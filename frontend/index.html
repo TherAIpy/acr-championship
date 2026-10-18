@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ACR Championship - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="/js/supabase.js"></script>
+  <script type="module" src="/js/auth.js"></script>
+</head>
+<body class="bg-[#0f0f1a] text-white min-h-screen flex items-center justify-center"
+      style="background-image: url('/assets/backgrounds/acr-rally.jpg'); background-size: cover;">
+  <div class="backdrop-blur-md bg-[#1a1a2e]/80 p-8 rounded-lg border border-gray-700 w-96">
+    <h1 class="text-3xl font-bold text-[#e94560] mb-6">ACR Championship</h1>
+    <form id="loginForm" class="space-y-4">
+      <input type="email" id="email" placeholder="Email"
+             class="w-full px-4 py-3 bg-[#0f0f1a] border border-gray-600 rounded text-white">
+      <input type="password" id="password" placeholder="Password"
+             class="w-full px-4 py-3 bg-[#0f0f1a] border border-gray-600 rounded text-white">
+      <button type="submit"
+              class="w-full bg-[#e94560] hover:bg-[#d13a55] py-3 rounded font-semibold">
+        Accedi
+      </button>
+    </form>
+    <p id="error" class="text-red-400 text-sm mt-4 hidden"></p>
+  </div>
+</body>
+</html>
