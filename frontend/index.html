@@ -23,7 +23,7 @@
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
-    <div class="glass p-8 rounded-lg w-full max-w-3xl shadow-2xl">
+    <div class="glass p-8 rounded-lg w-full max-w-5xl shadow-2xl">
         <h1 class="text-3xl font-bold text-[#e94560] mb-2">ACR Timing</h1>
         <p class="text-gray-400 mb-6">Carica uno screenshot per estrarre la classifica.</p>
 
@@ -39,20 +39,25 @@
         <div id="loading" class="text-center mt-4 hidden">
             <p class="text-[#4ecca3] animate-pulse">Elaborazione OCR in corso...</p>
         </div>
+
         <div id="resultBox" class="mt-6 hidden">
-            <!-- Nome del tracciato -->
-            <h2 id="trackName" class="text-xl font-semibold mb-4 text-[#4ecca3]">Tracciato</h2>
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="trackName" class="text-xl font-semibold text-[#4ecca3]">Tracciato</h2>
+                <button id="saveBtn" class="bg-[#e94560] text-white font-bold py-2 px-4 rounded hover:bg-[#d13a55] transition-colors hidden">
+                    Conferma e Salva
+                </button>
+            </div>
             
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-[#16213e] text-[#e94560] text-xs uppercase">
-                            <th class="p-3 border-b border-gray-600">Pos</th>
-                            <th class="p-3 border-b border-gray-600">Pilota</th>
-                            <th class="p-3 border-b border-gray-600">Auto</th>
-                            <th class="p-3 border-b border-gray-600">Penalità</th>
-                            <th class="p-3 border-b border-gray-600">Tempo</th>
-                            <th class="p-3 border-b border-gray-600">Gap</th>
+                            <th class="p-2 border-b border-gray-600 w-12 text-center">Pos</th>
+                            <th class="p-2 border-b border-gray-600">Pilota</th>
+                            <th class="p-2 border-b border-gray-600">Auto</th>
+                            <th class="p-2 border-b border-gray-600 w-20">Pen</th>
+                            <th class="p-2 border-b border-gray-600 w-28">Tempo</th>
+                            <th class="p-2 border-b border-gray-600 w-24">Gap</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody" class="text-sm">
@@ -75,10 +80,13 @@
         const resultBox = document.getElementById('resultBox');
         const tableBody = document.getElementById('tableBody');
         const rawText = document.getElementById('rawText');
-        const trackName = document.getElementById('trackName'); // Nuovo elemento
+        const trackName = document.getElementById('trackName');
+        const saveBtn = document.getElementById('saveBtn');
 
         const BACKEND_URL = 'https://acr-backend-wv98.onrender.com/api/upload';
+        const inputStyle = "w-full bg-transparent border-0 focus:ring-1 focus:ring-[#4ecca3] rounded px-1 py-0.5 text-white";
 
+        // --- EVENTO UPLOAD (Estrai Dati) ---
         fileInput.addEventListener('change', () => {
             if (fileInput.files.length > 0) {
                 uploadBtn.classList.remove('hidden');
@@ -102,24 +110,31 @@
 
                 if (data.success) {
                     rawText.textContent = data.raw_text;
-                    trackName.textContent = data.track_name; // Aggiorna il nome del tracciato
+                    trackName.textContent = data.track_name;
                     tableBody.innerHTML = '';
                     
-                    data.parsed_data.forEach(row => {
+                    data.parsed_data.forEach((row, index) => {
+                        // Salta i duplicati finali
+                        if (index > 0 && data.parsed_data.slice(0, index).some(r => r.driver === row.driver)) {
+                            return; 
+                        }
+
                         const tr = document.createElement('tr');
                         tr.className = "border-b border-gray-700 hover:bg-[#16213e] transition-colors";
+                        
                         tr.innerHTML = `
-                            <td class="p-3 font-bold text-[#4ecca3]">${row.position}</td>
-                            <td class="p-3 font-semibold text-white">${row.driver}</td>
-                            <td class="p-3 text-gray-400 text-xs">${row.car}</td>
-                            <td class="p-3 font-mono text-yellow-500 text-xs">${row.penalty || '-'}</td>
-                            <td class="p-3 font-mono text-gray-300">${row.time}</td>
-                            <td class="p-3 font-mono text-red-400">${row.gap}</td>
+                            <td class="p-2 text-center font-bold text-[#4ecca3]">${row.position}</td>
+                            <td class="p-2"><input type="text" class="${inputStyle} font-semibold" value="${row.driver || ''}" data-field="driver"></td>
+                            <td class="p-2"><input type="text" class="${inputStyle} text-gray-400 text-xs" value="${row.car || ''}" data-field="car"></td>
+                            <td class="p-2"><input type="text" class="${inputStyle} text-yellow-500 font-mono text-xs" value="${row.penalty || '-'}" data-field="penalty"></td>
+                            <td class="p-2"><input type="text" class="${inputStyle} text-gray-300 font-mono" value="${row.time || ''}" data-field="time"></td>
+                            <td class="p-2"><input type="text" class="${inputStyle} text-red-400 font-mono" value="${row.gap || '-'}" data-field="gap"></td>
                         `;
                         tableBody.appendChild(tr);
                     });
 
                     resultBox.classList.remove('hidden');
+                    saveBtn.classList.remove('hidden');
                 } else {
                     alert("Errore backend: " + data.error);
                 }
@@ -128,6 +143,53 @@
             } finally {
                 loading.classList.add('hidden');
                 uploadBtn.classList.remove('hidden');
+            }
+        });
+
+        // --- EVENTO SALVA (Conferma e Salva) ---
+        saveBtn.addEventListener('click', async () => {
+            const rows = tableBody.querySelectorAll('tr');
+            const finalData = [];
+
+            rows.forEach((tr, index) => {
+                const inputs = tr.querySelectorAll('input');
+                finalData.push({
+                    position: index + 1,
+                    driver: inputs[0].value,
+                    car: inputs[1].value,
+                    penalty: inputs[2].value,
+                    time: inputs[3].value,
+                    gap: inputs[4].value
+                });
+            });
+
+            saveBtn.disabled = true;
+            saveBtn.textContent = "Salvataggio in corso...";
+
+            try {
+                // NOTA: Questo endpoint /api/save-stage va ancora aggiunto al backend! 
+                // Per ora lo script è pronto per chiamarlo.
+                const response = await fetch('https://acr-backend-wv98.onrender.com/api/save-stage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        track_name: trackName.textContent,
+                        results: finalData
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert("✅ " + result.message);
+                } else {
+                    alert("❌ Errore: " + result.error);
+                }
+            } catch (error) {
+                alert("❌ Errore di rete: " + error.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = "Conferma e Salva";
             }
         });
     </script>
