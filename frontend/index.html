@@ -1,3 +1,27 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACR Timing - Estrazione Dati</title>
+    
+    <!-- Carica Tailwind CSS (con data-cfasync per evitare interferenze di Cloudflare) -->
+    <script src="https://cdn.tailwindcss.com" data-cfasync="false"></script>
+    
+    <!-- Stili personalizzati -->
+    <style>
+        body { 
+            background-color: #0f0f1a; 
+            color: white; 
+            font-family: sans-serif; 
+        }
+        .glass { 
+            background: rgba(26, 26, 46, 0.8); 
+            backdrop-filter: blur(10px); 
+            border: 1px solid #333; 
+        }
+    </style>
+</head>
 <body class="min-h-screen flex items-center justify-center p-4">
     <div class="glass p-8 rounded-lg w-full max-w-3xl shadow-2xl">
         <h1 class="text-3xl font-bold text-[#e94560] mb-2">ACR Timing</h1>
@@ -50,6 +74,7 @@
         const tableBody = document.getElementById('tableBody');
         const rawText = document.getElementById('rawText');
 
+        // Assicurati che questo URL sia corretto
         const BACKEND_URL = 'https://acr-backend-wv98.onrender.com/api/upload';
 
         fileInput.addEventListener('change', () => {
@@ -102,3 +127,4 @@
         });
     </script>
 </body>
+</html>
