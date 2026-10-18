@@ -1,63 +1,67 @@
 import re
 
 def parse_overall_text(raw_text: str) -> list:
-    """Trasforma il testo grezzo dell'OCR in una lista di dizionari strutturati."""
     results = []
-    lines = raw_text.split('\n')
+    # Pulisci il testo e dividilo in righe, rimuovendo quelle vuote
+    lines = [line.strip() for line in raw_text.split('\n') if line.strip()]
 
-    for line in lines:
-        line = line.strip()
-        if len(line) < 10:
-            continue
-
-        # 1. Trova il tempo (gestisce sia 00:50.658 che errori come 00:50,658)
+    for i, line in enumerate(lines):
+        # 1. Cerca un tempo valido (es. 00:50.658 o 00:52,269)
         time_match = re.search(r'(\d{1,2}:\d{2}[.,]\d{3})', line)
         
-        if not time_match:
-            loose_time = re.search(r'(\d{1,2}:\d{2}[.,]?\w{2,4})', line)
-            if loose_time:
-                clean_time = loose_time.group(1).replace('S', '5').replace('s', '5').replace('O', '0').replace('o', '0').replace(',', '.')
-                time_str = clean_time
-            else:
-                continue
-        else:
+        if time_match:
             time_str = time_match.group(1).replace(',', '.')
-
-        # 2. Trova il gap (es. +00.135)
-        gap_match = re.search(r'\+\s*(\d{1,2})[.,]?(\d{3})', line)
-        if gap_match:
-            gap_str = f"+{gap_match.group(1)}.{gap_match.group(2)}"
-        else:
+            
+            # 2. Cerca il Gap nella riga successiva (es. +00.135)
             gap_str = "-"
+            if i + 1 < len(lines):
+                gap_match = re.search(r'(\+\d{1,2}[.,]\d{3})', lines[i+1])
+                if gap_match:
+                    gap_str = gap_match.group(1).replace(',', '.')
+            
+            # 3. Cerca il Nome del Pilota e l'Auto nelle righe precedenti
+            driver_name = "Sconosciuto"
+            car_model = ""
+            
+            # Risaliamo al massimo di 5 righe per trovare il modello dell'auto
+            car_idx = -1
+            for j in range(i-1, max(i-5, -1), -1):
+                # Cerchiamo una riga che sembri un'auto (spesso ha un trattino o nomi noti)
+                if " - " in lines[j] or any(brand in lines[j] for brand in ["Alpine", "Fiat", "Ford", "Toyota", "Subaru", "Citroen", "Hyundai", "Skoda"]):
+                    car_model = lines[j]
+                    car_idx = j
+                    break
+            
+            if car_idx != -1:
+                # Il nome del pilota è solitamente la riga sopra l'auto
+                # A volte c'è la posizione (es. "10") o simboli strani (es. "■■") prima del nome
+                driver_idx = car_idx - 1
+                if driver_idx >= 0:
+                    candidate_name = lines[driver_idx]
+                    
+                    # Se la riga è solo un numero (la posizione) o un simbolo strano, sali di un'altra riga
+                    if (candidate_name.isdigit() or len(candidate_name) <= 2) and driver_idx > 0:
+                        candidate_name = lines[driver_idx - 1]
+                    
+                    driver_name = candidate_name
+            else:
+                # Fallback se non trova l'auto
+                if i >= 3:
+                    driver_name = lines[i-3]
 
-        # 3. Estrai il nome del pilota usando Alpine e Fiat come ancore
-        driver_name = "Sconosciuto"
-        parts = re.split(r'Alpine|Fiat', line, flags=re.IGNORECASE)
-        
-        if len(parts) > 1:
-            name_part = parts[0]
-            name_match = re.search(r'([a-zA-Z].*)', name_part)
-            if name_match:
-                driver_name = name_match.group(1).strip()
-                words = driver_name.split()
-                while words and len(words[0]) <= 2:
-                    words.pop(0)
-                driver_name = " ".join(words)
-        else:
-            name_part = line[:time_match.start()].strip() if time_match else line
-            name_match = re.search(r'([a-zA-Z].*)', name_part)
-            if name_match:
-                driver_name = name_match.group(1).strip()
+            # 4. Pulisci il nome del pilota da numeri di posizione o caratteri spuri all'inizio
+            driver_name = re.sub(r'^\d+[\s\.\-]*', '', driver_name)
+            driver_name = re.sub(r'^[^a-zA-Z0-9\[\]\(\)]+', '', driver_name).strip()
 
-        if driver_name:
-            results.append({
-                "position": len(results) + 1,
-                "driver": driver_name,
-                "time": time_str,
-                "gap": gap_str
-            })
+            if driver_name:
+                results.append({
+                    "position": len(results) + 1,
+                    "driver": driver_name,
+                    "time": time_str,
+                    "gap": gap_str
+                })
 
-    # Rimuovi duplicati
+    # 5. Rimuovi eventuali duplicati (es. l'ultima riga ripetuta in fondo)
     unique_results = []
     seen_times = set()
     for r in results:
@@ -65,6 +69,7 @@ def parse_overall_text(raw_text: str) -> list:
             unique_results.append(r)
             seen_times.add(r['time'])
             
+    # Riassegna le posizioni in ordine numerica
     for i, r in enumerate(unique_results):
         r['position'] = i + 1
 
