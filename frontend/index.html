@@ -1,28 +1,91 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ACR Championship - Login</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script type="module" src="/js/supabase.js"></script>
-  <script type="module" src="/js/auth.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACR Timing - Test OCR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f0f1a; color: white; font-family: sans-serif; }
+        .glass { background: rgba(26, 26, 46, 0.8); backdrop-filter: blur(10px); border: 1px solid #333; }
+    </style>
 </head>
-<body class="bg-[#0f0f1a] text-white min-h-screen flex items-center justify-center"
-      style="background-image: url('/assets/backgrounds/acr-rally.jpg'); background-size: cover;">
-  <div class="backdrop-blur-md bg-[#1a1a2e]/80 p-8 rounded-lg border border-gray-700 w-96">
-    <h1 class="text-3xl font-bold text-[#e94560] mb-6">ACR Championship</h1>
-    <form id="loginForm" class="space-y-4">
-      <input type="email" id="email" placeholder="Email"
-             class="w-full px-4 py-3 bg-[#0f0f1a] border border-gray-600 rounded text-white">
-      <input type="password" id="password" placeholder="Password"
-             class="w-full px-4 py-3 bg-[#0f0f1a] border border-gray-600 rounded text-white">
-      <button type="submit"
-              class="w-full bg-[#e94560] hover:bg-[#d13a55] py-3 rounded font-semibold">
-        Accedi
-      </button>
-    </form>
-    <p id="error" class="text-red-400 text-sm mt-4 hidden"></p>
-  </div>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="glass p-8 rounded-lg w-full max-w-2xl shadow-2xl">
+        <h1 class="text-3xl font-bold text-[#e94560] mb-2">ACR Timing</h1>
+        <p class="text-gray-400 mb-6">Carica uno screenshot di fine stage per testare l'OCR.</p>
+
+        <input type="file" id="fileInput" accept="image/*" class="block w-full text-sm text-gray-400
+            file:mr-4 file:py-2 file:px-4
+            file:rounded-md file:border-0
+            file:text-sm file:font-semibold
+            file:bg-[#e94560] file:text-white
+            hover:file:bg-[#d13a55] cursor-pointer mb-6">
+
+        <button id="uploadBtn" class="w-full bg-[#4ecca3] text-black font-bold py-3 rounded hover:bg-[#3bb890] transition-colors hidden">
+            Estrai Testo
+        </button>
+
+        <div id="loading" class="text-center mt-4 hidden">
+            <p class="text-[#4ecca3] animate-pulse">Elaborazione OCR in corso... (potrebbe richiedere qualche secondo)</p>
+        </div>
+
+        <div id="resultBox" class="mt-6 hidden">
+            <h2 class="text-xl font-semibold mb-2 text-[#4ecca3]">Testo Estratto (Raw):</h2>
+            <pre id="rawText" class="bg-[#0f0f1a] p-4 rounded text-sm text-gray-300 whitespace-pre-wrap max-h-96 overflow-y-auto border border-gray-700"></pre>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const loading = document.getElementById('loading');
+        const resultBox = document.getElementById('resultBox');
+        const rawText = document.getElementById('rawText');
+
+        // URL del tuo backend Render (SOSTITUISCI CON IL TUO URL ESATTO)
+        const BACKEND_URL = 'https://acr-backend-wv98.onrender.com/api/upload';
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                uploadBtn.classList.remove('hidden');
+                resultBox.classList.add('hidden');
+            }
+        });
+
+        uploadBtn.addEventListener('click', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('screenshot', file);
+
+            uploadBtn.classList.add('hidden');
+            loading.classList.remove('hidden');
+
+            try {
+                const response = await fetch(BACKEND_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    rawText.textContent = data.raw_text || "Nessun testo rilevato.";
+                    resultBox.classList.remove('hidden');
+                } else {
+                    rawText.textContent = "Errore: " + (data.error || "Sconosciuto");
+                    resultBox.classList.remove('hidden');
+                }
+            } catch (error) {
+                rawText.textContent = "Errore di rete: " + error.message;
+                resultBox.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+                uploadBtn.classList.remove('hidden');
+            }
+        });
+    </script>
 </body>
 </html>
