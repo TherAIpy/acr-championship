@@ -1,35 +1,43 @@
-import pytesseract
-from PIL import Image, ImageOps, ImageEnhance
-import io
+import os
+import json
+from google.oauth2 import service_account
+from google.cloud import vision
 
 def extract_text_from_image(image_bytes: bytes) -> str:
-    """Estrae il testo grezzo dall'immagine con preprocessing per UI scure."""
+    """
+    Invia l'immagine a Google Cloud Vision API e restituisce il testo estratto.
+    """
     try:
-        img = Image.open(io.BytesIO(image_bytes))
-        
-        # 1. Scala di grigi
-        img = img.convert('L')
-        
-        # 2. INVERTI I COLORI (Tesseract preferisce testo nero su sfondo bianco)
-        img = ImageOps.invert(img)
-        
-        # 3. Aumenta il contrasto per staccare il testo dallo sfondo
-        enhancer = ImageEnhance.Contrast(img)
-        img = enhancer.enhance(1.5)
-        
-        # 4. Raddoppia la dimensione (l'upscaling aiuta molto con font piccoli)
-        width, height = img.size
-        img = img.resize((width * 2, height * 2), Image.Resampling.LANCZOS)
-        
-        # 5. Configurazione Tesseract per blocchi di testo (PSM 6)
-        custom_config = r'--oem 3 --psm 6'
-        text = pytesseract.image_to_string(img, lang='ita+eng', config=custom_config)
+        # 1. Recupera le credenziali dalla variabile d'ambiente di Render
+        creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+        if not creds_json:
+            raise ValueError("La variabile d'ambiente GOOGLE_CREDENTIALS_JSON non è impostata.")
+
+        # 2. Crea le credenziali dal JSON
+        creds_dict = json.loads(creds_json)
+        credentials = service_account.Credentials.from_service_account_info(creds_dict)
+
+        # 3. Inizializza il client di Vision API
+        client = vision.ImageAnnotatorClient(credentials=credentials)
+
+        # 4. Prepara l'immagine
+        image = vision.Image(content=image_bytes)
+
+        # 5. Esegui il Document Text Detection (ottimo per tabelle e layout complessi)
+        response = client.document_text_detection(image=image)
+
+        # 6. Controlla se ci sono errori nell'API
+        if response.error.message:
+            raise Exception(f"Errore API Vision: {response.error.message}")
+
+        # 7. Estrai il testo completo
+        text = response.full_text_annotation.text
         
         if not text.strip():
-            raise ValueError("Tesseract non ha rilevato alcun testo.")
-            
+            raise ValueError("Google Vision non ha rilevato alcun testo nell'immagine.")
+
         return text
-        
+
     except Exception as e:
-        print(f"ERRORE OCR: {e}")
+        print(f"ERRORE OCR VISION: {e}")
         raise e
