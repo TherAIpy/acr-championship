@@ -1,38 +1,44 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACR Timing - Test OCR</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background-color: #0f0f1a; color: white; font-family: sans-serif; }
-        .glass { background: rgba(26, 26, 46, 0.8); backdrop-filter: blur(10px); border: 1px solid #333; }
-    </style>
-</head>
 <body class="min-h-screen flex items-center justify-center p-4">
-    <div class="glass p-8 rounded-lg w-full max-w-2xl shadow-2xl">
+    <div class="glass p-8 rounded-lg w-full max-w-3xl shadow-2xl">
         <h1 class="text-3xl font-bold text-[#e94560] mb-2">ACR Timing</h1>
-        <p class="text-gray-400 mb-6">Carica uno screenshot di fine stage per testare l'OCR.</p>
+        <p class="text-gray-400 mb-6">Carica uno screenshot per estrarre la classifica.</p>
 
         <input type="file" id="fileInput" accept="image/*" class="block w-full text-sm text-gray-400
-            file:mr-4 file:py-2 file:px-4
-            file:rounded-md file:border-0
-            file:text-sm file:font-semibold
-            file:bg-[#e94560] file:text-white
+            file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0
+            file:text-sm file:font-semibold file:bg-[#e94560] file:text-white
             hover:file:bg-[#d13a55] cursor-pointer mb-6">
 
         <button id="uploadBtn" class="w-full bg-[#4ecca3] text-black font-bold py-3 rounded hover:bg-[#3bb890] transition-colors hidden">
-            Estrai Testo
+            Estrai Dati
         </button>
 
         <div id="loading" class="text-center mt-4 hidden">
-            <p class="text-[#4ecca3] animate-pulse">Elaborazione OCR in corso... (potrebbe richiedere qualche secondo)</p>
+            <p class="text-[#4ecca3] animate-pulse">Elaborazione OCR in corso...</p>
         </div>
 
         <div id="resultBox" class="mt-6 hidden">
-            <h2 class="text-xl font-semibold mb-2 text-[#4ecca3]">Testo Estratto (Raw):</h2>
-            <pre id="rawText" class="bg-[#0f0f1a] p-4 rounded text-sm text-gray-300 whitespace-pre-wrap max-h-96 overflow-y-auto border border-gray-700"></pre>
+            <h2 class="text-xl font-semibold mb-4 text-[#4ecca3]">Dati Estratti</h2>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-[#16213e] text-[#e94560] text-sm uppercase">
+                            <th class="p-3 border-b border-gray-600">Pos</th>
+                            <th class="p-3 border-b border-gray-600">Pilota</th>
+                            <th class="p-3 border-b border-gray-600">Tempo</th>
+                            <th class="p-3 border-b border-gray-600">Gap</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="text-sm">
+                        <!-- Righe inserite via JS -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <details class="mt-6">
+                <summary class="cursor-pointer text-gray-400 hover:text-white text-sm">Mostra testo grezzo (Debug)</summary>
+                <pre id="rawText" class="mt-2 bg-[#0f0f1a] p-4 rounded text-xs text-gray-500 whitespace-pre-wrap border border-gray-700"></pre>
+            </details>
         </div>
     </div>
 
@@ -41,9 +47,9 @@
         const uploadBtn = document.getElementById('uploadBtn');
         const loading = document.getElementById('loading');
         const resultBox = document.getElementById('resultBox');
+        const tableBody = document.getElementById('tableBody');
         const rawText = document.getElementById('rawText');
 
-        // URL del tuo backend Render (SOSTITUISCI CON IL TUO URL ESATTO)
         const BACKEND_URL = 'https://acr-backend-wv98.onrender.com/api/upload';
 
         fileInput.addEventListener('change', () => {
@@ -64,23 +70,31 @@
             loading.classList.remove('hidden');
 
             try {
-                const response = await fetch(BACKEND_URL, {
-                    method: 'POST',
-                    body: formData
-                });
-
+                const response = await fetch(BACKEND_URL, { method: 'POST', body: formData });
                 const data = await response.json();
 
                 if (data.success) {
-                    rawText.textContent = data.raw_text || "Nessun testo rilevato.";
+                    rawText.textContent = data.raw_text;
+                    tableBody.innerHTML = '';
+                    
+                    data.parsed_data.forEach(row => {
+                        const tr = document.createElement('tr');
+                        tr.className = "border-b border-gray-700 hover:bg-[#16213e] transition-colors";
+                        tr.innerHTML = `
+                            <td class="p-3 font-bold text-[#4ecca3]">${row.position}</td>
+                            <td class="p-3 font-semibold text-white">${row.driver}</td>
+                            <td class="p-3 font-mono text-gray-300">${row.time}</td>
+                            <td class="p-3 font-mono text-red-400">${row.gap}</td>
+                        `;
+                        tableBody.appendChild(tr);
+                    });
+
                     resultBox.classList.remove('hidden');
                 } else {
-                    rawText.textContent = "Errore: " + (data.error || "Sconosciuto");
-                    resultBox.classList.remove('hidden');
+                    alert("Errore backend: " + data.error);
                 }
             } catch (error) {
-                rawText.textContent = "Errore di rete: " + error.message;
-                resultBox.classList.remove('hidden');
+                alert("Errore di rete: " + error.message);
             } finally {
                 loading.classList.add('hidden');
                 uploadBtn.classList.remove('hidden');
@@ -88,4 +102,3 @@
         });
     </script>
 </body>
-</html>
