@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ACR Championship</title>
     <script src="https://cdn.tailwindcss.com" data-cfasync="false"></script>
-    <!-- Carichiamo Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { background-color: #0f0f1a; color: white; font-family: sans-serif; }
@@ -44,10 +43,7 @@
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- VISTA PUBBLICA (Visibile di default)       -->
-    <!-- ========================================== -->
-    <!-- NOTA: Rimosso 'hidden' da questo div -->
+    <!-- VISTA PUBBLICA -->
     <div id="view-public" class="w-full max-w-6xl">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="glass p-6 rounded-lg h-fit">
@@ -83,11 +79,8 @@
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- VISTA ADMIN                                -->
-    <!-- ========================================== -->
+    <!-- VISTA ADMIN -->
     <div id="view-admin" class="w-full max-w-5xl hidden">
-        <!-- Setup -->
         <div class="glass p-6 rounded-lg mb-6">
             <h2 class="text-xl font-bold text-[#4ecca3] mb-4">1. Setup Gara</h2>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -110,7 +103,6 @@
                 </div>
             </div>
         </div>
-        <!-- Upload -->
         <div class="glass p-6 rounded-lg">
             <h2 class="text-xl font-bold text-[#4ecca3] mb-4">2. Carica Screenshot</h2>
             <input type="file" id="fileInput" accept="image/*" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#e94560] file:text-white hover:file:bg-[#d13a55] cursor-pointer mb-4">
@@ -140,118 +132,117 @@
     </div>
 
     <script>
-        // ⚠️ INSERISCI QUI LE TUE CHIAVI DI SUPABASE ⚠️
-        const SUPABASE_URL = 'https://rvqorpdebooklqtjbnwl.supabase.coo'; 
+        // ⚠️ SOSTITUISCI CON LE TUE CHIAVI ⚠️
+        const SUPABASE_URL = 'https://rvqorpdebooklqtjbnwl.supabase.co'; 
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cW9ycGRlYm9va2xxdGpibndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIzMTk2ODIsImV4cCI6MjEwNzg5NTY4Mn0.oaw45keCaaP40J9nfVLaggIyzPJBT-X0XerqlMc5iMk';
         
         const API_BASE = 'https://acr-backend-wv98.onrender.com/api';
         const inputStyle = "w-full bg-transparent border-0 focus:ring-1 focus:ring-[#4ecca3] rounded px-1 py-0.5 text-white";
+        let supabaseClient = null;
 
-        // 1. INIZIALIZZAZIONE SICURA
-        let supabase = null;
+        // Inizializzazione sicura
         try {
             if (SUPABASE_URL !== 'https://rvqorpdebooklqtjbnwl.supabase.co') {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            } else {
-                console.warn("Supabase non configurato. Il login non funzionerà.");
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             }
-        } catch (e) {
-            console.error("Errore nell'inizializzazione di Supabase:", e);
+        } catch(e) {
+            console.error("Errore init Supabase:", e);
         }
 
-        // 2. GESTIONE AUTENTICAZIONE (Senza bloccare il sito se fallisce)
-        async function checkAuth() {
+        // Funzione di avvio sicura (aspetta che il DOM sia caricato)
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- GESTIONE CLICK LOGIN ---
             const btnLogin = document.getElementById('btnLogin');
-            const linkAdmin = document.getElementById('linkAdmin');
-            const btnLogout = document.getElementById('btnLogout');
-            const viewPublic = document.getElementById('view-public');
-            const viewAdmin = document.getElementById('view-admin');
-            const urlParams = new URLSearchParams(window.location.search);
-
-            // Se Supabase non è configurato, mostra solo la vista pubblica
-            if (!supabase) {
-                viewPublic.classList.remove('hidden');
-                viewAdmin.classList.add('hidden');
-                loadCalendar();
-                loadStandings();
-                return;
+            if (btnLogin) {
+                btnLogin.addEventListener('click', () => {
+                    console.log("Click su Login rilevato");
+                    document.getElementById('loginModal').classList.remove('hidden');
+                });
             }
 
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
+            document.getElementById('btnCancelLogin').addEventListener('click', () => {
+                document.getElementById('loginModal').classList.add('hidden');
+            });
 
-                if (session) {
-                    // LOGGATO
-                    btnLogin.classList.add('hidden');
-                    btnLogout.classList.remove('hidden');
-                    linkAdmin.classList.remove('hidden');
-                    
-                    if (urlParams.get('admin') === 'true') {
-                        viewPublic.classList.add('hidden');
-                        viewAdmin.classList.remove('hidden');
-                        loadSetup();
+            // --- CONTROLLO SESSIONE ---
+            async function checkAuth() {
+                const linkAdmin = document.getElementById('linkAdmin');
+                const btnLogout = document.getElementById('btnLogout');
+                const viewPublic = document.getElementById('view-public');
+                const viewAdmin = document.getElementById('view-admin');
+                const urlParams = new URLSearchParams(window.location.search);
+
+                if (!supabaseClient) {
+                    viewPublic.classList.remove('hidden');
+                    viewAdmin.classList.add('hidden');
+                    loadCalendar();
+                    loadStandings();
+                    return;
+                }
+
+                try {
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    if (session) {
+                        btnLogin.classList.add('hidden');
+                        btnLogout.classList.remove('hidden');
+                        linkAdmin.classList.remove('hidden');
+                        
+                        if (urlParams.get('admin') === 'true') {
+                            viewPublic.classList.add('hidden');
+                            viewAdmin.classList.remove('hidden');
+                            loadSetup();
+                        } else {
+                            viewPublic.classList.remove('hidden');
+                            viewAdmin.classList.add('hidden');
+                            loadCalendar();
+                            loadStandings();
+                        }
                     } else {
+                        btnLogin.classList.remove('hidden');
+                        btnLogout.classList.add('hidden');
+                        linkAdmin.classList.add('hidden');
                         viewPublic.classList.remove('hidden');
                         viewAdmin.classList.add('hidden');
                         loadCalendar();
                         loadStandings();
                     }
-                } else {
-                    // NON LOGGATO
-                    btnLogin.classList.remove('hidden');
-                    btnLogout.classList.add('hidden');
-                    linkAdmin.classList.add('hidden');
-                    
+                } catch (err) {
                     viewPublic.classList.remove('hidden');
                     viewAdmin.classList.add('hidden');
-                    loadCalendar();
-                    loadStandings();
                 }
-            } catch (err) {
-                console.error("Errore auth:", err);
-                // In caso di errore, mostra la vista pubblica di default
-                viewPublic.classList.remove('hidden');
-                viewAdmin.classList.add('hidden');
             }
-        }
 
-        // 3. LISTENER PULSANTI AUTH
-        document.getElementById('btnLogin').addEventListener('click', () => {
-            document.getElementById('loginModal').classList.remove('hidden');
+            // --- AZIONE LOGIN ---
+            document.getElementById('btnDoLogin').addEventListener('click', async () => {
+                if (!supabaseClient) {
+                    alert("Supabase non configurato. Inserisci le chiavi nel codice.");
+                    return;
+                }
+                const email = document.getElementById('loginEmail').value;
+                const password = document.getElementById('loginPassword').value;
+                const errorMsg = document.getElementById('loginError');
+
+                const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                
+                if (error) {
+                    errorMsg.textContent = error.message;
+                    errorMsg.classList.remove('hidden');
+                } else {
+                    document.getElementById('loginModal').classList.add('hidden');
+                    errorMsg.classList.add('hidden');
+                    checkAuth();
+                }
+            });
+
+            document.getElementById('btnLogout').addEventListener('click', async () => {
+                if (supabaseClient) await supabaseClient.auth.signOut();
+                window.location.href = '/';
+            });
+
+            // Avvia il controllo
+            checkAuth();
         });
-        
-        document.getElementById('btnCancelLogin').addEventListener('click', () => {
-            document.getElementById('loginModal').classList.add('hidden');
-        });
-
-        document.getElementById('btnDoLogin').addEventListener('click', async () => {
-            if (!supabase) {
-                alert("Supabase non è configurato. Controlla il codice.");
-                return;
-            }
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            const errorMsg = document.getElementById('loginError');
-
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            
-            if (error) {
-                errorMsg.textContent = error.message;
-                errorMsg.classList.remove('hidden');
-            } else {
-                document.getElementById('loginModal').classList.add('hidden');
-                errorMsg.classList.add('hidden');
-                checkAuth();
-            }
-        });
-
-        document.getElementById('btnLogout').addEventListener('click', async () => {
-            if (supabase) await supabase.auth.signOut();
-            window.location.href = '/';
-        });
-
-        // 4. AVVIO
-        checkAuth();
 
         // ==========================================
         // LOGICA VISTA PUBBLICA
@@ -403,20 +394,19 @@
             document.getElementById('selectRally').dispatchEvent(new Event('change'));
         });
 
-        const fileInput = document.getElementById('fileInput');
-        const uploadBtn = document.getElementById('uploadBtn');
-        
-        fileInput.addEventListener('change', () => {
-            if (fileInput.files.length > 0) uploadBtn.classList.remove('hidden');
+        document.getElementById('fileInput').addEventListener('change', () => {
+            if (document.getElementById('fileInput').files.length > 0) {
+                document.getElementById('uploadBtn').classList.remove('hidden');
+            }
         });
 
-        uploadBtn.addEventListener('click', async () => {
-            const file = fileInput.files[0];
+        document.getElementById('uploadBtn').addEventListener('click', async () => {
+            const file = document.getElementById('fileInput').files[0];
             if (!file) return;
             const formData = new FormData();
             formData.append('screenshot', file);
 
-            uploadBtn.classList.add('hidden');
+            document.getElementById('uploadBtn').classList.add('hidden');
             document.getElementById('loading').classList.remove('hidden');
 
             try {
@@ -450,7 +440,7 @@
                 alert("Errore di rete: " + error.message);
             } finally {
                 document.getElementById('loading').classList.add('hidden');
-                uploadBtn.classList.remove('hidden');
+                document.getElementById('uploadBtn').classList.remove('hidden');
             }
         });
 
@@ -491,7 +481,7 @@
                     alert("✅ " + result.message);
                     document.getElementById('resultBox').classList.add('hidden');
                     document.getElementById('stageName').value = '';
-                    fileInput.value = '';
+                    document.getElementById('fileInput').value = '';
                 } else {
                     alert("❌ Errore: " + result.error);
                 }
