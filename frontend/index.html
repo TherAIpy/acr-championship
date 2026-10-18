@@ -39,16 +39,18 @@
         <div id="loading" class="text-center mt-4 hidden">
             <p class="text-[#4ecca3] animate-pulse">Elaborazione OCR in corso...</p>
         </div>
-
         <div id="resultBox" class="mt-6 hidden">
-            <h2 class="text-xl font-semibold mb-4 text-[#4ecca3]">Dati Estratti</h2>
+            <!-- Nome del tracciato -->
+            <h2 id="trackName" class="text-xl font-semibold mb-4 text-[#4ecca3]">Tracciato</h2>
             
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr class="bg-[#16213e] text-[#e94560] text-sm uppercase">
+                        <tr class="bg-[#16213e] text-[#e94560] text-xs uppercase">
                             <th class="p-3 border-b border-gray-600">Pos</th>
                             <th class="p-3 border-b border-gray-600">Pilota</th>
+                            <th class="p-3 border-b border-gray-600">Auto</th>
+                            <th class="p-3 border-b border-gray-600">Penalità</th>
                             <th class="p-3 border-b border-gray-600">Tempo</th>
                             <th class="p-3 border-b border-gray-600">Gap</th>
                         </tr>
@@ -73,8 +75,8 @@
         const resultBox = document.getElementById('resultBox');
         const tableBody = document.getElementById('tableBody');
         const rawText = document.getElementById('rawText');
+        const trackName = document.getElementById('trackName'); // Nuovo elemento
 
-        // Assicurati che questo URL sia corretto
         const BACKEND_URL = 'https://acr-backend-wv98.onrender.com/api/upload';
 
         fileInput.addEventListener('change', () => {
@@ -100,6 +102,7 @@
 
                 if (data.success) {
                     rawText.textContent = data.raw_text;
+                    trackName.textContent = data.track_name; // Aggiorna il nome del tracciato
                     tableBody.innerHTML = '';
                     
                     data.parsed_data.forEach(row => {
@@ -108,6 +111,8 @@
                         tr.innerHTML = `
                             <td class="p-3 font-bold text-[#4ecca3]">${row.position}</td>
                             <td class="p-3 font-semibold text-white">${row.driver}</td>
+                            <td class="p-3 text-gray-400 text-xs">${row.car}</td>
+                            <td class="p-3 font-mono text-yellow-500 text-xs">${row.penalty || '-'}</td>
                             <td class="p-3 font-mono text-gray-300">${row.time}</td>
                             <td class="p-3 font-mono text-red-400">${row.gap}</td>
                         `;

@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 from services.ocr_service import extract_text_from_image
-from services.parser import parse_overall_text  # <-- Importiamo il parser
+from services.parser import parse_overall_text
 
 app = Flask(__name__)
 CORS(app)
@@ -22,13 +22,14 @@ def upload_image():
         image_bytes = file.read()
         raw_text = extract_text_from_image(image_bytes)
         
-        # Passiamo il testo al parser
+        # Il parser ora restituisce un dizionario
         parsed_data = parse_overall_text(raw_text)
         
         return jsonify({
             "success": True,
             "raw_text": raw_text,
-            "parsed_data": parsed_data # Dati puliti!
+            "track_name": parsed_data["track_name"],
+            "parsed_data": parsed_data["results"]
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
