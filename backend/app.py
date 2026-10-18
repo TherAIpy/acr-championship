@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import os
 from services.ocr_service import extract_text_from_image  # <-- Nome corretto
 from utils.db import get_supabase
