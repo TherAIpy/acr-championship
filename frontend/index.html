@@ -21,7 +21,6 @@
         <div class="space-x-4 flex items-center">
             <a href="/" class="text-white hover:text-[#4ecca3] transition-colors">Area Pubblica</a>
             
-            <!-- Sezione Login / Admin -->
             <div id="authSection">
                 <button id="btnLogin" class="text-white hover:text-[#4ecca3] transition-colors border-l border-gray-600 pl-4">🔒 Login Admin</button>
                 <a href="?admin=true" id="linkAdmin" class="hidden text-[#4ecca3] font-bold border-l border-gray-600 pl-4 hover:text-white">⚙️ Area Admin</a>
@@ -30,7 +29,7 @@
         </div>
     </nav>
 
-    <!-- MODALE DI LOGIN (Nascosta di default) -->
+    <!-- MODALE DI LOGIN -->
     <div id="loginModal" class="fixed inset-0 bg-black/80 flex items-center justify-center hidden z-50">
         <div class="glass p-8 rounded-lg w-96 shadow-2xl">
             <h2 class="text-2xl font-bold text-[#e94560] mb-4">Accesso Riservato</h2>
@@ -45,10 +44,9 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- VISTA PUBBLICA (Calendario + Classifiche)  -->
+    <!-- VISTA PUBBLICA                             -->
     <!-- ========================================== -->
-    <div id="view-public" class="w-full max-w-6xl">
-        <!-- ... (Il codice della vista pubblica rimane IDENTICO a quello che ti ho dato prima) ... -->
+    <div id="view-public" class="w-full max-w-6xl hidden">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="glass p-6 rounded-lg h-fit">
                 <h2 class="text-xl font-bold text-[#4ecca3] mb-4 border-b border-gray-700 pb-2">📅 Calendario Eventi</h2>
@@ -84,10 +82,9 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- VISTA ADMIN (Nascosta di default)          -->
+    <!-- VISTA ADMIN                                -->
     <!-- ========================================== -->
     <div id="view-admin" class="w-full max-w-5xl hidden">
-        <!-- ... (Il codice della vista admin con Setup e Upload rimane IDENTICO a quello che ti ho dato prima) ... -->
         <!-- Setup -->
         <div class="glass p-6 rounded-lg mb-6">
             <h2 class="text-xl font-bold text-[#4ecca3] mb-4">1. Setup Gara</h2>
@@ -140,15 +137,15 @@
         </div>
     </div>
 
-    <!-- SCRIPT LOGICO COMPLETO -->
     <script>
-        const API_BASE = 'https://acr-backend-wv98.onrender.com/api';
+        // ⚠️ SOSTITUISCI QUESTE DUE RIGHE CON I TUOI DATI DA SUPABASE ⚠️
+        const SUPABASE_URL = 'https://rvqorpdebooklqtjbnwl.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'LA_TUA_ANON_KEY_LUNGA_QUI';
+        
+        const API_BASE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cW9ycGRlYm9va2xxdGpibndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIzMTk2ODIsImV4cCI6MjEwNzg5NTY4Mn0.oaw45keCaaP40J9nfVLaggIyzPJBT-X0XerqlMc5iMk';
         const inputStyle = "w-full bg-transparent border-0 focus:ring-1 focus:ring-[#4ecca3] rounded px-1 py-0.5 text-white";
 
-        // --- INIZIALIZZAZIONE SUPABASE ---
-        // Sostituisci con i tuoi dati da Supabase (Project Settings -> API)
-        const SUPABASE_URL = 'https://rvqorpdebooklqtjbnwl.supabase.co'; 
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cW9ycGRlYm9va2xxdGpibndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIzMTk2ODIsImV4cCI6MjEwNzg5NTY4Mn0.oaw45keCaaP40J9nfVLaggIyzPJBT-X0XerqlMc5iMk';
+        // Inizializza Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // --- GESTIONE AUTENTICAZIONE ---
@@ -163,12 +160,10 @@
             const urlParams = new URLSearchParams(window.location.search);
 
             if (session) {
-                // Utente Loggato
                 btnLogin.classList.add('hidden');
                 btnLogout.classList.remove('hidden');
                 linkAdmin.classList.remove('hidden');
                 
-                // Se l'URL chiede la vista admin, mostrala
                 if (urlParams.get('admin') === 'true') {
                     viewPublic.classList.add('hidden');
                     viewAdmin.classList.remove('hidden');
@@ -180,12 +175,10 @@
                     loadStandings();
                 }
             } else {
-                // Utente NON Loggato
                 btnLogin.classList.remove('hidden');
                 btnLogout.classList.add('hidden');
                 linkAdmin.classList.add('hidden');
                 
-                // Forza la vista pubblica
                 viewPublic.classList.remove('hidden');
                 viewAdmin.classList.add('hidden');
                 loadCalendar();
@@ -193,7 +186,7 @@
             }
         }
 
-        // Login
+        // Listener Pulsanti Auth
         document.getElementById('btnDoLogin').addEventListener('click', async () => {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
@@ -207,37 +200,270 @@
             } else {
                 document.getElementById('loginModal').classList.add('hidden');
                 errorMsg.classList.add('hidden');
-                checkAuth(); // Ricontrolla lo stato
+                checkAuth();
             }
         });
 
-        // Logout
         document.getElementById('btnLogout').addEventListener('click', async () => {
             await supabase.auth.signOut();
-            window.location.href = '/'; // Torna alla home pubblica
+            window.location.href = '/';
         });
 
-        // Gestione Modale
-        document.getElementById('btnLogin').addEventListener('click', () => document.getElementById('loginModal').classList.remove('hidden'));
-        document.getElementById('btnCancelLogin').addEventListener('click', () => document.getElementById('loginModal').classList.add('hidden'));
+        document.getElementById('btnLogin').addEventListener('click', () => {
+            document.getElementById('loginModal').classList.remove('hidden');
+        });
+        
+        document.getElementById('btnCancelLogin').addEventListener('click', () => {
+            document.getElementById('loginModal').classList.add('hidden');
+        });
 
-        // Avvia il controllo all'apertura della pagina
+        // Avvia il controllo
         checkAuth();
 
-        // ==========================================
-        // LOGICA VISTA PUBBLICA (Identica a prima)
-        // ==========================================
-        async function loadCalendar() { /* ... codice calendario ... */ }
-        let currentTab = 'rally';
-        function setTab(tab, event) { /* ... codice tab ... */ }
-        async function loadStandings() { /* ... codice classifiche ... */ }
+        // --- LOGICA PUBBLICA ---
+        async function loadCalendar() {
+            try {
+                const res = await fetch(`${API_BASE}/calendar`);
+                const data = await res.json();
+                const list = document.getElementById('calendarList');
+                list.innerHTML = '';
+                
+                if (data.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 text-sm italic">Nessun evento in calendario.</p>';
+                    return;
+                }
 
-        // ==========================================
-        // LOGICA VISTA ADMIN (Identica a prima)
-        // ==========================================
+                data.forEach(r => {
+                    const date = new Date(r.created_at).toLocaleDateString('it-IT');
+                    list.innerHTML += `
+                        <div class="bg-[#0f0f1a] p-3 rounded border border-gray-700 hover:border-[#4ecca3] transition-colors cursor-pointer" onclick="document.getElementById('standingsId').value='${r.id}'; setTab('rally', null)">
+                            <p class="font-bold text-white text-sm">${r.name}</p>
+                            <p class="text-xs text-gray-500">${date}</p>
+                        </div>
+                    `;
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        let currentTab = 'rally';
+        
+        function setTab(tab, event) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('tab-active');
+                btn.classList.add('bg-[#0f0f1a]', 'hover:bg-[#16213e]');
+            });
+            if (event) {
+                event.target.classList.remove('bg-[#0f0f1a]', 'hover:bg-[#16213e]');
+                event.target.classList.add('tab-active');
+            }
+            loadStandings();
+        }
+
+        async function loadStandings() {
+            const id = document.getElementById('standingsId').value;
+            const tbody = document.getElementById('standingsBody');
+            tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">Caricamento...</td></tr>';
+
+            try {
+                const res = await fetch(`${API_BASE}/standings/${currentTab}/${id}`);
+                const data = await res.json();
+                
+                tbody.innerHTML = '';
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">Nessun dato per questo ID.</td></tr>';
+                    return;
+                }
+
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = "border-b border-gray-700 hover:bg-[#16213e] transition-colors";
+                    
+                    let gapDisplay = row.gap_first || '-';
+                    if (currentTab === 'stage') gapDisplay = row.gap || '-';
+                    
+                    let extra = '';
+                    if (currentTab === 'rally') {
+                        extra = `<td class="p-3 font-bold text-[#f5a623] text-right">${row.points} pt</td>`;
+                        document.getElementById('extraColHead').textContent = "Punti";
+                    } else {
+                        document.getElementById('extraColHead').textContent = "";
+                    }
+
+                    tr.innerHTML = `
+                        <td class="p-3 text-center font-bold text-[#4ecca3]">${row.position}</td>
+                        <td class="p-3 font-semibold text-white">${row.driver || row.driver_name}</td>
+                        <td class="p-3 font-mono text-gray-300">
+                            ${row.time_str || row.total_str} 
+                            <span class="text-red-400 text-xs ml-2">${gapDisplay !== '-' ? gapDisplay : ''}</span>
+                        </td>
+                        ${extra}
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-400">Errore di caricamento</td></tr>`;
+            }
+        }
+
+        // --- LOGICA ADMIN ---
         let dbRallys = [];
-        async function loadSetup() { /* ... codice setup ... */ }
-        // (Eventuali listener per selectRally, uploadBtn, saveBtn vanno incollati qui come prima)
+        async function loadSetup() {
+            try {
+                const res = await fetch(`${API_BASE}/setup`);
+                const data = await res.json();
+                dbRallys = data.rallys;
+                
+                const selectRally = document.getElementById('selectRally');
+                selectRally.innerHTML = '<option value="">Seleziona...</option>';
+                dbRallys.forEach(r => {
+                    selectRally.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+                });
+            } catch (e) { console.error("Errore setup", e); }
+        }
+
+        document.getElementById('selectRally').addEventListener('change', (e) => {
+            const rallyId = e.target.value;
+            const selectLeg = document.getElementById('selectLeg');
+            const btnNewLeg = document.getElementById('btnNewLeg');
+            
+            if (!rallyId) {
+                selectLeg.innerHTML = '<option value="">Seleziona...</option>';
+                selectLeg.disabled = true;
+                btnNewLeg.classList.add('hidden');
+                return;
+            }
+            const rally = dbRallys.find(r => r.id == rallyId);
+            selectLeg.innerHTML = '<option value="">Seleziona...</option>';
+            if (rally.leg) {
+                rally.leg.forEach(l => {
+                    selectLeg.innerHTML += `<option value="${l.id}">${l.name}</option>`;
+                });
+            }
+            selectLeg.disabled = false;
+            btnNewLeg.classList.remove('hidden');
+            btnNewLeg.disabled = false;
+        });
+
+        document.getElementById('btnNewRally').addEventListener('click', async () => {
+            const name = prompt("Nome del nuovo Rally:");
+            if (!name) return;
+            await fetch(`${API_BASE}/create-rally`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            loadSetup();
+        });
+
+        document.getElementById('btnNewLeg').addEventListener('click', async () => {
+            const rallyId = document.getElementById('selectRally').value;
+            const name = prompt("Nome del nuovo Leg (es. Leg 1):");
+            if (!name || !rallyId) return;
+            await fetch(`${API_BASE}/create-leg`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rally_id: rallyId, name })
+            });
+            document.getElementById('selectRally').dispatchEvent(new Event('change'));
+        });
+
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) uploadBtn.classList.remove('hidden');
+        });
+
+        uploadBtn.addEventListener('click', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('screenshot', file);
+
+            uploadBtn.classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('trackName').textContent = data.track_name;
+                    const tbody = document.getElementById('tableBody');
+                    tbody.innerHTML = '';
+                    
+                    data.parsed_data.forEach((row, index) => {
+                        if (index > 0 && data.parsed_data.slice(0, index).some(r => r.driver === row.driver)) return; 
+
+                        const tr = document.createElement('tr');
+                        tr.className = "border-b border-gray-700 hover:bg-[#16213e]";
+                        tr.innerHTML = `
+                            <td class="p-2 text-center font-bold text-[#4ecca3]">${row.position}</td>
+                            <td class="p-2"><input type="text" class="${inputStyle} font-semibold" value="${row.driver || ''}" data-field="driver"></td>
+                            <td class="p-2"><input type="text" class="${inputStyle} text-gray-400 text-xs" value="${row.car || ''}" data-field="car"></td>
+                            <td class="p-2"><input type="text" class="${inputStyle} text-gray-300 font-mono" value="${row.time || ''}" data-field="time"></td>
+                            <td class="p-2"><input type="text" class="${inputStyle} text-red-400 font-mono" value="${row.gap || '-'}" data-field="gap"></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                    document.getElementById('resultBox').classList.remove('hidden');
+                } else {
+                    alert("Errore OCR: " + data.error);
+                }
+            } catch (error) {
+                alert("Errore di rete: " + error.message);
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+                uploadBtn.classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('saveBtn').addEventListener('click', async () => {
+            const legId = document.getElementById('selectLeg').value;
+            const stageName = document.getElementById('stageName').value;
+            const trackName = document.getElementById('trackName').textContent;
+            
+            if (!legId || !stageName) {
+                alert("⚠️ Seleziona un Rally, un Leg e inserisci il nome dello Stage prima di salvare.");
+                return;
+            }
+
+            const finalData = [];
+            document.querySelectorAll('#tableBody tr').forEach((tr, index) => {
+                const inputs = tr.querySelectorAll('input');
+                finalData.push({
+                    position: index + 1,
+                    driver: inputs[0].value,
+                    car: inputs[1].value,
+                    time: inputs[2].value,
+                    gap: inputs[3].value,
+                    penalty: "-"
+                });
+            });
+
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true; btn.textContent = "Salvataggio...";
+
+            try {
+                const response = await fetch(`${API_BASE}/save-stage`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ leg_id: legId, stage_name: stageName, track_name: trackName, results: finalData })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert("✅ " + result.message);
+                    document.getElementById('resultBox').classList.add('hidden');
+                    document.getElementById('stageName').value = '';
+                    fileInput.value = '';
+                } else {
+                    alert("❌ Errore: " + result.error);
+                }
+            } catch (error) {
+                alert("❌ Errore di rete: " + error.message);
+            } finally {
+                btn.disabled = false; btn.textContent = "💾 Conferma e Salva";
+            }
+        });
     </script>
 </body>
 </html>
