@@ -4,6 +4,7 @@ from services.ocr_service import extract_text_from_image  # <-- Nome corretto
 from utils.db import get_supabase
 
 app = Flask(__name__)
+CORS(app)
 
 @app.route('/')
 def health_check():
