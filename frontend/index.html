@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ACR Championship</title>
     <script src="https://cdn.tailwindcss.com" data-cfasync="false"></script>
+    <!-- Carichiamo Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { background-color: #0f0f1a; color: white; font-family: sans-serif; }
@@ -44,9 +45,10 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- VISTA PUBBLICA                             -->
+    <!-- VISTA PUBBLICA (Visibile di default)       -->
     <!-- ========================================== -->
-    <div id="view-public" class="w-full max-w-6xl hidden">
+    <!-- NOTA: Rimosso 'hidden' da questo div -->
+    <div id="view-public" class="w-full max-w-6xl">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="glass p-6 rounded-lg h-fit">
                 <h2 class="text-xl font-bold text-[#4ecca3] mb-4 border-b border-gray-700 pb-2">📅 Calendario Eventi</h2>
@@ -138,20 +140,27 @@
     </div>
 
     <script>
-        // ⚠️ SOSTITUISCI QUESTE DUE RIGHE CON I TUOI DATI DA SUPABASE ⚠️
-        const SUPABASE_URL = 'https://rvqorpdebooklqtjbnwl.supabase.co'; 
-        const SUPABASE_ANON_KEY = 'LA_TUA_ANON_KEY_LUNGA_QUI';
+        // ⚠️ INSERISCI QUI LE TUE CHIAVI DI SUPABASE ⚠️
+        const SUPABASE_URL = 'https://rvqorpdebooklqtjbnwl.supabase.coo'; 
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cW9ycGRlYm9va2xxdGpibndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIzMTk2ODIsImV4cCI6MjEwNzg5NTY4Mn0.oaw45keCaaP40J9nfVLaggIyzPJBT-X0XerqlMc5iMk';
         
-        const API_BASE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cW9ycGRlYm9va2xxdGpibndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIzMTk2ODIsImV4cCI6MjEwNzg5NTY4Mn0.oaw45keCaaP40J9nfVLaggIyzPJBT-X0XerqlMc5iMk';
+        const API_BASE = 'https://acr-backend-wv98.onrender.com/api';
         const inputStyle = "w-full bg-transparent border-0 focus:ring-1 focus:ring-[#4ecca3] rounded px-1 py-0.5 text-white";
 
-        // Inizializza Supabase
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // 1. INIZIALIZZAZIONE SICURA
+        let supabase = null;
+        try {
+            if (SUPABASE_URL !== 'https://rvqorpdebooklqtjbnwl.supabase.co') {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            } else {
+                console.warn("Supabase non configurato. Il login non funzionerà.");
+            }
+        } catch (e) {
+            console.error("Errore nell'inizializzazione di Supabase:", e);
+        }
 
-        // --- GESTIONE AUTENTICAZIONE ---
+        // 2. GESTIONE AUTENTICAZIONE (Senza bloccare il sito se fallisce)
         async function checkAuth() {
-            const { data: { session } } = await supabase.auth.getSession();
-            
             const btnLogin = document.getElementById('btnLogin');
             const linkAdmin = document.getElementById('linkAdmin');
             const btnLogout = document.getElementById('btnLogout');
@@ -159,35 +168,67 @@
             const viewAdmin = document.getElementById('view-admin');
             const urlParams = new URLSearchParams(window.location.search);
 
-            if (session) {
-                btnLogin.classList.add('hidden');
-                btnLogout.classList.remove('hidden');
-                linkAdmin.classList.remove('hidden');
-                
-                if (urlParams.get('admin') === 'true') {
-                    viewPublic.classList.add('hidden');
-                    viewAdmin.classList.remove('hidden');
-                    loadSetup();
+            // Se Supabase non è configurato, mostra solo la vista pubblica
+            if (!supabase) {
+                viewPublic.classList.remove('hidden');
+                viewAdmin.classList.add('hidden');
+                loadCalendar();
+                loadStandings();
+                return;
+            }
+
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+
+                if (session) {
+                    // LOGGATO
+                    btnLogin.classList.add('hidden');
+                    btnLogout.classList.remove('hidden');
+                    linkAdmin.classList.remove('hidden');
+                    
+                    if (urlParams.get('admin') === 'true') {
+                        viewPublic.classList.add('hidden');
+                        viewAdmin.classList.remove('hidden');
+                        loadSetup();
+                    } else {
+                        viewPublic.classList.remove('hidden');
+                        viewAdmin.classList.add('hidden');
+                        loadCalendar();
+                        loadStandings();
+                    }
                 } else {
+                    // NON LOGGATO
+                    btnLogin.classList.remove('hidden');
+                    btnLogout.classList.add('hidden');
+                    linkAdmin.classList.add('hidden');
+                    
                     viewPublic.classList.remove('hidden');
                     viewAdmin.classList.add('hidden');
                     loadCalendar();
                     loadStandings();
                 }
-            } else {
-                btnLogin.classList.remove('hidden');
-                btnLogout.classList.add('hidden');
-                linkAdmin.classList.add('hidden');
-                
+            } catch (err) {
+                console.error("Errore auth:", err);
+                // In caso di errore, mostra la vista pubblica di default
                 viewPublic.classList.remove('hidden');
                 viewAdmin.classList.add('hidden');
-                loadCalendar();
-                loadStandings();
             }
         }
 
-        // Listener Pulsanti Auth
+        // 3. LISTENER PULSANTI AUTH
+        document.getElementById('btnLogin').addEventListener('click', () => {
+            document.getElementById('loginModal').classList.remove('hidden');
+        });
+        
+        document.getElementById('btnCancelLogin').addEventListener('click', () => {
+            document.getElementById('loginModal').classList.add('hidden');
+        });
+
         document.getElementById('btnDoLogin').addEventListener('click', async () => {
+            if (!supabase) {
+                alert("Supabase non è configurato. Controlla il codice.");
+                return;
+            }
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
             const errorMsg = document.getElementById('loginError');
@@ -205,22 +246,16 @@
         });
 
         document.getElementById('btnLogout').addEventListener('click', async () => {
-            await supabase.auth.signOut();
+            if (supabase) await supabase.auth.signOut();
             window.location.href = '/';
         });
 
-        document.getElementById('btnLogin').addEventListener('click', () => {
-            document.getElementById('loginModal').classList.remove('hidden');
-        });
-        
-        document.getElementById('btnCancelLogin').addEventListener('click', () => {
-            document.getElementById('loginModal').classList.add('hidden');
-        });
-
-        // Avvia il controllo
+        // 4. AVVIO
         checkAuth();
 
-        // --- LOGICA PUBBLICA ---
+        // ==========================================
+        // LOGICA VISTA PUBBLICA
+        // ==========================================
         async function loadCalendar() {
             try {
                 const res = await fetch(`${API_BASE}/calendar`);
@@ -242,7 +277,7 @@
                         </div>
                     `;
                 });
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Errore calendario:", e); }
         }
 
         let currentTab = 'rally';
@@ -306,7 +341,9 @@
             }
         }
 
-        // --- LOGICA ADMIN ---
+        // ==========================================
+        // LOGICA VISTA ADMIN
+        // ==========================================
         let dbRallys = [];
         async function loadSetup() {
             try {
