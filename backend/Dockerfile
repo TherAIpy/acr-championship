@@ -18,4 +18,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Avvia l'applicazione con Gunicorn
-CMD ["gunicorn", "app:app"]
+CMD ["gunicorn", "app:app", "--timeout", "120"]
