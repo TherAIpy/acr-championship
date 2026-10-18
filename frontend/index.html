@@ -140,11 +140,11 @@
         const inputStyle = "w-full bg-transparent border-0 focus:ring-1 focus:ring-[#4ecca3] rounded px-1 py-0.5 text-white";
         let supabaseClient = null;
 
-        // Inizializzazione sicura
+        // Inizializzazione Supabase
+        let supabaseClient = null;
         try {
-            if (SUPABASE_URL !== 'https://rvqorpdebooklqtjbnwl.supabase.co') {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            }
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log("Supabase connesso con successo!");
         } catch(e) {
             console.error("Errore init Supabase:", e);
         }
