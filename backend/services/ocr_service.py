@@ -1,43 +1,58 @@
 import os
-import json
-from google.oauth2 import service_account
-from google.cloud import vision
+import requests
+from PIL import Image
+import io
 
 def extract_text_from_image(image_bytes: bytes) -> str:
     """
-    Invia l'immagine a Google Cloud Vision API e restituisce il testo estratto.
+    Invia l'immagine all'API di OCR.space e restituisce il testo estratto.
     """
     try:
-        # 1. Recupera le credenziali dalla variabile d'ambiente di Render
-        creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
-        if not creds_json:
-            raise ValueError("La variabile d'ambiente GOOGLE_CREDENTIALS_JSON non è impostata.")
+        api_key = os.environ.get("OCR_SPACE_API_KEY")
+        if not api_key:
+            raise ValueError("La variabile d'ambiente OCR_SPACE_API_KEY non è impostata.")
 
-        # 2. Crea le credenziali dal JSON
-        creds_dict = json.loads(creds_json)
-        credentials = service_account.Credentials.from_service_account_info(creds_dict)
+        # 1. Controllo e compressione dell'immagine (limite API: 1MB)
+        img = Image.open(io.BytesIO(image_bytes))
+        
+        # Se l'immagine è troppo grande o pesante, la ridimensioniamo
+        if len(image_bytes) > 1000000: # > 1 MB
+            img.thumbnail((1920, 1080), Image.Resampling.LANCZOS)
+            buffer = io.BytesIO()
+            img.save(buffer, format="JPEG", quality=85)
+            image_bytes = buffer.getvalue()
 
-        # 3. Inizializza il client di Vision API
-        client = vision.ImageAnnotatorClient(credentials=credentials)
+        # 2. Prepara la chiamata API
+        url = 'https://api.ocr.space/parse/image'
+        payload = {
+            'apikey': api_key,
+            'language': 'ita',       # Imposta l'italiano (o 'eng' per l'inglese)
+            'isOverlayRequired': False,
+            'scale': True,           # Migliora la lettura di caratteri piccoli
+            'OCREngine': 2           # Engine 2 è più preciso per le tabelle
+        }
+        
+        files = {'file': ('screenshot.jpg', image_bytes, 'image/jpeg')}
 
-        # 4. Prepara l'immagine
-        image = vision.Image(content=image_bytes)
+        # 3. Esegui la richiesta
+        response = requests.post(url, data=payload, files=files, timeout=30)
+        response.raise_for_status()
+        
+        result = response.json()
 
-        # 5. Esegui il Document Text Detection (ottimo per tabelle e layout complessi)
-        response = client.document_text_detection(image=image)
+        # 4. Gestisci eventuali errori restituiti dall'API
+        if result.get('IsErroredOnProcessing'):
+            error_msg = result.get('ErrorMessage', ['Errore sconosciuto'])[0]
+            raise Exception(f"Errore OCR.space: {error_msg}")
 
-        # 6. Controlla se ci sono errori nell'API
-        if response.error.message:
-            raise Exception(f"Errore API Vision: {response.error.message}")
-
-        # 7. Estrai il testo completo
-        text = response.full_text_annotation.text
+        # 5. Estrai il testo
+        text = "".join(result['ParsedResults'][0]['ParsedText'])
         
         if not text.strip():
-            raise ValueError("Google Vision non ha rilevato alcun testo nell'immagine.")
+            raise ValueError("OCR.space non ha rilevato alcun testo nell'immagine.")
 
         return text
 
     except Exception as e:
-        print(f"ERRORE OCR VISION: {e}")
+        print(f"ERRORE OCR SPACE: {e}")
         raise e
