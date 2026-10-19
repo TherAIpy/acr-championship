@@ -589,40 +589,110 @@
             stageNameInput.addEventListener('input', checkStageReady);
         }
 
-        document.getElementById('btnNewChamp').addEventListener('click', async () => {
-            const name = prompt("Nome del nuovo Campionato:");
-            if (!name) return;
-            await fetch(`${API_BASE}/create-championship`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name })
-            });
-            loadSetup();
-            loadPublicFilters();
-        });
+        // Pulsante Nuovo Campionato con selezione automatica
+document.getElementById('btnNewChamp').addEventListener('click', async () => {
+    const name = prompt("Nome del nuovo Campionato:");
+    if (!name) return;
 
-        document.getElementById('btnNewRally').addEventListener('click', async () => {
-            const champId = selectChamp.value;
-            const name = prompt("Nome del nuovo Rally:");
-            if (!name || !champId) return;
-            await fetch(`${API_BASE}/create-rally`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, championship_id: champId })
-            });
-            loadSetup();
-            loadPublicFilters();
+    try {
+        const response = await fetch(`${API_BASE}/create-championship`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
         });
+        const result = await response.json();
 
-        document.getElementById('btnNewLeg').addEventListener('click', async () => {
-            const rallyId = selectRally.value;
-            const name = prompt("Nome del nuovo Leg (es. Leg 1):");
-            if (!name || !rallyId) return;
-            await fetch(`${API_BASE}/create-leg`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rally_id: rallyId, name })
-            });
-            loadSetup();
-            loadPublicFilters();
+        if (result.success) {
+            // Ricarica la lista dal DB
+            await loadSetup();
+            await loadPublicFilters();
+
+            // Seleziona automaticamente il nuovo campionato e scatena l'evento 'change'
+            const selectChamp = document.getElementById('selectChamp');
+            selectChamp.value = result.championship.id;
+            selectChamp.dispatchEvent(new Event('change'));
+        } else {
+            alert("❌ Errore durante la creazione del campionato: " + (result.error || "Errore sconosciuto"));
+        }
+    } catch (err) {
+        alert("❌ Errore di rete: " + err.message);
+    }
+});
+
+// Pulsante Nuovo Rally con selezione automatica
+document.getElementById('btnNewRally').addEventListener('click', async () => {
+    const champId = document.getElementById('selectChamp').value;
+    const name = prompt("Nome del nuovo Rally:");
+    if (!name || !champId) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/create-rally`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, championship_id: champId })
         });
+        const result = await response.json();
+
+        if (result.success) {
+            await loadSetup();
+            await loadPublicFilters();
+
+            // Rileziona il campionato corrente per ripopolare la lista dei rally
+            const selectChamp = document.getElementById('selectChamp');
+            selectChamp.value = champId;
+            selectChamp.dispatchEvent(new Event('change'));
+
+            // Seleziona automaticamente il nuovo rally
+            const selectRally = document.getElementById('selectRally');
+            selectRally.value = result.rally.id;
+            selectRally.dispatchEvent(new Event('change'));
+        } else {
+            alert("❌ Errore durante la creazione del rally: " + (result.error || "Errore sconosciuto"));
+        }
+    } catch (err) {
+        alert("❌ Errore di rete: " + err.message);
+    }
+});
+
+// Pulsante Nuovo Leg con selezione automatica
+    document.getElementById('btnNewLeg').addEventListener('click', async () => {
+        const rallyId = document.getElementById('selectRally').value;
+        const name = prompt("Nome del nuovo Leg (es. Leg 1):");
+        if (!name || !rallyId) return;
+
+     try {
+        const response = await fetch(`${API_BASE}/create-leg`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rally_id: rallyId, name })
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            const champId = document.getElementById('selectChamp').value;
+            await loadSetup();
+            await loadPublicFilters();
+
+            // Ripopola
+            const selectChamp = document.getElementById('selectChamp');
+            selectChamp.value = champId;
+            selectChamp.dispatchEvent(new Event('change'));
+
+            const selectRally = document.getElementById('selectRally');
+            selectRally.value = rallyId;
+            selectRally.dispatchEvent(new Event('change'));
+
+            // Seleziona il nuovo leg
+            const selectLeg = document.getElementById('selectLeg');
+            selectLeg.value = result.leg.id;
+            selectLeg.dispatchEvent(new Event('change'));
+        } else {
+            alert("❌ Errore durante la creazione del leg: " + (result.error || "Errore sconosciuto"));
+        }
+        } catch (err) {
+        alert("❌ Errore di rete: " + err.message);
+        }
+    });
 
         const fileInput = document.getElementById('fileInput');
         if (fileInput) {
