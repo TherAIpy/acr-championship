@@ -657,7 +657,7 @@
                                     <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white font-semibold" value="${row.driver || ''}" data-field="driver"></td>
                                     <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-400 text-xs" value="${row.car || ''}" data-field="car"></td>
                                     <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 font-mono-time" value="${row.time || ''}" data-field="time"></td>
-                                    <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-amber-400 font-mono-time text-center" value="-" data-field="penalty"></td>
+                                    <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-amber-400 font-mono-time text-center" value="${row.penalty || '-'}" data-field="penalty"></td>
                                     <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-rose-400 font-mono-time" value="${row.gap || '-'}" data-field="gap"></td>
                                 `;
                                 tbody.appendChild(tr);

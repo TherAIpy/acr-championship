@@ -58,10 +58,22 @@ def parse_overall_text(raw_text):
         if time_match or is_corrupted:
             time_str = time_match.group(1).replace(',', '.') if time_match else "00:00.000"
             
+            # Gap
             gap_str = "-"
             if i + 1 < len(lines) and lines[i+1].startswith('+'):
                 gap_str = lines[i+1].replace(',', '.')
 
+            # Controllo Penalità (se la riga immediatamente precedente al tempo è una penalità)
+            penalty_str = "-"
+            if i - 1 >= 0:
+                prev_line = lines[i-1]
+                # Se la riga precedente contiene secondi/formato di penalità (es. +00:05 o +05.000 o simile)
+                if re.search(r'\+\d+', prev_line) and not prev_line.startswith('+00:') and prev_line != gap_str:
+                    penalty_str = prev_line
+                elif prev_line in ["5s", "10s", "15s", "30s", "60s"]: # formati alternativi di penalità
+                    penalty_str = prev_line
+
+            # Ricerca Vettura e Pilota
             car_idx = -1
             for j in range(i-1, max(i-6, -1), -1):
                 if " - " in lines[j] or any(brand in lines[j] for brand in ["Alpine", "Fiat", "Ford", "Toyota", "Subaru", "Citroen", "Hyundai", "Skoda"]):
@@ -84,7 +96,7 @@ def parse_overall_text(raw_text):
                             "driver": player_name,
                             "car": car_model,
                             "time": time_str,
-                            "penalty": "-",
+                            "penalty": penalty_str,
                             "gap": gap_str
                         })
 
