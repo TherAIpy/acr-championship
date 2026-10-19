@@ -33,7 +33,7 @@ def ms_to_time_str(ms):
     return f"{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
 
 # =============================================================================
-# PARSER (Integrato per evitare errori di import)
+# PARSER OCR
 # =============================================================================
 def parse_overall_text(raw_text):
     lines = [line.strip() for line in raw_text.split('\n') if line.strip()]
@@ -129,14 +129,25 @@ def upload_image():
 @app.route('/api/setup', methods=['GET'])
 def get_setup():
     supabase = get_supabase()
-    rallys = supabase.table('rally').select('*, leg(*, stage(*))').execute()
-    return jsonify({"rallys": rallys.data})
+    # Recupera i campionati con la gerarchia completa: championship -> rally -> leg -> stage
+    champs = supabase.table('championship').select('*, rally(*, leg(*, stage(*)))').execute()
+    return jsonify({"championships": champs.data})
+
+@app.route('/api/create-championship', methods=['POST'])
+def create_championship():
+    data = request.json
+    supabase = get_supabase()
+    res = supabase.table('championship').insert({"name": data['name']}).execute()
+    return jsonify({"success": True, "championship": res.data[0]})
 
 @app.route('/api/create-rally', methods=['POST'])
 def create_rally():
     data = request.json
     supabase = get_supabase()
-    res = supabase.table('rally').insert({"name": data['name']}).execute()
+    res = supabase.table('rally').insert({
+        "name": data['name'],
+        "championship_id": data.get('championship_id')
+    }).execute()
     return jsonify({"success": True, "rally": res.data[0]})
 
 @app.route('/api/create-leg', methods=['POST'])
@@ -172,7 +183,7 @@ def save_stage():
                 "driver_name": r.get("driver"),
                 "car_model": r.get("car"),
                 "time_str": r.get("time"),
-                "penalty": r.get("penalty"),
+                "penalty": r.get("penalty", "-"),
                 "gap": r.get("gap")
             })
         supabase.table('stage_result').insert(insert_data).execute()
@@ -181,14 +192,12 @@ def save_stage():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-# --- ENDPOINT PER CALENDARIO PUBBLICO ---
 @app.route('/api/calendar', methods=['GET'])
 def get_calendar():
     supabase = get_supabase()
     rallys = supabase.table('rally').select('id, name, created_at').order('created_at', desc=True).execute()
     return jsonify(rallys.data)
 
-# --- ENDPOINT PER CLASSIFICHE ---
 @app.route('/api/standings/<type>/<int:id>', methods=['GET'])
 def get_standings(type, id):
     supabase = get_supabase()
@@ -204,12 +213,15 @@ def get_standings(type, id):
         
         results = supabase.table('stage_result').select('*').in_('stage_id', stage_ids).execute()
         driver_totals = {}
+        driver_penalties = {}
         for r in results.data:
             driver = r['driver_name']
             time_ms = time_str_to_ms(r['time_str'])
             driver_totals[driver] = driver_totals.get(driver, 0) + time_ms
+            if r.get('penalty') and r['penalty'] != '-':
+                driver_penalties[driver] = r['penalty'] # Conserva l'ultima o accumula se necessario
             
-        standings = [{"driver": k, "total_ms": v, "total_str": ms_to_time_str(v)} for k, v in driver_totals.items()]
+        standings = [{"driver": k, "total_ms": v, "total_str": ms_to_time_str(v), "penalty": driver_penalties.get(k, "-")} for k, v in driver_totals.items()]
         standings.sort(key=lambda x: x['total_ms'])
         
         leader_ms = standings[0]['total_ms'] if standings else 0
@@ -250,6 +262,44 @@ def get_standings(type, id):
             s['points'] = points_system[i] if i < len(points_system) else 0
             prev_ms = s['total_ms']
         return jsonify(standings)
+
+    elif type == 'championship':
+        rallys = supabase.table('rally').select('id').eq('championship_id', id).execute()
+        rally_ids = [r['id'] for r in rallys.data]
+        if not rally_ids: return jsonify([])
+        
+        champ_points = {}
+        points_system = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1]
+        
+        for r_id in rally_ids:
+            legs = supabase.table('leg').select('id').eq('rally_id', r_id).execute()
+            leg_ids = [l['id'] for l in legs.data]
+            if not leg_ids: continue
+            
+            stages = supabase.table('stage').select('id').in_('leg_id', leg_ids).execute()
+            stage_ids = [s['id'] for s in stages.data]
+            if not stage_ids: continue
+            
+            results = supabase.table('stage_result').select('*').in_('stage_id', stage_ids).execute()
+            driver_totals = {}
+            for r in results.data:
+                driver = r['driver_name']
+                time_ms = time_str_to_ms(r['time_str'])
+                driver_totals[driver] = driver_totals.get(driver, 0) + time_ms
+                
+            standings = [{"driver": k, "total_ms": v} for k, v in driver_totals.items()]
+            standings.sort(key=lambda x: x['total_ms'])
+            
+            for i, s in enumerate(standings):
+                pts = points_system[i] if i < len(points_system) else 0
+                drv = s['driver']
+                champ_points[drv] = champ_points.get(drv, 0) + pts
+                
+        final_standings = [{"driver": k, "points": v} for k, v in champ_points.items()]
+        final_standings.sort(key=lambda x: x['points'], reverse=True)
+        for i, s in enumerate(final_standings):
+            s['position'] = i + 1
+        return jsonify(final_standings)
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))

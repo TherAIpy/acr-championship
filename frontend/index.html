@@ -76,12 +76,18 @@
 
     <!-- VISTA PUBBLICA -->
     <div id="view-public" class="w-full max-w-7xl">
-        <!-- FILTRI SELEZIONE RALLI/LEG/STAGE -->
+        <!-- FILTRI SELEZIONE GERARCHICA A CASCATA -->
         <div class="glass-panel p-4 rounded-xl mb-6 flex flex-wrap items-center justify-between gap-4">
             <div class="flex flex-wrap items-center gap-3">
                 <div class="flex items-center space-x-2">
+                    <i data-lucide="award" class="w-4 h-4 text-purple-400"></i>
+                    <select id="pubChampSelect" class="bg-slate-900 text-slate-200 text-sm font-semibold p-2.5 rounded-lg border border-slate-700 focus:border-blue-500">
+                        <option value="">Seleziona Campionato...</option>
+                    </select>
+                </div>
+                <div class="flex items-center space-x-2">
                     <i data-lucide="flag" class="w-4 h-4 text-blue-400"></i>
-                    <select id="pubRallySelect" class="bg-slate-900 text-slate-200 text-sm font-semibold p-2.5 rounded-lg border border-slate-700 focus:border-blue-500">
+                    <select id="pubRallySelect" class="bg-slate-900 text-slate-200 text-sm font-semibold p-2.5 rounded-lg border border-slate-700 focus:border-blue-500" disabled>
                         <option value="">Seleziona Rally...</option>
                     </select>
                 </div>
@@ -101,15 +107,10 @@
 
             <!-- TABS CLASSIFICA -->
             <div class="flex bg-slate-900/80 p-1 rounded-lg border border-slate-800">
-                <button class="tab-btn tab-active px-4 py-2 text-xs font-bold rounded-md flex items-center gap-1.5" onclick="setTab('rally', event)">
-                    <i data-lucide="award" class="w-3.5 h-3.5"></i> Rally Points
-                </button>
-                <button class="tab-btn text-slate-400 hover:text-white px-4 py-2 text-xs font-bold rounded-md flex items-center gap-1.5" onclick="setTab('leg', event)">
-                    <i data-lucide="clock" class="w-3.5 h-3.5"></i> Leg Overall
-                </button>
-                <button class="tab-btn text-slate-400 hover:text-white px-4 py-2 text-xs font-bold rounded-md flex items-center gap-1.5" onclick="setTab('stage', event)">
-                    <i data-lucide="zap" class="w-3.5 h-3.5"></i> Stage Results
-                </button>
+                <button class="tab-btn tab-active px-3 py-2 text-xs font-bold rounded-md flex items-center gap-1" onclick="setTab('championship', event)">Campionato</button>
+                <button class="tab-btn text-slate-400 hover:text-white px-3 py-2 text-xs font-bold rounded-md flex items-center gap-1" onclick="setTab('rally', event)">Rally</button>
+                <button class="tab-btn text-slate-400 hover:text-white px-3 py-2 text-xs font-bold rounded-md flex items-center gap-1" onclick="setTab('leg', event)">Leg</button>
+                <button class="tab-btn text-slate-400 hover:text-white px-3 py-2 text-xs font-bold rounded-md flex items-center gap-1" onclick="setTab('stage', event)">Stage</button>
             </div>
         </div>
 
@@ -122,11 +123,11 @@
                             <th class="p-4 w-16 text-center">POS</th>
                             <th class="p-4">PILOTA</th>
                             <th class="p-4">TEMPO / DISTACCO</th>
-                            <th class="p-4 text-right" id="extraColHead">PUNTI FIA</th>
+                            <th class="p-4 text-right" id="extraColHead">PUNTI</th>
                         </tr>
                     </thead>
                     <tbody id="standingsBody" class="divide-y divide-slate-800/50 text-sm font-medium fade-in">
-                        <tr><td colspan="4" class="p-8 text-center text-slate-500">Seleziona un evento per visualizzare i tempi.</td></tr>
+                        <tr><td colspan="4" class="p-8 text-center text-slate-500">Seleziona un campionato o evento per visualizzare i tempi.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -136,25 +137,30 @@
     <!-- VISTA ADMIN -->
     <div id="view-admin" class="w-full max-w-7xl hidden space-y-6 fade-in">
         <div class="glass-panel p-6 rounded-xl">
-            <h2 class="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2"><i data-lucide="folder-plus"></i> Setup Campionato & Stage</h2>
+            <h2 class="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2"><i data-lucide="folder-plus"></i> Setup Campionato, Rally, Leg & Stage</h2>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
+                    <label class="text-xs text-slate-400 font-semibold block mb-1">Campionato</label>
+                    <select id="selectChamp" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700"><option value="">Seleziona...</option></select>
+                    <button id="btnNewChamp" class="text-xs text-purple-400 font-semibold mt-1 hover:underline">+ Nuovo Campionato</button>
+                </div>
+                <div>
                     <label class="text-xs text-slate-400 font-semibold block mb-1">Rally</label>
-                    <select id="selectRally" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700"><option value="">Seleziona...</option></select>
-                    <button id="btnNewRally" class="text-xs text-blue-400 font-semibold mt-1 hover:underline">+ Nuovo Rally</button>
+                    <select id="selectRally" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700" disabled><option value="">Seleziona...</option></select>
+                    <button id="btnNewRally" class="text-xs text-blue-400 font-semibold mt-1 hover:underline hidden" disabled>+ Nuovo Rally</button>
                 </div>
                 <div>
                     <label class="text-xs text-slate-400 font-semibold block mb-1">Leg</label>
                     <select id="selectLeg" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700" disabled><option value="">Seleziona...</option></select>
-                    <button id="btnNewLeg" class="text-xs text-blue-400 font-semibold mt-1 hover:underline hidden" disabled>+ Nuovo Leg</button>
+                    <button id="btnNewLeg" class="text-xs text-emerald-400 font-semibold mt-1 hover:underline hidden" disabled>+ Nuovo Leg</button>
                 </div>
                 <div>
                     <label class="text-xs text-slate-400 font-semibold block mb-1">Nome Stage (es. SS1)</label>
                     <input type="text" id="stageName" placeholder="SS1 - Special Stage" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700">
                 </div>
-                <div class="flex items-end">
-                    <button onclick="loadSetup()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold p-2.5 rounded-lg border border-slate-600 transition-all">Aggiorna elenchi</button>
-                </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button onclick="loadSetup()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-4 py-2 rounded-lg border border-slate-600 transition-all text-xs">Aggiorna elenchi</button>
             </div>
         </div>
 
@@ -177,6 +183,7 @@
                                 <th class="p-2.5">PILOTA</th>
                                 <th class="p-2.5">VETTURA</th>
                                 <th class="p-2.5 w-32">TEMPO STAGE</th>
+                                <th class="p-2.5 w-24 text-center">PENALITÀ</th>
                                 <th class="p-2.5 w-28">GAP</th>
                             </tr>
                         </thead>
@@ -194,8 +201,8 @@
         const API_BASE = 'https://acr-backend-wv98.onrender.com/api';
         
         let supabaseClient = null;
-        let dbRallys = [];
-        let currentTab = 'rally';
+        let dbChamps = [];
+        let currentTab = 'championship';
 
         document.addEventListener('DOMContentLoaded', async () => {
             try {
@@ -204,7 +211,6 @@
                 }
             } catch(e) { console.error("Error initializing Supabase:", e); }
 
-            // Gestione Modale Login
             const btnLogin = document.getElementById('btnLogin');
             const loginModal = document.getElementById('loginModal');
             const btnCancelLogin = document.getElementById('btnCancelLogin');
@@ -238,7 +244,6 @@
                 });
             }
 
-            // Inizializzazione filtri e setup admin
             await checkAuth();
             await loadPublicFilters();
         });
@@ -298,16 +303,44 @@
             try {
                 const res = await fetch(`${API_BASE}/setup`);
                 const data = await res.json();
-                dbRallys = data.rallys || [];
+                dbChamps = data.championships || [];
                 
-                const pubRallySelect = document.getElementById('pubRallySelect');
-                if (!pubRallySelect) return;
+                const pubChampSelect = document.getElementById('pubChampSelect');
+                if (!pubChampSelect) return;
                 
-                pubRallySelect.innerHTML = '<option value="">Seleziona Rally...</option>';
-                dbRallys.forEach(r => {
-                    pubRallySelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+                pubChampSelect.innerHTML = '<option value="">Seleziona Campionato...</option>';
+                dbChamps.forEach(c => {
+                    pubChampSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
                 });
             } catch (e) { console.error("Errore caricamento filtri pubblici:", e); }
+        }
+
+        const pubChampSelect = document.getElementById('pubChampSelect');
+        if (pubChampSelect) {
+            pubChampSelect.addEventListener('change', (e) => {
+                const champId = e.target.value;
+                const pubRallySelect = document.getElementById('pubRallySelect');
+                const pubLegSelect = document.getElementById('pubLegSelect');
+                const pubStageSelect = document.getElementById('pubStageSelect');
+                
+                pubRallySelect.innerHTML = '<option value="">Seleziona Rally...</option>';
+                pubLegSelect.innerHTML = '<option value="">Seleziona Leg...</option>';
+                pubStageSelect.innerHTML = '<option value="">Seleziona Stage...</option>';
+                pubRallySelect.disabled = true;
+                pubLegSelect.disabled = true;
+                pubStageSelect.disabled = true;
+
+                if (!champId) return;
+
+                const selectedChamp = dbChamps.find(c => c.id == champId);
+                if (selectedChamp && selectedChamp.rally) {
+                    selectedChamp.rally.forEach(r => {
+                        pubRallySelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+                    });
+                    pubRallySelect.disabled = false;
+                }
+                loadStandings('championship', champId);
+            });
         }
 
         const pubRallySelect = document.getElementById('pubRallySelect');
@@ -324,7 +357,10 @@
 
                 if (!rallyId) return;
 
-                const selectedRally = dbRallys.find(r => r.id == rallyId);
+                const champId = document.getElementById('pubChampSelect').value;
+                const selectedChamp = dbChamps.find(c => c.id == champId);
+                const selectedRally = selectedChamp?.rally?.find(r => r.id == rallyId);
+
                 if (selectedRally && selectedRally.leg) {
                     selectedRally.leg.forEach(l => {
                         pubLegSelect.innerHTML += `<option value="${l.id}">${l.name}</option>`;
@@ -346,8 +382,10 @@
 
                 if (!legId) return;
 
+                const champId = document.getElementById('pubChampSelect').value;
                 const rallyId = document.getElementById('pubRallySelect').value;
-                const selectedRally = dbRallys.find(r => r.id == rallyId);
+                const selectedChamp = dbChamps.find(c => c.id == champId);
+                const selectedRally = selectedChamp?.rally?.find(r => r.id == rallyId);
                 const selectedLeg = selectedRally?.leg?.find(l => l.id == legId);
 
                 if (selectedLeg && selectedLeg.stage) {
@@ -373,6 +411,7 @@
             let id = forcedId;
 
             if (!id) {
+                if (type === 'championship') id = document.getElementById('pubChampSelect')?.value;
                 if (type === 'rally') id = document.getElementById('pubRallySelect')?.value;
                 if (type === 'leg') id = document.getElementById('pubLegSelect')?.value;
                 if (type === 'stage') id = document.getElementById('pubStageSelect')?.value;
@@ -412,11 +451,12 @@
                     
                     let extra = '';
                     const extraHead = document.getElementById('extraColHead');
-                    if (type === 'rally') {
+                    if (type === 'championship' || type === 'rally') {
                         extra = `<td class="p-4 font-bold text-amber-400 text-right">${row.points || 0} PTS</td>`;
-                        if (extraHead) extraHead.textContent = "PUNTI FIA";
+                        if (extraHead) extraHead.textContent = "PUNTI";
                     } else {
-                        if (extraHead) extraHead.textContent = "";
+                        if (extraHead) extraHead.textContent = "PENALITÀ";
+                        extra = `<td class="p-4 font-mono-time text-amber-400 text-right">${row.penalty || '-'}</td>`;
                     }
 
                     tr.innerHTML = `
@@ -445,15 +485,50 @@
             try {
                 const res = await fetch(`${API_BASE}/setup`);
                 const data = await res.json();
-                dbRallys = data.rallys || [];
+                dbChamps = data.championships || [];
                 
-                const selectRally = document.getElementById('selectRally');
-                if (!selectRally) return;
-                selectRally.innerHTML = '<option value="">Seleziona...</option>';
-                dbRallys.forEach(r => {
-                    selectRally.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+                const selectChamp = document.getElementById('selectChamp');
+                if (!selectChamp) return;
+                selectChamp.innerHTML = '<option value="">Seleziona...</option>';
+                dbChamps.forEach(c => {
+                    selectChamp.innerHTML += `<option value="${c.id}">${c.name}</option>`;
                 });
             } catch (e) { console.error("Errore caricamento setup admin:", e); }
+        }
+
+        const selectChampAdmin = document.getElementById('selectChamp');
+        if (selectChampAdmin) {
+            selectChampAdmin.addEventListener('change', (e) => {
+                const champId = e.target.value;
+                const selectRally = document.getElementById('selectRally');
+                const btnNewRally = document.getElementById('btnNewRally');
+                const selectLeg = document.getElementById('selectLeg');
+                const btnNewLeg = document.getElementById('btnNewLeg');
+                
+                selectLeg.innerHTML = '<option value="">Seleziona...</option>';
+                selectLeg.disabled = true;
+                if (btnNewLeg) btnNewLeg.classList.add('hidden');
+
+                if (!champId) {
+                    selectRally.innerHTML = '<option value="">Seleziona...</option>';
+                    selectRally.disabled = true;
+                    if (btnNewRally) btnNewRally.classList.add('hidden');
+                    return;
+                }
+
+                const champ = dbChamps.find(c => c.id == champId);
+                selectRally.innerHTML = '<option value="">Seleziona...</option>';
+                if (champ && champ.rally) {
+                    champ.rally.forEach(r => {
+                        selectRally.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+                    });
+                }
+                selectRally.disabled = false;
+                if (btnNewRally) {
+                    btnNewRally.classList.remove('hidden');
+                    btnNewRally.disabled = false;
+                }
+            });
         }
 
         const selectRallyAdmin = document.getElementById('selectRally');
@@ -469,7 +544,10 @@
                     if (btnNewLeg) btnNewLeg.classList.add('hidden');
                     return;
                 }
-                const rally = dbRallys.find(r => r.id == rallyId);
+                const champId = document.getElementById('selectChamp').value;
+                const champ = dbChamps.find(c => c.id == champId);
+                const rally = champ?.rally?.find(r => r.id == rallyId);
+
                 selectLeg.innerHTML = '<option value="">Seleziona...</option>';
                 if (rally && rally.leg) {
                     rally.leg.forEach(l => {
@@ -484,15 +562,32 @@
             });
         }
 
+        const btnNewChamp = document.getElementById('btnNewChamp');
+        if (btnNewChamp) {
+            btnNewChamp.addEventListener('click', async () => {
+                const name = prompt("Nome del nuovo Campionato:");
+                if (!name) return;
+                try {
+                    await fetch(`${API_BASE}/create-championship`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name })
+                    });
+                    loadSetup();
+                    loadPublicFilters();
+                } catch (err) { alert("Errore creazione campionato: " + err.message); }
+            });
+        }
+
         const btnNewRally = document.getElementById('btnNewRally');
         if (btnNewRally) {
             btnNewRally.addEventListener('click', async () => {
+                const champId = document.getElementById('selectChamp').value;
                 const name = prompt("Nome del nuovo Rally:");
-                if (!name) return;
+                if (!name || !champId) return;
                 try {
                     await fetch(`${API_BASE}/create-rally`, {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name })
+                        body: JSON.stringify({ name, championship_id: champId })
                     });
                     loadSetup();
                     loadPublicFilters();
@@ -562,6 +657,7 @@
                                     <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white font-semibold" value="${row.driver || ''}" data-field="driver"></td>
                                     <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-400 text-xs" value="${row.car || ''}" data-field="car"></td>
                                     <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 font-mono-time" value="${row.time || ''}" data-field="time"></td>
+                                    <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-amber-400 font-mono-time text-center" value="-" data-field="penalty"></td>
                                     <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-rose-400 font-mono-time" value="${row.gap || '-'}" data-field="gap"></td>
                                 `;
                                 tbody.appendChild(tr);
@@ -591,21 +687,21 @@
                 const trackName = trackNameEl ? trackNameEl.textContent.replace("Tracciato: ", "") : '';
                 
                 if (!legId || !stageName) {
-                    alert("⚠️ Seleziona un Rally, un Leg e inserisci il nome dello Stage prima di salvare.");
+                    alert("⚠️ Seleziona un Campionato, un Rally, un Leg e inserisci il nome dello Stage prima di salvare.");
                     return;
                 }
 
                 const finalData = [];
                 document.querySelectorAll('#tableBody tr').forEach((tr, index) => {
                     const inputs = tr.querySelectorAll('input');
-                    if (inputs.length >= 4) {
+                    if (inputs.length >= 5) {
                         finalData.push({
                             position: index + 1,
                             driver: inputs[0].value,
                             car: inputs[1].value,
                             time: inputs[2].value,
-                            gap: inputs[3].value,
-                            penalty: "-"
+                            penalty: inputs[3].value || '-',
+                            gap: inputs[4].value
                         });
                     }
                 });
