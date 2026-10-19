@@ -132,117 +132,133 @@
     </div>
 
     <script>
-        // ⚠️ SOSTITUISCI CON LE TUE CHIAVI ⚠️
         const SUPABASE_URL = 'https://rvqorpdebooklqtjbnwl.supabase.co'; 
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cW9ycGRlYm9va2xxdGpibndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIzMTk2ODIsImV4cCI6MjEwNzg5NTY4Mn0.oaw45keCaaP40J9nfVLaggIyzPJBT-X0XerqlMc5iMk';
         
         const API_BASE = 'https://acr-backend-wv98.onrender.com/api';
         const inputStyle = "w-full bg-transparent border-0 focus:ring-1 focus:ring-[#4ecca3] rounded px-1 py-0.5 text-white";
+        
         let supabaseClient = null;
 
-        // Inizializzazione Supabase
-        let supabaseClient = null;
-        try {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            console.log("Supabase connesso con successo!");
-        } catch(e) {
-            console.error("Errore init Supabase:", e);
-        }
-
-        // Funzione di avvio sicura (aspetta che il DOM sia caricato)
-        document.addEventListener('DOMContentLoaded', () => {
+        // Inizializzazione sicura al caricamento del DOM
+        document.addEventListener('DOMContentLoaded', async () => {
             
-            // --- GESTIONE CLICK LOGIN ---
+            // 1. Init Supabase
+            try {
+                if (window.supabase) {
+                    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    console.log("Supabase connesso con successo!");
+                } else {
+                    console.error("Libreria Supabase non trovata.");
+                }
+            } catch(e) {
+                console.error("Errore init Supabase:", e);
+            }
+
+            // 2. Gestione Modale Login
             const btnLogin = document.getElementById('btnLogin');
-            if (btnLogin) {
+            const loginModal = document.getElementById('loginModal');
+            const btnCancelLogin = document.getElementById('btnCancelLogin');
+
+            if (btnLogin && loginModal) {
                 btnLogin.addEventListener('click', () => {
                     console.log("Click su Login rilevato");
-                    document.getElementById('loginModal').classList.remove('hidden');
+                    loginModal.classList.remove('hidden');
                 });
             }
 
-            document.getElementById('btnCancelLogin').addEventListener('click', () => {
-                document.getElementById('loginModal').classList.add('hidden');
-            });
+            if (btnCancelLogin && loginModal) {
+                btnCancelLogin.addEventListener('click', () => {
+                    loginModal.classList.add('hidden');
+                });
+            }
 
-            // --- CONTROLLO SESSIONE ---
-            async function checkAuth() {
-                const linkAdmin = document.getElementById('linkAdmin');
-                const btnLogout = document.getElementById('btnLogout');
-                const viewPublic = document.getElementById('view-public');
-                const viewAdmin = document.getElementById('view-admin');
-                const urlParams = new URLSearchParams(window.location.search);
+            // 3. Azione Login
+            const btnDoLogin = document.getElementById('btnDoLogin');
+            if (btnDoLogin) {
+                btnDoLogin.addEventListener('click', async () => {
+                    if (!supabaseClient) {
+                        alert("Supabase non configurato.");
+                        return;
+                    }
+                    const email = document.getElementById('loginEmail').value;
+                    const password = document.getElementById('loginPassword').value;
+                    const errorMsg = document.getElementById('loginError');
 
-                if (!supabaseClient) {
-                    viewPublic.classList.remove('hidden');
-                    viewAdmin.classList.add('hidden');
-                    loadCalendar();
-                    loadStandings();
-                    return;
-                }
-
-                try {
-                    const { data: { session } } = await supabaseClient.auth.getSession();
-                    if (session) {
-                        btnLogin.classList.add('hidden');
-                        btnLogout.classList.remove('hidden');
-                        linkAdmin.classList.remove('hidden');
-                        
-                        if (urlParams.get('admin') === 'true') {
-                            viewPublic.classList.add('hidden');
-                            viewAdmin.classList.remove('hidden');
-                            loadSetup();
-                        } else {
-                            viewPublic.classList.remove('hidden');
-                            viewAdmin.classList.add('hidden');
-                            loadCalendar();
-                            loadStandings();
-                        }
+                    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                    
+                    if (error) {
+                        errorMsg.textContent = error.message;
+                        errorMsg.classList.remove('hidden');
                     } else {
-                        btnLogin.classList.remove('hidden');
-                        btnLogout.classList.add('hidden');
-                        linkAdmin.classList.add('hidden');
+                        loginModal.classList.add('hidden');
+                        errorMsg.classList.add('hidden');
+                        checkAuth();
+                    }
+                });
+            }
+
+            // 4. Logout
+            const btnLogout = document.getElementById('btnLogout');
+            if (btnLogout) {
+                btnLogout.addEventListener('click', async () => {
+                    if (supabaseClient) await supabaseClient.auth.signOut();
+                    window.location.href = '/';
+                });
+            }
+
+            // Avvia controllo sessione e caricamento iniziale
+            await checkAuth();
+        });
+
+        // --- CONTROLLO SESSIONE ---
+        async function checkAuth() {
+            const linkAdmin = document.getElementById('linkAdmin');
+            const btnLogout = document.getElementById('btnLogout');
+            const btnLogin = document.getElementById('btnLogin');
+            const viewPublic = document.getElementById('view-public');
+            const viewAdmin = document.getElementById('view-admin');
+            const urlParams = new URLSearchParams(window.location.search);
+
+            if (!supabaseClient) {
+                viewPublic.classList.remove('hidden');
+                viewAdmin.classList.add('hidden');
+                loadCalendar();
+                loadStandings();
+                return;
+            }
+
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session) {
+                    if (btnLogin) btnLogin.classList.add('hidden');
+                    if (btnLogout) btnLogout.classList.remove('hidden');
+                    if (linkAdmin) linkAdmin.classList.remove('hidden');
+                    
+                    if (urlParams.get('admin') === 'true') {
+                        viewPublic.classList.add('hidden');
+                        viewAdmin.classList.remove('hidden');
+                        loadSetup();
+                    } else {
                         viewPublic.classList.remove('hidden');
                         viewAdmin.classList.add('hidden');
                         loadCalendar();
                         loadStandings();
                     }
-                } catch (err) {
+                } else {
+                    if (btnLogin) btnLogin.classList.remove('hidden');
+                    if (btnLogout) btnLogout.classList.add('hidden');
+                    if (linkAdmin) linkAdmin.classList.add('hidden');
                     viewPublic.classList.remove('hidden');
                     viewAdmin.classList.add('hidden');
+                    loadCalendar();
+                    loadStandings();
                 }
+            } catch (err) {
+                viewPublic.classList.remove('hidden');
+                viewAdmin.classList.add('hidden');
             }
-
-            // --- AZIONE LOGIN ---
-            document.getElementById('btnDoLogin').addEventListener('click', async () => {
-                if (!supabaseClient) {
-                    alert("Supabase non configurato. Inserisci le chiavi nel codice.");
-                    return;
-                }
-                const email = document.getElementById('loginEmail').value;
-                const password = document.getElementById('loginPassword').value;
-                const errorMsg = document.getElementById('loginError');
-
-                const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-                
-                if (error) {
-                    errorMsg.textContent = error.message;
-                    errorMsg.classList.remove('hidden');
-                } else {
-                    document.getElementById('loginModal').classList.add('hidden');
-                    errorMsg.classList.add('hidden');
-                    checkAuth();
-                }
-            });
-
-            document.getElementById('btnLogout').addEventListener('click', async () => {
-                if (supabaseClient) await supabaseClient.auth.signOut();
-                window.location.href = '/';
-            });
-
-            // Avvia il controllo
-            checkAuth();
-        });
+        }
 
         // ==========================================
         // LOGICA VISTA PUBBLICA
@@ -252,6 +268,7 @@
                 const res = await fetch(`${API_BASE}/calendar`);
                 const data = await res.json();
                 const list = document.getElementById('calendarList');
+                if (!list) return;
                 list.innerHTML = '';
                 
                 if (data.length === 0) {
@@ -279,7 +296,7 @@
                 btn.classList.remove('tab-active');
                 btn.classList.add('bg-[#0f0f1a]', 'hover:bg-[#16213e]');
             });
-            if (event) {
+            if (event && event.target) {
                 event.target.classList.remove('bg-[#0f0f1a]', 'hover:bg-[#16213e]');
                 event.target.classList.add('tab-active');
             }
@@ -287,8 +304,11 @@
         }
 
         async function loadStandings() {
-            const id = document.getElementById('standingsId').value;
+            const idInput = document.getElementById('standingsId');
             const tbody = document.getElementById('standingsBody');
+            if (!idInput || !tbody) return;
+            
+            const id = idInput.value;
             tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">Caricamento...</td></tr>';
 
             try {
@@ -309,11 +329,12 @@
                     if (currentTab === 'stage') gapDisplay = row.gap || '-';
                     
                     let extra = '';
+                    const extraHead = document.getElementById('extraColHead');
                     if (currentTab === 'rally') {
                         extra = `<td class="p-3 font-bold text-[#f5a623] text-right">${row.points} pt</td>`;
-                        document.getElementById('extraColHead').textContent = "Punti";
+                        if (extraHead) extraHead.textContent = "Punti";
                     } else {
-                        document.getElementById('extraColHead').textContent = "";
+                        if (extraHead) extraHead.textContent = "";
                     }
 
                     tr.innerHTML = `
@@ -340,9 +361,10 @@
             try {
                 const res = await fetch(`${API_BASE}/setup`);
                 const data = await res.json();
-                dbRallys = data.rallys;
+                dbRallys = data.rallys || [];
                 
                 const selectRally = document.getElementById('selectRally');
+                if (!selectRally) return;
                 selectRally.innerHTML = '<option value="">Seleziona...</option>';
                 dbRallys.forEach(r => {
                     selectRally.innerHTML += `<option value="${r.id}">${r.name}</option>`;
@@ -350,147 +372,165 @@
             } catch (e) { console.error("Errore setup", e); }
         }
 
-        document.getElementById('selectRally').addEventListener('change', (e) => {
-            const rallyId = e.target.value;
-            const selectLeg = document.getElementById('selectLeg');
-            const btnNewLeg = document.getElementById('btnNewLeg');
-            
-            if (!rallyId) {
-                selectLeg.innerHTML = '<option value="">Seleziona...</option>';
-                selectLeg.disabled = true;
-                btnNewLeg.classList.add('hidden');
-                return;
-            }
-            const rally = dbRallys.find(r => r.id == rallyId);
-            selectLeg.innerHTML = '<option value="">Seleziona...</option>';
-            if (rally.leg) {
-                rally.leg.forEach(l => {
-                    selectLeg.innerHTML += `<option value="${l.id}">${l.name}</option>`;
-                });
-            }
-            selectLeg.disabled = false;
-            btnNewLeg.classList.remove('hidden');
-            btnNewLeg.disabled = false;
-        });
-
-        document.getElementById('btnNewRally').addEventListener('click', async () => {
-            const name = prompt("Nome del nuovo Rally:");
-            if (!name) return;
-            await fetch(`${API_BASE}/create-rally`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name })
-            });
-            loadSetup();
-        });
-
-        document.getElementById('btnNewLeg').addEventListener('click', async () => {
-            const rallyId = document.getElementById('selectRally').value;
-            const name = prompt("Nome del nuovo Leg (es. Leg 1):");
-            if (!name || !rallyId) return;
-            await fetch(`${API_BASE}/create-leg`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rally_id: rallyId, name })
-            });
-            document.getElementById('selectRally').dispatchEvent(new Event('change'));
-        });
-
-        document.getElementById('fileInput').addEventListener('change', () => {
-            if (document.getElementById('fileInput').files.length > 0) {
-                document.getElementById('uploadBtn').classList.remove('hidden');
-            }
-        });
-
-        document.getElementById('uploadBtn').addEventListener('click', async () => {
-            const file = document.getElementById('fileInput').files[0];
-            if (!file) return;
-            const formData = new FormData();
-            formData.append('screenshot', file);
-
-            document.getElementById('uploadBtn').classList.add('hidden');
-            document.getElementById('loading').classList.remove('hidden');
-
-            try {
-                const response = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
-                const data = await response.json();
-
-                if (data.success) {
-                    document.getElementById('trackName').textContent = data.track_name;
-                    const tbody = document.getElementById('tableBody');
-                    tbody.innerHTML = '';
-                    
-                    data.parsed_data.forEach((row, index) => {
-                        if (index > 0 && data.parsed_data.slice(0, index).some(r => r.driver === row.driver)) return; 
-
-                        const tr = document.createElement('tr');
-                        tr.className = "border-b border-gray-700 hover:bg-[#16213e]";
-                        tr.innerHTML = `
-                            <td class="p-2 text-center font-bold text-[#4ecca3]">${row.position}</td>
-                            <td class="p-2"><input type="text" class="${inputStyle} font-semibold" value="${row.driver || ''}" data-field="driver"></td>
-                            <td class="p-2"><input type="text" class="${inputStyle} text-gray-400 text-xs" value="${row.car || ''}" data-field="car"></td>
-                            <td class="p-2"><input type="text" class="${inputStyle} text-gray-300 font-mono" value="${row.time || ''}" data-field="time"></td>
-                            <td class="p-2"><input type="text" class="${inputStyle} text-red-400 font-mono" value="${row.gap || '-'}" data-field="gap"></td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
-                    document.getElementById('resultBox').classList.remove('hidden');
-                } else {
-                    alert("Errore OCR: " + data.error);
-                }
-            } catch (error) {
-                alert("Errore di rete: " + error.message);
-            } finally {
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('uploadBtn').classList.remove('hidden');
-            }
-        });
-
-        document.getElementById('saveBtn').addEventListener('click', async () => {
-            const legId = document.getElementById('selectLeg').value;
-            const stageName = document.getElementById('stageName').value;
-            const trackName = document.getElementById('trackName').textContent;
-            
-            if (!legId || !stageName) {
-                alert("⚠️ Seleziona un Rally, un Leg e inserisci il nome dello Stage prima di salvare.");
-                return;
-            }
-
-            const finalData = [];
-            document.querySelectorAll('#tableBody tr').forEach((tr, index) => {
-                const inputs = tr.querySelectorAll('input');
-                finalData.push({
-                    position: index + 1,
-                    driver: inputs[0].value,
-                    car: inputs[1].value,
-                    time: inputs[2].value,
-                    gap: inputs[3].value,
-                    penalty: "-"
-                });
-            });
-
-            const btn = document.getElementById('saveBtn');
-            btn.disabled = true; btn.textContent = "Salvataggio...";
-
-            try {
-                const response = await fetch(`${API_BASE}/save-stage`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ leg_id: legId, stage_name: stageName, track_name: trackName, results: finalData })
-                });
-                const result = await response.json();
+        const selectRallyEl = document.getElementById('selectRally');
+        if (selectRallyEl) {
+            selectRallyEl.addEventListener('change', (e) => {
+                const rallyId = e.target.value;
+                const selectLeg = document.getElementById('selectLeg');
+                const btnNewLeg = document.getElementById('btnNewLeg');
                 
-                if (result.success) {
-                    alert("✅ " + result.message);
-                    document.getElementById('resultBox').classList.add('hidden');
-                    document.getElementById('stageName').value = '';
-                    document.getElementById('fileInput').value = '';
-                } else {
-                    alert("❌ Errore: " + result.error);
+                if (!rallyId) {
+                    selectLeg.innerHTML = '<option value="">Seleziona...</option>';
+                    selectLeg.disabled = true;
+                    btnNewLeg.classList.add('hidden');
+                    return;
                 }
-            } catch (error) {
-                alert("❌ Errore di rete: " + error.message);
-            } finally {
-                btn.disabled = false; btn.textContent = "💾 Conferma e Salva";
-            }
-        });
+                const rally = dbRallys.find(r => r.id == rallyId);
+                selectLeg.innerHTML = '<option value="">Seleziona...</option>';
+                if (rally && rally.leg) {
+                    rally.leg.forEach(l => {
+                        selectLeg.innerHTML += `<option value="${l.id}">${l.name}</option>`;
+                    });
+                }
+                selectLeg.disabled = false;
+                btnNewLeg.classList.remove('hidden');
+                btnNewLeg.disabled = false;
+            });
+        }
+
+        const btnNewRallyEl = document.getElementById('btnNewRally');
+        if (btnNewRallyEl) {
+            btnNewRallyEl.addEventListener('click', async () => {
+                const name = prompt("Nome del nuovo Rally:");
+                if (!name) return;
+                await fetch(`${API_BASE}/create-rally`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                loadSetup();
+            });
+        }
+
+        const btnNewLegEl = document.getElementById('btnNewLeg');
+        if (btnNewLegEl) {
+            btnNewLegEl.addEventListener('click', async () => {
+                const rallyId = document.getElementById('selectRally').value;
+                const name = prompt("Nome del nuovo Leg (es. Leg 1):");
+                if (!name || !rallyId) return;
+                await fetch(`${API_BASE}/create-leg`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rally_id: rallyId, name })
+                });
+                document.getElementById('selectRally').dispatchEvent(new Event('change'));
+            });
+        }
+
+        const fileInputEl = document.getElementById('fileInput');
+        if (fileInputEl) {
+            fileInputEl.addEventListener('change', () => {
+                if (fileInputEl.files.length > 0) {
+                    document.getElementById('uploadBtn').classList.remove('hidden');
+                }
+            });
+        }
+
+        const uploadBtnEl = document.getElementById('uploadBtn');
+        if (uploadBtnEl) {
+            uploadBtnEl.addEventListener('click', async () => {
+                const file = document.getElementById('fileInput').files[0];
+                if (!file) return;
+                const formData = new FormData();
+                formData.append('screenshot', file);
+
+                document.getElementById('uploadBtn').classList.add('hidden');
+                document.getElementById('loading').classList.remove('hidden');
+
+                try {
+                    const response = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        document.getElementById('trackName').textContent = data.track_name;
+                        const tbody = document.getElementById('tableBody');
+                        tbody.innerHTML = '';
+                        
+                        data.parsed_data.forEach((row, index) => {
+                            if (index > 0 && data.parsed_data.slice(0, index).some(r => r.driver === row.driver)) return; 
+
+                            const tr = document.createElement('tr');
+                            tr.className = "border-b border-gray-700 hover:bg-[#16213e]";
+                            tr.innerHTML = `
+                                <td class="p-2 text-center font-bold text-[#4ecca3]">${row.position}</td>
+                                <td class="p-2"><input type="text" class="${inputStyle} font-semibold" value="${row.driver || ''}" data-field="driver"></td>
+                                <td class="p-2"><input type="text" class="${inputStyle} text-gray-400 text-xs" value="${row.car || ''}" data-field="car"></td>
+                                <td class="p-2"><input type="text" class="${inputStyle} text-gray-300 font-mono" value="${row.time || ''}" data-field="time"></td>
+                                <td class="p-2"><input type="text" class="${inputStyle} text-red-400 font-mono" value="${row.gap || '-'}" data-field="gap"></td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                        document.getElementById('resultBox').classList.remove('hidden');
+                    } else {
+                        alert("Errore OCR: " + data.error);
+                    }
+                } catch (error) {
+                    alert("Errore di rete: " + error.message);
+                } finally {
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('uploadBtn').classList.remove('hidden');
+                }
+            });
+        }
+
+        const saveBtnEl = document.getElementById('saveBtn');
+        if (saveBtnEl) {
+            saveBtnEl.addEventListener('click', async () => {
+                const legId = document.getElementById('selectLeg').value;
+                const stageName = document.getElementById('stageName').value;
+                const trackName = document.getElementById('trackName').textContent;
+                
+                if (!legId || !stageName) {
+                    alert("⚠️ Seleziona un Rally, un Leg e inserisci il nome dello Stage prima di salvare.");
+                    return;
+                }
+
+                const finalData = [];
+                document.querySelectorAll('#tableBody tr').forEach((tr, index) => {
+                    const inputs = tr.querySelectorAll('input');
+                    finalData.push({
+                        position: index + 1,
+                        driver: inputs[0].value,
+                        car: inputs[1].value,
+                        time: inputs[2].value,
+                        gap: inputs[3].value,
+                        penalty: "-"
+                    });
+                });
+
+                const btn = document.getElementById('saveBtn');
+                btn.disabled = true; btn.textContent = "Salvataggio...";
+
+                try {
+                    const response = await fetch(`${API_BASE}/save-stage`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ leg_id: legId, stage_name: stageName, track_name: trackName, results: finalData })
+                    });
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        alert("✅ " + result.message);
+                        document.getElementById('resultBox').classList.add('hidden');
+                        document.getElementById('stageName').value = '';
+                        document.getElementById('fileInput').value = '';
+                    } else {
+                        alert("❌ Errore: " + result.error);
+                    }
+                } catch (error) {
+                    alert("❌ Errore di rete: " + error.message);
+                } finally {
+                    btn.disabled = false; btn.textContent = "💾 Conferma e Salva";
+                }
+            });
+        }
     </script>
 </body>
 </html>
