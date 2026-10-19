@@ -377,6 +377,161 @@
                 dbRallys.forEach(r => selectRally.innerHTML += `<option value="${r.id}">${r.name}</option>`);
             } catch (e) { console.error(e); }
         }
+
+        // --- GESTIONE FILTRI A CASCATA PUBBLICI ---
+        let publicSetupData = [];
+
+        async function loadPublicFilters() {
+            try {
+                const res = await fetch(`${API_BASE}/setup`);
+                const data = await res.json();
+                publicSetupData = data.rallys || [];
+                
+                const pubRallySelect = document.getElementById('pubRallySelect');
+                if (!pubRallySelect) return;
+                
+                pubRallySelect.innerHTML = '<option value="">Seleziona Rally...</option>';
+                publicSetupData.forEach(r => {
+                    pubRallySelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+                });
+            } catch (e) { console.error("Errore caricamento filtri:", e); }
+        }
+
+        // Evento Rally -> Popola Leg
+        const pubRallySelect = document.getElementById('pubRallySelect');
+        if (pubRallySelect) {
+            pubRallySelect.addEventListener('change', (e) => {
+                const rallyId = e.target.value;
+                const pubLegSelect = document.getElementById('pubLegSelect');
+                const pubStageSelect = document.getElementById('pubStageSelect');
+                
+                pubLegSelect.innerHTML = '<option value="">Seleziona Leg...</option>';
+                pubStageSelect.innerHTML = '<option value="">Seleziona Stage...</option>';
+                pubLegSelect.disabled = true;
+                pubStageSelect.disabled = true;
+
+                if (!rallyId) return;
+
+                const selectedRally = publicSetupData.find(r => r.id == rallyId);
+                if (selectedRally && selectedRally.leg) {
+                    selectedRally.leg.forEach(l => {
+                        pubLegSelect.innerHTML += `<option value="${l.id}">${l.name}</option>`;
+                    });
+                    pubLegSelect.disabled = false;
+                }
+                // Carica direttamente la classifica del Rally (punti)
+                loadStandings('rally', rallyId);
+            });
+        }
+
+        // Evento Leg -> Popola Stage
+        const pubLegSelect = document.getElementById('pubLegSelect');
+        if (pubLegSelect) {
+            pubLegSelect.addEventListener('change', (e) => {
+                const legId = e.target.value;
+                const pubStageSelect = document.getElementById('pubStageSelect');
+                
+                pubStageSelect.innerHTML = '<option value="">Seleziona Stage...</option>';
+                pubStageSelect.disabled = true;
+
+                if (!legId) return;
+
+                const rallyId = document.getElementById('pubRallySelect').value;
+                const selectedRally = publicSetupData.find(r => r.id == rallyId);
+                const selectedLeg = selectedRally?.leg?.find(l => l.id == legId);
+
+                if (selectedLeg && selectedLeg.stage) {
+                    selectedLeg.stage.forEach(s => {
+                        pubStageSelect.innerHTML += `<option value="${s.id}">${s.name} (${s.track_name})</option>`;
+                    });
+                    pubStageSelect.disabled = false;
+                }
+                // Carica la classifica della Leg (somma tempi)
+                loadStandings('leg', legId);
+            });
+        }
+
+        // Evento Stage -> Carica Stage
+        const pubStageSelect = document.getElementById('pubStageSelect');
+        if (pubStageSelect) {
+            pubStageSelect.addEventListener('change', (e) => {
+                const stageId = e.target.value;
+                if (stageId) {
+                    loadStandings('stage', stageId);
+                }
+            });
+        }
+
+        // Funzione unificata per caricare le classifiche in base al tipo attivo
+        async function loadStandings(forcedType = null, forcedId = null) {
+            const type = forcedType || currentTab;
+            let id = forcedId;
+
+            if (!id) {
+                if (type === 'rally') id = document.getElementById('pubRallySelect')?.value;
+                if (type === 'leg') id = document.getElementById('pubLegSelect')?.value;
+                if (type === 'stage') id = document.getElementById('pubStageSelect')?.value;
+            }
+
+            const tbody = document.getElementById('standingsBody');
+            if (!tbody) return;
+
+            if (!id) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-500">Seleziona un evento per visualizzare i tempi.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-500">Caricamento classifiche in corso...</td></tr>';
+
+            try {
+                const res = await fetch(`${API_BASE}/standings/${type}/${id}`);
+                const data = await res.json();
+                
+                tbody.innerHTML = '';
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-500">Nessun risultato disponibile per questa selezione.</td></tr>';
+                    return;
+                }
+
+                data.forEach((row) => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-800/40 transition-colors border-b border-slate-800/50";
+                    
+                    let posBadge = `<span class="font-bold text-slate-400">${row.position}</span>`;
+                    if (row.position === 1) posBadge = `<span class="px-2.5 py-0.5 rounded text-amber-300 bg-amber-500/10 border border-amber-500/30 font-bold">1</span>`;
+                    if (row.position === 2) posBadge = `<span class="px-2.5 py-0.5 rounded text-slate-200 bg-slate-400/10 border border-slate-400/30 font-bold">2</span>`;
+                    if (row.position === 3) posBadge = `<span class="px-2.5 py-0.5 rounded text-amber-600 bg-amber-700/10 border border-amber-700/30 font-bold">3</span>`;
+
+                    let timeDisplay = row.time_str || row.total_str || '-';
+                    let gapDisplay = row.gap_first || row.gap || '-';
+                    
+                    let extra = '';
+                    const extraHead = document.getElementById('extraColHead');
+                    if (type === 'rally') {
+                        extra = `<td class="p-4 font-bold text-amber-400 text-right">${row.points || 0} PTS</td>`;
+                        if (extraHead) extraHead.textContent = "PUNTI FIA";
+                    } else {
+                        if (extraHead) extraHead.textContent = "";
+                    }
+
+                    tr.innerHTML = `
+                        <td class="p-4 text-center">${posBadge}</td>
+                        <td class="p-4 font-bold text-white flex items-center gap-2">
+                            <i data-lucide="user" class="w-4 h-4 text-slate-500"></i> ${row.driver || row.driver_name}
+                        </td>
+                        <td class="p-4 font-mono-time text-slate-300">
+                            ${timeDisplay} 
+                            <span class="text-rose-400 text-xs ml-2">${gapDisplay !== '-' ? '(+' + gapDisplay + ')' : ''}</span>
+                        </td>
+                        ${extra}
+                    `;
+                    tbody.appendChild(tr);
+                });
+                lucide.createIcons();
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-rose-400">Errore nel recupero dati.</td></tr>`;
+            }
+        }
     </script>
 </body>
 </html>
