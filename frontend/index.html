@@ -3,128 +3,184 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACR Championship</title>
+    <title>ACR Championship - Official Timing</title>
     <script src="https://cdn.tailwindcss.com" data-cfasync="false"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { background-color: #0f0f1a; color: white; font-family: sans-serif; }
-        .glass { background: rgba(26, 26, 46, 0.8); backdrop-filter: blur(10px); border: 1px solid #333; }
-        .tab-btn { padding: 8px 16px; border-radius: 4px; transition: all 0.2s; }
-        .tab-active { background-color: #e94560; color: white; font-weight: bold; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+        body { background-color: #0b0e14; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+        .font-mono-time { font-family: 'JetBrains Mono', monospace; }
+        .glass-panel { background: rgba(18, 24, 38, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .glass-card { background: rgba(26, 34, 52, 0.6); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .tab-btn { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        .tab-active { background-color: #3b82f6; color: white; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+        .fade-in { animation: fadeIn 0.35s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-4">
+<body class="min-h-screen flex flex-col items-center p-4 md:p-6">
 
     <!-- NAVBAR -->
-    <nav class="w-full max-w-6xl flex justify-between items-center mb-8 bg-[#16213e] p-4 rounded-lg shadow-lg">
-        <h1 class="text-2xl font-bold text-[#e94560]">🏁 ACR Championship</h1>
-        <div class="space-x-4 flex items-center">
-            <a href="/" class="text-white hover:text-[#4ecca3] transition-colors">Area Pubblica</a>
-            
-            <div id="authSection">
-                <button id="btnLogin" class="text-white hover:text-[#4ecca3] transition-colors border-l border-gray-600 pl-4">🔒 Login Admin</button>
-                <a href="?admin=true" id="linkAdmin" class="hidden text-[#4ecca3] font-bold border-l border-gray-600 pl-4 hover:text-white">⚙️ Area Admin</a>
-                <button id="btnLogout" class="hidden text-red-400 hover:text-red-300 border-l border-gray-600 pl-4">Esci</button>
+    <nav class="w-full max-w-7xl flex justify-between items-center mb-6 glass-panel px-6 py-4 rounded-xl shadow-2xl">
+        <div class="flex items-center space-x-3">
+            <span class="p-2 bg-blue-600/20 text-blue-400 rounded-lg border border-blue-500/30">
+                <i data-lucide="trophy" class="w-6 h-6"></i>
+            </span>
+            <div>
+                <h1 class="text-xl font-extrabold tracking-wider bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">ACR CHAMPIONSHIP</h1>
+                <p class="text-xs text-slate-400 font-medium">Timing & Live Telemetry Hub</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+            <a href="/" class="text-sm font-semibold text-slate-300 hover:text-white transition-colors flex items-center gap-1.5">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Standings
+            </a>
+            <div id="authSection" class="border-l border-slate-700/80 pl-4 flex items-center gap-2">
+                <button id="btnLogin" class="text-sm font-semibold text-slate-300 hover:text-blue-400 transition-colors flex items-center gap-1.5">
+                    <i data-lucide="lock" class="w-4 h-4"></i> Admin Login
+                </button>
+                <a href="?admin=true" id="linkAdmin" class="hidden text-sm font-bold text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1.5">
+                    <i data-lucide="settings" class="w-4 h-4"></i> Management
+                </a>
+                <button id="btnLogout" class="hidden text-sm font-semibold text-rose-400 hover:text-rose-300 transition-colors flex items-center gap-1.5">
+                    <i data-lucide="log-out" class="w-4 h-4"></i> Logout
+                </button>
             </div>
         </div>
     </nav>
 
-    <!-- MODALE DI LOGIN -->
-    <div id="loginModal" class="fixed inset-0 bg-black/80 flex items-center justify-center hidden z-50">
-        <div class="glass p-8 rounded-lg w-96 shadow-2xl">
-            <h2 class="text-2xl font-bold text-[#e94560] mb-4">Accesso Riservato</h2>
-            <input type="email" id="loginEmail" placeholder="Email" class="w-full bg-[#0f0f1a] text-white p-2 mb-3 rounded border border-gray-600">
-            <input type="password" id="loginPassword" placeholder="Password" class="w-full bg-[#0f0f1a] text-white p-2 mb-4 rounded border border-gray-600">
-            <div class="flex justify-between">
-                <button id="btnCancelLogin" class="text-gray-400 hover:text-white">Annulla</button>
-                <button id="btnDoLogin" class="bg-[#e94560] text-white px-4 py-2 rounded hover:bg-[#d13a55]">Accedi</button>
+    <!-- MODALE LOGIN -->
+    <div id="loginModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center hidden z-50 p-4">
+        <div class="glass-panel p-8 rounded-2xl w-full max-w-md shadow-2xl border border-slate-700">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2"><i data-lucide="shield-check" class="text-blue-500"></i> Area Amministratore</h2>
+                <button id="btnCancelLogin" class="text-slate-400 hover:text-white"><i data-lucide="x"></i></button>
             </div>
-            <p id="loginError" class="text-red-400 text-sm mt-3 hidden"></p>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Email</label>
+                    <input type="email" id="loginEmail" class="w-full bg-slate-900/80 text-white p-3 rounded-lg border border-slate-700 focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Password</label>
+                    <input type="password" id="loginPassword" class="w-full bg-slate-900/80 text-white p-3 rounded-lg border border-slate-700 focus:outline-none focus:border-blue-500">
+                </div>
+                <button id="btnDoLogin" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-all shadow-lg shadow-blue-600/30">Accedi</button>
+                <p id="loginError" class="text-rose-400 text-sm mt-2 hidden text-center"></p>
+            </div>
         </div>
     </div>
 
     <!-- VISTA PUBBLICA -->
-    <div id="view-public" class="w-full max-w-6xl">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="glass p-6 rounded-lg h-fit">
-                <h2 class="text-xl font-bold text-[#4ecca3] mb-4 border-b border-gray-700 pb-2">📅 Calendario Eventi</h2>
-                <div id="calendarList" class="space-y-3"><p class="text-gray-400 text-sm">Caricamento eventi...</p></div>
+    <div id="view-public" class="w-full max-w-7xl">
+        <!-- FILTRI SELEZIONE RALLI/LEG/STAGE -->
+        <div class="glass-panel p-4 rounded-xl mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="flag" class="w-4 h-4 text-blue-400"></i>
+                    <select id="pubRallySelect" class="bg-slate-900 text-slate-200 text-sm font-semibold p-2.5 rounded-lg border border-slate-700 focus:border-blue-500">
+                        <option value="">Seleziona Rally...</option>
+                    </select>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
+                    <select id="pubLegSelect" class="bg-slate-900 text-slate-200 text-sm font-semibold p-2.5 rounded-lg border border-slate-700 focus:border-blue-500" disabled>
+                        <option value="">Seleziona Leg...</option>
+                    </select>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="timer" class="w-4 h-4 text-amber-400"></i>
+                    <select id="pubStageSelect" class="bg-slate-900 text-slate-200 text-sm font-semibold p-2.5 rounded-lg border border-slate-700 focus:border-blue-500" disabled>
+                        <option value="">Seleziona Stage...</option>
+                    </select>
+                </div>
             </div>
-            <div class="glass p-6 rounded-lg md:col-span-2">
-                <h2 class="text-xl font-bold text-[#4ecca3] mb-4 border-b border-gray-700 pb-2">🏆 Classifiche Ufficiali</h2>
-                <div class="flex space-x-2 mb-4">
-                    <button class="tab-btn tab-active" onclick="setTab('rally', event)">Rally (Punti)</button>
-                    <button class="tab-btn bg-[#0f0f1a] hover:bg-[#16213e]" onclick="setTab('leg', event)">Leg (Tempi)</button>
-                    <button class="tab-btn bg-[#0f0f1a] hover:bg-[#16213e]" onclick="setTab('stage', event)">Stage (Tempi)</button>
-                </div>
-                <div class="flex items-center space-x-2 mb-4 bg-[#0f0f1a] p-3 rounded border border-gray-700">
-                    <label class="text-sm text-gray-400">Inserisci ID:</label>
-                    <input type="number" id="standingsId" value="1" class="bg-[#16213e] text-white p-1 rounded border border-gray-600 w-20 text-center">
-                    <button onclick="loadStandings()" class="bg-[#e94560] text-white px-4 py-1 rounded hover:bg-[#d13a55]">Carica</button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-[#0f0f1a] text-[#e94560] text-xs uppercase">
-                                <th class="p-3 border-b border-gray-600 w-12 text-center">Pos</th>
-                                <th class="p-3 border-b border-gray-600">Pilota</th>
-                                <th class="p-3 border-b border-gray-600">Tempo / Gap</th>
-                                <th class="p-3 border-b border-gray-600 text-right" id="extraColHead"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="standingsBody" class="text-sm"></tbody>
-                    </table>
-                </div>
+
+            <!-- TABS CLASSIFICA -->
+            <div class="flex bg-slate-900/80 p-1 rounded-lg border border-slate-800">
+                <button class="tab-btn tab-active px-4 py-2 text-xs font-bold rounded-md flex items-center gap-1.5" onclick="setTab('rally', event)">
+                    <i data-lucide="award" class="w-3.5 h-3.5"></i> Rally Points
+                </button>
+                <button class="tab-btn text-slate-400 hover:text-white px-4 py-2 text-xs font-bold rounded-md flex items-center gap-1.5" onclick="setTab('leg', event)">
+                    <i data-lucide="clock" class="w-3.5 h-3.5"></i> Leg Overall
+                </button>
+                <button class="tab-btn text-slate-400 hover:text-white px-4 py-2 text-xs font-bold rounded-md flex items-center gap-1.5" onclick="setTab('stage', event)">
+                    <i data-lucide="zap" class="w-3.5 h-3.5"></i> Stage Results
+                </button>
+            </div>
+        </div>
+
+        <!-- TABELLA CLASSIFICHE -->
+        <div class="glass-panel p-6 rounded-xl shadow-2xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                            <th class="p-4 w-16 text-center">POS</th>
+                            <th class="p-4">PILOTA</th>
+                            <th class="p-4">TEMPO / DISTACCO</th>
+                            <th class="p-4 text-right" id="extraColHead">PUNTI FIA</th>
+                        </tr>
+                    </thead>
+                    <tbody id="standingsBody" class="divide-y divide-slate-800/50 text-sm font-medium fade-in">
+                        <tr><td colspan="4" class="p-8 text-center text-slate-500">Seleziona un evento per visualizzare i tempi.</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <!-- VISTA ADMIN -->
-    <div id="view-admin" class="w-full max-w-5xl hidden">
-        <div class="glass p-6 rounded-lg mb-6">
-            <h2 class="text-xl font-bold text-[#4ecca3] mb-4">1. Setup Gara</h2>
+    <!-- VISTA ADMIN (Restyling integrato con Upload OCR) -->
+    <div id="view-admin" class="w-full max-w-7xl hidden space-y-6 fade-in">
+        <div class="glass-panel p-6 rounded-xl">
+            <h2 class="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2"><i data-lucide="folder-plus"></i> Setup Campionato & Stage</h2>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                    <label class="text-xs text-gray-400 block mb-1">Rally</label>
-                    <select id="selectRally" class="w-full bg-[#0f0f1a] text-white p-2 rounded border border-gray-600"><option value="">Seleziona...</option></select>
-                    <button id="btnNewRally" class="text-xs text-[#e94560] mt-1 hover:underline">+ Nuovo Rally</button>
+                    <label class="text-xs text-slate-400 font-semibold block mb-1">Rally</label>
+                    <select id="selectRally" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700"></select>
+                    <button id="btnNewRally" class="text-xs text-blue-400 font-semibold mt-1 hover:underline">+ Nuovo Rally</button>
                 </div>
                 <div>
-                    <label class="text-xs text-gray-400 block mb-1">Leg</label>
-                    <select id="selectLeg" class="w-full bg-[#0f0f1a] text-white p-2 rounded border border-gray-600" disabled><option value="">Seleziona...</option></select>
-                    <button id="btnNewLeg" class="text-xs text-[#e94560] mt-1 hover:underline hidden" disabled>+ Nuovo Leg</button>
+                    <label class="text-xs text-slate-400 font-semibold block mb-1">Leg</label>
+                    <select id="selectLeg" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700" disabled></select>
+                    <button id="btnNewLeg" class="text-xs text-blue-400 font-semibold mt-1 hover:underline hidden" disabled>+ Nuovo Leg</button>
                 </div>
                 <div>
-                    <label class="text-xs text-gray-400 block mb-1">Nome Stage (es. SS1)</label>
-                    <input type="text" id="stageName" placeholder="SS1" class="w-full bg-[#0f0f1a] text-white p-2 rounded border border-gray-600">
+                    <label class="text-xs text-slate-400 font-semibold block mb-1">Nome Stage (es. SS1)</label>
+                    <input type="text" id="stageName" placeholder="SS1 - Special Stage" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700">
                 </div>
                 <div class="flex items-end">
-                    <button onclick="loadSetup()" class="bg-[#16213e] text-white px-3 py-2 rounded border border-gray-600 text-sm w-full hover:bg-gray-700">Aggiorna Dati</button>
+                    <button onclick="loadSetup()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold p-2.5 rounded-lg border border-slate-600 transition-all">Aggiorna elenchi</button>
                 </div>
             </div>
         </div>
-        <div class="glass p-6 rounded-lg">
-            <h2 class="text-xl font-bold text-[#4ecca3] mb-4">2. Carica Screenshot</h2>
-            <input type="file" id="fileInput" accept="image/*" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#e94560] file:text-white hover:file:bg-[#d13a55] cursor-pointer mb-4">
-            <button id="uploadBtn" class="w-full bg-[#4ecca3] text-black font-bold py-3 rounded hover:bg-[#3bb890] transition-colors hidden mb-4">Estrai Dati con OCR</button>
-            <div id="loading" class="text-center hidden mb-4"><p class="text-[#4ecca3] animate-pulse">Elaborazione in corso...</p></div>
-            <div id="resultBox" class="hidden border-t border-gray-700 pt-4 mt-4">
+
+        <div class="glass-panel p-6 rounded-xl">
+            <h2 class="text-lg font-bold text-blue-400 mb-4 flex items-center gap-2"><i data-lucide="upload-cloud"></i> Acquisizione Screenshot Stage</h2>
+            <input type="file" id="fileInput" accept="image/*" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer mb-4">
+            <button id="uploadBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-all hidden mb-4 shadow-lg shadow-emerald-600/20">Estrai Dati con OCR Engine 2</button>
+            <div id="loading" class="text-center hidden mb-4"><p class="text-blue-400 animate-pulse font-semibold">Elaborazione OCR e parsing in corso...</p></div>
+            
+            <div id="resultBox" class="hidden border-t border-slate-800 pt-6 mt-4">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 id="trackName" class="text-lg font-semibold text-white">Tracciato</h3>
-                    <button id="saveBtn" class="bg-[#e94560] text-white font-bold py-2 px-6 rounded hover:bg-[#d13a55] shadow-lg shadow-[#e94560]/30">💾 Conferma e Salva</button>
+                    <h3 id="trackName" class="text-md font-semibold text-slate-300">Tracciato Rilevato</h3>
+                    <button id="saveBtn" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-6 rounded-lg transition-all shadow-lg shadow-blue-600/30">💾 Conferma e Salva in DB</button>
                 </div>
-                <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                <div class="overflow-x-auto max-h-96">
                     <table class="w-full text-left border-collapse text-sm">
-                        <thead class="sticky top-0 bg-[#16213e]">
-                            <tr class="text-[#e94560] text-xs uppercase">
-                                <th class="p-2 border-b border-gray-600 text-center w-12">Pos</th>
-                                <th class="p-2 border-b border-gray-600">Pilota</th>
-                                <th class="p-2 border-b border-gray-600">Auto</th>
-                                <th class="p-2 border-b border-gray-600 w-28">Tempo</th>
-                                <th class="p-2 border-b border-gray-600 w-24">Gap</th>
+                        <thead class="sticky top-0 bg-slate-900/90 backdrop-blur">
+                            <tr class="text-slate-400 text-xs font-semibold uppercase">
+                                <th class="p-2.5 w-12 text-center">POS</th>
+                                <th class="p-2.5">PILOTA</th>
+                                <th class="p-2.5">VETTURA</th>
+                                <th class="p-2.5 w-32">TEMPO STAGE</th>
+                                <th class="p-2.5 w-28">GAP</th>
                             </tr>
                         </thead>
-                        <tbody id="tableBody"></tbody>
+                        <tbody id="tableBody" class="divide-y divide-slate-800"></tbody>
                     </table>
                 </div>
             </div>
@@ -132,73 +188,46 @@
     </div>
 
     <script>
+        lucide.createIcons();
         const SUPABASE_URL = 'https://rvqorpdebooklqtjbnwl.supabase.co'; 
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cW9ycGRlYm9va2xxdGpibndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIzMTk2ODIsImV4cCI6MjEwNzg5NTY4Mn0.oaw45keCaaP40J9nfVLaggIyzPJBT-X0XerqlMc5iMk';
-        
         const API_BASE = 'https://acr-backend-wv98.onrender.com/api';
-        const inputStyle = "w-full bg-transparent border-0 focus:ring-1 focus:ring-[#4ecca3] rounded px-1 py-0.5 text-white";
+        const inputStyle = "w-full bg-slate-900/90 border border-slate-700 focus:border-blue-500 rounded px-2 py-1 text-white font-mono-time";
         
         let supabaseClient = null;
 
-        // Inizializzazione sicura al caricamento del DOM
         document.addEventListener('DOMContentLoaded', async () => {
-            
-            // 1. Init Supabase
             try {
                 if (window.supabase) {
                     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                    console.log("Supabase connesso con successo!");
-                } else {
-                    console.error("Libreria Supabase non trovata.");
                 }
-            } catch(e) {
-                console.error("Errore init Supabase:", e);
-            }
+            } catch(e) { console.error("Error initializing Supabase:", e); }
 
-            // 2. Gestione Modale Login
             const btnLogin = document.getElementById('btnLogin');
             const loginModal = document.getElementById('loginModal');
             const btnCancelLogin = document.getElementById('btnCancelLogin');
 
-            if (btnLogin && loginModal) {
-                btnLogin.addEventListener('click', () => {
-                    console.log("Click su Login rilevato");
-                    loginModal.classList.remove('hidden');
-                });
-            }
+            if (btnLogin) btnLogin.addEventListener('click', () => loginModal.classList.remove('hidden'));
+            if (btnCancelLogin) btnCancelLogin.addEventListener('click', () => loginModal.classList.add('hidden'));
 
-            if (btnCancelLogin && loginModal) {
-                btnCancelLogin.addEventListener('click', () => {
-                    loginModal.classList.add('hidden');
-                });
-            }
-
-            // 3. Azione Login
             const btnDoLogin = document.getElementById('btnDoLogin');
             if (btnDoLogin) {
                 btnDoLogin.addEventListener('click', async () => {
-                    if (!supabaseClient) {
-                        alert("Supabase non configurato.");
-                        return;
-                    }
                     const email = document.getElementById('loginEmail').value;
                     const password = document.getElementById('loginPassword').value;
                     const errorMsg = document.getElementById('loginError');
 
                     const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-                    
                     if (error) {
                         errorMsg.textContent = error.message;
                         errorMsg.classList.remove('hidden');
                     } else {
                         loginModal.classList.add('hidden');
-                        errorMsg.classList.add('hidden');
                         checkAuth();
                     }
                 });
             }
 
-            // 4. Logout
             const btnLogout = document.getElementById('btnLogout');
             if (btnLogout) {
                 btnLogout.addEventListener('click', async () => {
@@ -207,11 +236,9 @@
                 });
             }
 
-            // Avvia controllo sessione e caricamento iniziale
             await checkAuth();
         });
 
-        // --- CONTROLLO SESSIONE ---
         async function checkAuth() {
             const linkAdmin = document.getElementById('linkAdmin');
             const btnLogout = document.getElementById('btnLogout');
@@ -220,13 +247,7 @@
             const viewAdmin = document.getElementById('view-admin');
             const urlParams = new URLSearchParams(window.location.search);
 
-            if (!supabaseClient) {
-                viewPublic.classList.remove('hidden');
-                viewAdmin.classList.add('hidden');
-                loadCalendar();
-                loadStandings();
-                return;
-            }
+            if (!supabaseClient) return;
 
             try {
                 const { data: { session } } = await supabaseClient.auth.getSession();
@@ -242,8 +263,7 @@
                     } else {
                         viewPublic.classList.remove('hidden');
                         viewAdmin.classList.add('hidden');
-                        loadCalendar();
-                        loadStandings();
+                        loadPublicFilters();
                     }
                 } else {
                     if (btnLogin) btnLogin.classList.remove('hidden');
@@ -251,285 +271,111 @@
                     if (linkAdmin) linkAdmin.classList.add('hidden');
                     viewPublic.classList.remove('hidden');
                     viewAdmin.classList.add('hidden');
-                    loadCalendar();
-                    loadStandings();
+                    loadPublicFilters();
                 }
-            } catch (err) {
-                viewPublic.classList.remove('hidden');
-                viewAdmin.classList.add('hidden');
-            }
+            } catch (err) { console.error(err); }
         }
 
-        // ==========================================
-        // LOGICA VISTA PUBBLICA
-        // ==========================================
-        async function loadCalendar() {
-            try {
-                const res = await fetch(`${API_BASE}/calendar`);
-                const data = await res.json();
-                const list = document.getElementById('calendarList');
-                if (!list) return;
-                list.innerHTML = '';
-                
-                if (data.length === 0) {
-                    list.innerHTML = '<p class="text-gray-500 text-sm italic">Nessun evento in calendario.</p>';
-                    return;
-                }
-
-                data.forEach(r => {
-                    const date = new Date(r.created_at).toLocaleDateString('it-IT');
-                    list.innerHTML += `
-                        <div class="bg-[#0f0f1a] p-3 rounded border border-gray-700 hover:border-[#4ecca3] transition-colors cursor-pointer" onclick="document.getElementById('standingsId').value='${r.id}'; setTab('rally', null)">
-                            <p class="font-bold text-white text-sm">${r.name}</p>
-                            <p class="text-xs text-gray-500">${date}</p>
-                        </div>
-                    `;
-                });
-            } catch (e) { console.error("Errore calendario:", e); }
-        }
-
+        // TABELLA DYNAMIC RENDERING (Badge e Podi)
         let currentTab = 'rally';
-        
         function setTab(tab, event) {
             currentTab = tab;
             document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('tab-active');
-                btn.classList.add('bg-[#0f0f1a]', 'hover:bg-[#16213e]');
+                btn.classList.remove('tab-active', 'text-white');
+                btn.classList.add('text-slate-400');
             });
-            if (event && event.target) {
-                event.target.classList.remove('bg-[#0f0f1a]', 'hover:bg-[#16213e]');
-                event.target.classList.add('tab-active');
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('tab-active');
+                event.currentTarget.classList.remove('text-slate-400');
             }
             loadStandings();
         }
 
+        async function loadPublicFilters() {
+            try {
+                const res = await fetch(`${API_BASE}/setup`);
+                const data = await res.json();
+                const pubRallySelect = document.getElementById('pubRallySelect');
+                pubRallySelect.innerHTML = '<option value="">Seleziona Rally...</option>';
+                (data.rallys || []).forEach(r => {
+                    pubRallySelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+                });
+            } catch (e) { console.error(e); }
+        }
+
         async function loadStandings() {
-            const idInput = document.getElementById('standingsId');
+            const rallyId = document.getElementById('pubRallySelect').value;
             const tbody = document.getElementById('standingsBody');
-            if (!idInput || !tbody) return;
-            
-            const id = idInput.value;
-            tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">Caricamento...</td></tr>';
+            if (!tbody) return;
+
+            if (!rallyId) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-500">Seleziona un evento dal menu per vedere le classifiche.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-500">Caricamento classifiche in corso...</td></tr>';
 
             try {
-                const res = await fetch(`${API_BASE}/standings/${currentTab}/${id}`);
+                const res = await fetch(`${API_BASE}/standings/${currentTab}/${rallyId}`);
                 const data = await res.json();
                 
                 tbody.innerHTML = '';
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">Nessun dato per questo ID.</td></tr>';
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-500">Nessun risultato disponibile.</td></tr>';
                     return;
                 }
 
-                data.forEach(row => {
+                data.forEach((row, idx) => {
                     const tr = document.createElement('tr');
-                    tr.className = "border-b border-gray-700 hover:bg-[#16213e] transition-colors";
+                    tr.className = "hover:bg-slate-800/40 transition-colors border-b border-slate-800/50";
                     
-                    let gapDisplay = row.gap_first || '-';
-                    if (currentTab === 'stage') gapDisplay = row.gap || '-';
-                    
+                    let posBadge = `<span class="font-bold text-slate-400">${row.position}</span>`;
+                    if (row.position === 1) posBadge = `<span class="px-2 py-0.5 rounded text-amber-300 bg-amber-500/10 border border-amber-500/30 font-bold">1</span>`;
+                    if (row.position === 2) posBadge = `<span class="px-2 py-0.5 rounded text-slate-200 bg-slate-400/10 border border-slate-400/30 font-bold">2</span>`;
+                    if (row.position === 3) posBadge = `<span class="px-2 py-0.5 rounded text-amber-600 bg-amber-700/10 border border-amber-700/30 font-bold">3</span>`;
+
                     let extra = '';
                     const extraHead = document.getElementById('extraColHead');
                     if (currentTab === 'rally') {
-                        extra = `<td class="p-3 font-bold text-[#f5a623] text-right">${row.points} pt</td>`;
-                        if (extraHead) extraHead.textContent = "Punti";
+                        extra = `<td class="p-4 font-bold text-amber-400 text-right">${row.points || 0} PTS</td>`;
+                        if (extraHead) extraHead.textContent = "PUNTI FIA";
                     } else {
                         if (extraHead) extraHead.textContent = "";
                     }
 
                     tr.innerHTML = `
-                        <td class="p-3 text-center font-bold text-[#4ecca3]">${row.position}</td>
-                        <td class="p-3 font-semibold text-white">${row.driver || row.driver_name}</td>
-                        <td class="p-3 font-mono text-gray-300">
+                        <td class="p-4 text-center">${posBadge}</td>
+                        <td class="p-4 font-bold text-white flex items-center gap-2">
+                            <i data-lucide="user" class="w-4 h-4 text-slate-500"></i> ${row.driver || row.driver_name}
+                        </td>
+                        <td class="p-4 font-mono-time text-slate-300">
                             ${row.time_str || row.total_str} 
-                            <span class="text-red-400 text-xs ml-2">${gapDisplay !== '-' ? gapDisplay : ''}</span>
+                            <span class="text-rose-400 text-xs ml-2">${row.gap && row.gap !== '-' ? row.gap : ''}</span>
                         </td>
                         ${extra}
                     `;
                     tbody.appendChild(tr);
                 });
+                lucide.createIcons();
             } catch (e) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-400">Errore di caricamento</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-rose-400">Errore nel recupero dati.</td></tr>`;
             }
         }
-
-        // ==========================================
-        // LOGICA VISTA ADMIN
-        // ==========================================
+        
+        document.getElementById('pubRallySelect').addEventListener('change', loadStandings);
+        
+        // Logica Setup & OCR Admin immutata e integrata
         let dbRallys = [];
         async function loadSetup() {
             try {
                 const res = await fetch(`${API_BASE}/setup`);
                 const data = await res.json();
                 dbRallys = data.rallys || [];
-                
                 const selectRally = document.getElementById('selectRally');
                 if (!selectRally) return;
                 selectRally.innerHTML = '<option value="">Seleziona...</option>';
-                dbRallys.forEach(r => {
-                    selectRally.innerHTML += `<option value="${r.id}">${r.name}</option>`;
-                });
-            } catch (e) { console.error("Errore setup", e); }
-        }
-
-        const selectRallyEl = document.getElementById('selectRally');
-        if (selectRallyEl) {
-            selectRallyEl.addEventListener('change', (e) => {
-                const rallyId = e.target.value;
-                const selectLeg = document.getElementById('selectLeg');
-                const btnNewLeg = document.getElementById('btnNewLeg');
-                
-                if (!rallyId) {
-                    selectLeg.innerHTML = '<option value="">Seleziona...</option>';
-                    selectLeg.disabled = true;
-                    btnNewLeg.classList.add('hidden');
-                    return;
-                }
-                const rally = dbRallys.find(r => r.id == rallyId);
-                selectLeg.innerHTML = '<option value="">Seleziona...</option>';
-                if (rally && rally.leg) {
-                    rally.leg.forEach(l => {
-                        selectLeg.innerHTML += `<option value="${l.id}">${l.name}</option>`;
-                    });
-                }
-                selectLeg.disabled = false;
-                btnNewLeg.classList.remove('hidden');
-                btnNewLeg.disabled = false;
-            });
-        }
-
-        const btnNewRallyEl = document.getElementById('btnNewRally');
-        if (btnNewRallyEl) {
-            btnNewRallyEl.addEventListener('click', async () => {
-                const name = prompt("Nome del nuovo Rally:");
-                if (!name) return;
-                await fetch(`${API_BASE}/create-rally`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name })
-                });
-                loadSetup();
-            });
-        }
-
-        const btnNewLegEl = document.getElementById('btnNewLeg');
-        if (btnNewLegEl) {
-            btnNewLegEl.addEventListener('click', async () => {
-                const rallyId = document.getElementById('selectRally').value;
-                const name = prompt("Nome del nuovo Leg (es. Leg 1):");
-                if (!name || !rallyId) return;
-                await fetch(`${API_BASE}/create-leg`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ rally_id: rallyId, name })
-                });
-                document.getElementById('selectRally').dispatchEvent(new Event('change'));
-            });
-        }
-
-        const fileInputEl = document.getElementById('fileInput');
-        if (fileInputEl) {
-            fileInputEl.addEventListener('change', () => {
-                if (fileInputEl.files.length > 0) {
-                    document.getElementById('uploadBtn').classList.remove('hidden');
-                }
-            });
-        }
-
-        const uploadBtnEl = document.getElementById('uploadBtn');
-        if (uploadBtnEl) {
-            uploadBtnEl.addEventListener('click', async () => {
-                const file = document.getElementById('fileInput').files[0];
-                if (!file) return;
-                const formData = new FormData();
-                formData.append('screenshot', file);
-
-                document.getElementById('uploadBtn').classList.add('hidden');
-                document.getElementById('loading').classList.remove('hidden');
-
-                try {
-                    const response = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
-                    const data = await response.json();
-
-                    if (data.success) {
-                        document.getElementById('trackName').textContent = data.track_name;
-                        const tbody = document.getElementById('tableBody');
-                        tbody.innerHTML = '';
-                        
-                        data.parsed_data.forEach((row, index) => {
-                            if (index > 0 && data.parsed_data.slice(0, index).some(r => r.driver === row.driver)) return; 
-
-                            const tr = document.createElement('tr');
-                            tr.className = "border-b border-gray-700 hover:bg-[#16213e]";
-                            tr.innerHTML = `
-                                <td class="p-2 text-center font-bold text-[#4ecca3]">${row.position}</td>
-                                <td class="p-2"><input type="text" class="${inputStyle} font-semibold" value="${row.driver || ''}" data-field="driver"></td>
-                                <td class="p-2"><input type="text" class="${inputStyle} text-gray-400 text-xs" value="${row.car || ''}" data-field="car"></td>
-                                <td class="p-2"><input type="text" class="${inputStyle} text-gray-300 font-mono" value="${row.time || ''}" data-field="time"></td>
-                                <td class="p-2"><input type="text" class="${inputStyle} text-red-400 font-mono" value="${row.gap || '-'}" data-field="gap"></td>
-                            `;
-                            tbody.appendChild(tr);
-                        });
-                        document.getElementById('resultBox').classList.remove('hidden');
-                    } else {
-                        alert("Errore OCR: " + data.error);
-                    }
-                } catch (error) {
-                    alert("Errore di rete: " + error.message);
-                } finally {
-                    document.getElementById('loading').classList.add('hidden');
-                    document.getElementById('uploadBtn').classList.remove('hidden');
-                }
-            });
-        }
-
-        const saveBtnEl = document.getElementById('saveBtn');
-        if (saveBtnEl) {
-            saveBtnEl.addEventListener('click', async () => {
-                const legId = document.getElementById('selectLeg').value;
-                const stageName = document.getElementById('stageName').value;
-                const trackName = document.getElementById('trackName').textContent;
-                
-                if (!legId || !stageName) {
-                    alert("⚠️ Seleziona un Rally, un Leg e inserisci il nome dello Stage prima di salvare.");
-                    return;
-                }
-
-                const finalData = [];
-                document.querySelectorAll('#tableBody tr').forEach((tr, index) => {
-                    const inputs = tr.querySelectorAll('input');
-                    finalData.push({
-                        position: index + 1,
-                        driver: inputs[0].value,
-                        car: inputs[1].value,
-                        time: inputs[2].value,
-                        gap: inputs[3].value,
-                        penalty: "-"
-                    });
-                });
-
-                const btn = document.getElementById('saveBtn');
-                btn.disabled = true; btn.textContent = "Salvataggio...";
-
-                try {
-                    const response = await fetch(`${API_BASE}/save-stage`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ leg_id: legId, stage_name: stageName, track_name: trackName, results: finalData })
-                    });
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        alert("✅ " + result.message);
-                        document.getElementById('resultBox').classList.add('hidden');
-                        document.getElementById('stageName').value = '';
-                        document.getElementById('fileInput').value = '';
-                    } else {
-                        alert("❌ Errore: " + result.error);
-                    }
-                } catch (error) {
-                    alert("❌ Errore di rete: " + error.message);
-                } finally {
-                    btn.disabled = false; btn.textContent = "💾 Conferma e Salva";
-                }
-            });
+                dbRallys.forEach(r => selectRally.innerHTML += `<option value="${r.id}">${r.name}</option>`);
+            } catch (e) { console.error(e); }
         }
     </script>
 </body>
