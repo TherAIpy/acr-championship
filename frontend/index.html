@@ -532,6 +532,212 @@
                 tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-rose-400">Errore nel recupero dati.</td></tr>`;
             }
         }
+
+        // ==========================================
+        // LOGICA VISTA ADMIN (Setup & OCR Upload)
+        // ==========================================
+        let dbRallys = [];
+
+        async function loadSetup() {
+            try {
+                const res = await fetch(`${API_BASE}/setup`);
+                const data = await res.json();
+                dbRallys = data.rallys || [];
+                
+                const selectRally = document.getElementById('selectRally');
+                if (!selectRally) return;
+                selectRally.innerHTML = '<option value="">Seleziona...</option>';
+                dbRallys.forEach(r => {
+                    selectRally.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+                });
+            } catch (e) { console.error("Errore caricamento setup:", e); }
+        }
+
+        // Gestione cambio Rally nel pannello Admin -> Popola Leg
+        const selectRallyAdmin = document.getElementById('selectRally');
+        if (selectRallyAdmin) {
+            selectRallyAdmin.addEventListener('change', (e) => {
+                const rallyId = e.target.value;
+                const selectLeg = document.getElementById('selectLeg');
+                const btnNewLeg = document.getElementById('btnNewLeg');
+                
+                if (!rallyId) {
+                    selectLeg.innerHTML = '<option value="">Seleziona...</option>';
+                    selectLeg.disabled = true;
+                    if (btnNewLeg) btnNewLeg.classList.add('hidden');
+                    return;
+                }
+                const rally = dbRallys.find(r => r.id == rallyId);
+                selectLeg.innerHTML = '<option value="">Seleziona...</option>';
+                if (rally && rally.leg) {
+                    rally.leg.forEach(l => {
+                        selectLeg.innerHTML += `<option value="${l.id}">${l.name}</option>`;
+                    });
+                }
+                selectLeg.disabled = false;
+                if (btnNewLeg) {
+                    btnNewLeg.classList.remove('hidden');
+                    btnNewLeg.disabled = false;
+                }
+            });
+        }
+
+        // Pulsante Nuovo Rally
+        const btnNewRally = document.getElementById('btnNewRally');
+        if (btnNewRally) {
+            btnNewRally.addEventListener('click', async () => {
+                const name = prompt("Nome del nuovo Rally:");
+                if (!name) return;
+                try {
+                    await fetch(`${API_BASE}/create-rally`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name })
+                    });
+                    loadSetup();
+                } catch (err) { alert("Errore creazione rally: " + err.message); }
+            });
+        }
+
+        // Pulsante Nuovo Leg
+        const btnNewLeg = document.getElementById('btnNewLeg');
+        if (btnNewLeg) {
+            btnNewLeg.addEventListener('click', async () => {
+                const rallyId = document.getElementById('selectRally').value;
+                const name = prompt("Nome del nuovo Leg (es. Leg 1):");
+                if (!name || !rallyId) return;
+                try {
+                    await fetch(`${API_BASE}/create-leg`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ rally_id: rallyId, name })
+                    });
+                    loadSetup();
+                } catch (err) { alert("Errore creazione leg: " + err.message); }
+            });
+        }
+
+        // Mostra il pulsante OCR quando viene selezionato uno screenshot
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) {
+            fileInput.addEventListener('change', () => {
+                const uploadBtn = document.getElementById('uploadBtn');
+                if (fileInput.files.length > 0 && uploadBtn) {
+                    uploadBtn.classList.remove('hidden');
+                }
+            });
+        }
+
+        // Azione Upload & OCR
+        const uploadBtn = document.getElementById('uploadBtn');
+        if (uploadBtn) {
+            uploadBtn.addEventListener('click', async () => {
+                const file = document.getElementById('fileInput').files[0];
+                if (!file) return;
+                
+                const formData = new FormData();
+                formData.append('screenshot', file);
+
+                uploadBtn.classList.add('hidden');
+                const loadingDiv = document.getElementById('loading');
+                if (loadingDiv) loadingDiv.classList.remove('hidden');
+
+                try {
+                    const response = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const trackNameEl = document.getElementById('trackName');
+                        if (trackNameEl) trackNameEl.textContent = "Tracciato: " + data.track_name;
+                        
+                        const tbody = document.getElementById('tableBody');
+                        if (tbody) {
+                            tbody.innerHTML = '';
+                            
+                            data.parsed_data.forEach((row, index) => {
+                                if (index > 0 && data.parsed_data.slice(0, index).some(r => r.driver === row.driver)) return; 
+
+                                const tr = document.createElement('tr');
+                                tr.className = "border-b border-slate-800 hover:bg-slate-800/40 transition-colors";
+                                tr.innerHTML = `
+                                    <td class="p-3 text-center font-bold text-emerald-400">${row.position}</td>
+                                    <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white font-semibold" value="${row.driver || ''}" data-field="driver"></td>
+                                    <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-400 text-xs" value="${row.car || ''}" data-field="car"></td>
+                                    <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 font-mono-time" value="${row.time || ''}" data-field="time"></td>
+                                    <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-rose-400 font-mono-time" value="${row.gap || '-'}" data-field="gap"></td>
+                                `;
+                                tbody.appendChild(tr);
+                            });
+                        }
+                        const resultBox = document.getElementById('resultBox');
+                        if (resultBox) resultBox.classList.remove('hidden');
+                    } else {
+                        alert("Errore OCR: " + (data.error || "Impossibile estrarre i dati"));
+                    }
+                } catch (error) {
+                    alert("Errore di rete durante l'upload: " + error.message);
+                } finally {
+                    if (loadingDiv) loadingDiv.classList.add('hidden');
+                    if (uploadBtn) uploadBtn.classList.remove('hidden');
+                }
+            });
+        }
+
+        // Salvataggio Stage sul Database Supabase
+        const saveBtn = document.getElementById('saveBtn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', async () => {
+                const legId = document.getElementById('selectLeg').value;
+                const stageNameInput = document.getElementById('stageName');
+                const stageName = stageNameInput ? stageNameInput.value : '';
+                const trackNameEl = document.getElementById('trackName');
+                const trackName = trackNameEl ? trackNameEl.textContent.replace("Tracciato: ", "") : '';
+                
+                if (!legId || !stageName) {
+                    alert("⚠️ Seleziona un Rally, un Leg e inserisci il nome dello Stage prima di salvare.");
+                    return;
+                }
+
+                const finalData = [];
+                document.querySelectorAll('#tableBody tr').forEach((tr, index) => {
+                    const inputs = tr.querySelectorAll('input');
+                    if (inputs.length >= 4) {
+                        finalData.push({
+                            position: index + 1,
+                            driver: inputs[0].value,
+                            car: inputs[1].value,
+                            time: inputs[2].value,
+                            gap: inputs[3].value,
+                            penalty: "-"
+                        });
+                    }
+                });
+
+                saveBtn.disabled = true; 
+                saveBtn.textContent = "Salvataggio in corso...";
+
+                try {
+                    const response = await fetch(`${API_BASE}/save-stage`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ leg_id: legId, stage_name: stageName, track_name: trackName, results: finalData })
+                    });
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        alert("✅ " + result.message);
+                        const resultBox = document.getElementById('resultBox');
+                        if (resultBox) resultBox.classList.add('hidden');
+                        if (stageNameInput) stageNameInput.value = '';
+                        if (fileInput) fileInput.value = '';
+                    } else {
+                        alert("❌ Errore: " + result.error);
+                    }
+                } catch (error) {
+                    alert("❌ Errore di rete: " + error.message);
+                } finally {
+                    saveBtn.disabled = false; 
+                    saveBtn.textContent = "💾 Conferma e Salva in DB";
+                }
+            });
+        }
     </script>
 </body>
 </html>
