@@ -133,19 +133,19 @@
         </div>
     </div>
 
-    <!-- VISTA ADMIN (Restyling integrato con Upload OCR) -->
+    <!-- VISTA ADMIN -->
     <div id="view-admin" class="w-full max-w-7xl hidden space-y-6 fade-in">
         <div class="glass-panel p-6 rounded-xl">
             <h2 class="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2"><i data-lucide="folder-plus"></i> Setup Campionato & Stage</h2>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                     <label class="text-xs text-slate-400 font-semibold block mb-1">Rally</label>
-                    <select id="selectRally" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700"></select>
+                    <select id="selectRally" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700"><option value="">Seleziona...</option></select>
                     <button id="btnNewRally" class="text-xs text-blue-400 font-semibold mt-1 hover:underline">+ Nuovo Rally</button>
                 </div>
                 <div>
                     <label class="text-xs text-slate-400 font-semibold block mb-1">Leg</label>
-                    <select id="selectLeg" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700" disabled></select>
+                    <select id="selectLeg" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700" disabled><option value="">Seleziona...</option></select>
                     <button id="btnNewLeg" class="text-xs text-blue-400 font-semibold mt-1 hover:underline hidden" disabled>+ Nuovo Leg</button>
                 </div>
                 <div>
@@ -192,9 +192,10 @@
         const SUPABASE_URL = 'https://rvqorpdebooklqtjbnwl.supabase.co'; 
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cW9ycGRlYm9va2xxdGpibndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIzMTk2ODIsImV4cCI6MjEwNzg5NTY4Mn0.oaw45keCaaP40J9nfVLaggIyzPJBT-X0XerqlMc5iMk';
         const API_BASE = 'https://acr-backend-wv98.onrender.com/api';
-        const inputStyle = "w-full bg-slate-900/90 border border-slate-700 focus:border-blue-500 rounded px-2 py-1 text-white font-mono-time";
         
         let supabaseClient = null;
+        let dbRallys = [];
+        let currentTab = 'rally';
 
         document.addEventListener('DOMContentLoaded', async () => {
             try {
@@ -203,6 +204,7 @@
                 }
             } catch(e) { console.error("Error initializing Supabase:", e); }
 
+            // Gestione Modale Login
             const btnLogin = document.getElementById('btnLogin');
             const loginModal = document.getElementById('loginModal');
             const btnCancelLogin = document.getElementById('btnCancelLogin');
@@ -236,7 +238,9 @@
                 });
             }
 
+            // Inizializzazione filtri e setup admin
             await checkAuth();
+            await loadPublicFilters();
         });
 
         async function checkAuth() {
@@ -263,7 +267,6 @@
                     } else {
                         viewPublic.classList.remove('hidden');
                         viewAdmin.classList.add('hidden');
-                        loadPublicFilters();
                     }
                 } else {
                     if (btnLogin) btnLogin.classList.remove('hidden');
@@ -271,13 +274,13 @@
                     if (linkAdmin) linkAdmin.classList.add('hidden');
                     viewPublic.classList.remove('hidden');
                     viewAdmin.classList.add('hidden');
-                    loadPublicFilters();
                 }
             } catch (err) { console.error(err); }
         }
 
-        // TABELLA DYNAMIC RENDERING (Badge e Podi)
-        let currentTab = 'rally';
+        // ==========================================
+        // VISTA PUBBLICA & FILTRI A CASCATA
+        // ==========================================
         function setTab(tab, event) {
             currentTab = tab;
             document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -295,109 +298,18 @@
             try {
                 const res = await fetch(`${API_BASE}/setup`);
                 const data = await res.json();
-                const pubRallySelect = document.getElementById('pubRallySelect');
-                pubRallySelect.innerHTML = '<option value="">Seleziona Rally...</option>';
-                (data.rallys || []).forEach(r => {
-                    pubRallySelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
-                });
-            } catch (e) { console.error(e); }
-        }
-
-        async function loadStandings() {
-            const rallyId = document.getElementById('pubRallySelect').value;
-            const tbody = document.getElementById('standingsBody');
-            if (!tbody) return;
-
-            if (!rallyId) {
-                tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-500">Seleziona un evento dal menu per vedere le classifiche.</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-500">Caricamento classifiche in corso...</td></tr>';
-
-            try {
-                const res = await fetch(`${API_BASE}/standings/${currentTab}/${rallyId}`);
-                const data = await res.json();
-                
-                tbody.innerHTML = '';
-                if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-500">Nessun risultato disponibile.</td></tr>';
-                    return;
-                }
-
-                data.forEach((row, idx) => {
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-slate-800/40 transition-colors border-b border-slate-800/50";
-                    
-                    let posBadge = `<span class="font-bold text-slate-400">${row.position}</span>`;
-                    if (row.position === 1) posBadge = `<span class="px-2 py-0.5 rounded text-amber-300 bg-amber-500/10 border border-amber-500/30 font-bold">1</span>`;
-                    if (row.position === 2) posBadge = `<span class="px-2 py-0.5 rounded text-slate-200 bg-slate-400/10 border border-slate-400/30 font-bold">2</span>`;
-                    if (row.position === 3) posBadge = `<span class="px-2 py-0.5 rounded text-amber-600 bg-amber-700/10 border border-amber-700/30 font-bold">3</span>`;
-
-                    let extra = '';
-                    const extraHead = document.getElementById('extraColHead');
-                    if (currentTab === 'rally') {
-                        extra = `<td class="p-4 font-bold text-amber-400 text-right">${row.points || 0} PTS</td>`;
-                        if (extraHead) extraHead.textContent = "PUNTI FIA";
-                    } else {
-                        if (extraHead) extraHead.textContent = "";
-                    }
-
-                    tr.innerHTML = `
-                        <td class="p-4 text-center">${posBadge}</td>
-                        <td class="p-4 font-bold text-white flex items-center gap-2">
-                            <i data-lucide="user" class="w-4 h-4 text-slate-500"></i> ${row.driver || row.driver_name}
-                        </td>
-                        <td class="p-4 font-mono-time text-slate-300">
-                            ${row.time_str || row.total_str} 
-                            <span class="text-rose-400 text-xs ml-2">${row.gap && row.gap !== '-' ? row.gap : ''}</span>
-                        </td>
-                        ${extra}
-                    `;
-                    tbody.appendChild(tr);
-                });
-                lucide.createIcons();
-            } catch (e) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-rose-400">Errore nel recupero dati.</td></tr>`;
-            }
-        }
-        
-        document.getElementById('pubRallySelect').addEventListener('change', loadStandings);
-        
-        // Logica Setup & OCR Admin immutata e integrata
-        let dbRallys = [];
-        async function loadSetup() {
-            try {
-                const res = await fetch(`${API_BASE}/setup`);
-                const data = await res.json();
                 dbRallys = data.rallys || [];
-                const selectRally = document.getElementById('selectRally');
-                if (!selectRally) return;
-                selectRally.innerHTML = '<option value="">Seleziona...</option>';
-                dbRallys.forEach(r => selectRally.innerHTML += `<option value="${r.id}">${r.name}</option>`);
-            } catch (e) { console.error(e); }
-        }
-
-        // --- GESTIONE FILTRI A CASCATA PUBBLICI ---
-        let publicSetupData = [];
-
-        async function loadPublicFilters() {
-            try {
-                const res = await fetch(`${API_BASE}/setup`);
-                const data = await res.json();
-                publicSetupData = data.rallys || [];
                 
                 const pubRallySelect = document.getElementById('pubRallySelect');
                 if (!pubRallySelect) return;
                 
                 pubRallySelect.innerHTML = '<option value="">Seleziona Rally...</option>';
-                publicSetupData.forEach(r => {
+                dbRallys.forEach(r => {
                     pubRallySelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
                 });
-            } catch (e) { console.error("Errore caricamento filtri:", e); }
+            } catch (e) { console.error("Errore caricamento filtri pubblici:", e); }
         }
 
-        // Evento Rally -> Popola Leg
         const pubRallySelect = document.getElementById('pubRallySelect');
         if (pubRallySelect) {
             pubRallySelect.addEventListener('change', (e) => {
@@ -412,19 +324,17 @@
 
                 if (!rallyId) return;
 
-                const selectedRally = publicSetupData.find(r => r.id == rallyId);
+                const selectedRally = dbRallys.find(r => r.id == rallyId);
                 if (selectedRally && selectedRally.leg) {
                     selectedRally.leg.forEach(l => {
                         pubLegSelect.innerHTML += `<option value="${l.id}">${l.name}</option>`;
                     });
                     pubLegSelect.disabled = false;
                 }
-                // Carica direttamente la classifica del Rally (punti)
                 loadStandings('rally', rallyId);
             });
         }
 
-        // Evento Leg -> Popola Stage
         const pubLegSelect = document.getElementById('pubLegSelect');
         if (pubLegSelect) {
             pubLegSelect.addEventListener('change', (e) => {
@@ -437,7 +347,7 @@
                 if (!legId) return;
 
                 const rallyId = document.getElementById('pubRallySelect').value;
-                const selectedRally = publicSetupData.find(r => r.id == rallyId);
+                const selectedRally = dbRallys.find(r => r.id == rallyId);
                 const selectedLeg = selectedRally?.leg?.find(l => l.id == legId);
 
                 if (selectedLeg && selectedLeg.stage) {
@@ -446,23 +356,18 @@
                     });
                     pubStageSelect.disabled = false;
                 }
-                // Carica la classifica della Leg (somma tempi)
                 loadStandings('leg', legId);
             });
         }
 
-        // Evento Stage -> Carica Stage
         const pubStageSelect = document.getElementById('pubStageSelect');
         if (pubStageSelect) {
             pubStageSelect.addEventListener('change', (e) => {
                 const stageId = e.target.value;
-                if (stageId) {
-                    loadStandings('stage', stageId);
-                }
+                if (stageId) loadStandings('stage', stageId);
             });
         }
 
-        // Funzione unificata per caricare le classifiche in base al tipo attivo
         async function loadStandings(forcedType = null, forcedId = null) {
             const type = forcedType || currentTab;
             let id = forcedId;
@@ -489,7 +394,7 @@
                 
                 tbody.innerHTML = '';
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-500">Nessun risultato disponibile per questa selezione.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-500">Nessun risultato disponibile.</td></tr>';
                     return;
                 }
 
@@ -534,10 +439,8 @@
         }
 
         // ==========================================
-        // LOGICA VISTA ADMIN (Setup & OCR Upload)
+        // VISTA ADMIN (Setup & OCR Upload)
         // ==========================================
-        let dbRallys = [];
-
         async function loadSetup() {
             try {
                 const res = await fetch(`${API_BASE}/setup`);
@@ -550,10 +453,9 @@
                 dbRallys.forEach(r => {
                     selectRally.innerHTML += `<option value="${r.id}">${r.name}</option>`;
                 });
-            } catch (e) { console.error("Errore caricamento setup:", e); }
+            } catch (e) { console.error("Errore caricamento setup admin:", e); }
         }
 
-        // Gestione cambio Rally nel pannello Admin -> Popola Leg
         const selectRallyAdmin = document.getElementById('selectRally');
         if (selectRallyAdmin) {
             selectRallyAdmin.addEventListener('change', (e) => {
@@ -582,7 +484,6 @@
             });
         }
 
-        // Pulsante Nuovo Rally
         const btnNewRally = document.getElementById('btnNewRally');
         if (btnNewRally) {
             btnNewRally.addEventListener('click', async () => {
@@ -594,11 +495,11 @@
                         body: JSON.stringify({ name })
                     });
                     loadSetup();
+                    loadPublicFilters();
                 } catch (err) { alert("Errore creazione rally: " + err.message); }
             });
         }
 
-        // Pulsante Nuovo Leg
         const btnNewLeg = document.getElementById('btnNewLeg');
         if (btnNewLeg) {
             btnNewLeg.addEventListener('click', async () => {
@@ -611,11 +512,11 @@
                         body: JSON.stringify({ rally_id: rallyId, name })
                     });
                     loadSetup();
+                    loadPublicFilters();
                 } catch (err) { alert("Errore creazione leg: " + err.message); }
             });
         }
 
-        // Mostra il pulsante OCR quando viene selezionato uno screenshot
         const fileInput = document.getElementById('fileInput');
         if (fileInput) {
             fileInput.addEventListener('change', () => {
@@ -626,7 +527,6 @@
             });
         }
 
-        // Azione Upload & OCR
         const uploadBtn = document.getElementById('uploadBtn');
         if (uploadBtn) {
             uploadBtn.addEventListener('click', async () => {
@@ -681,7 +581,6 @@
             });
         }
 
-        // Salvataggio Stage sul Database Supabase
         const saveBtn = document.getElementById('saveBtn');
         if (saveBtn) {
             saveBtn.addEventListener('click', async () => {
@@ -727,6 +626,7 @@
                         if (resultBox) resultBox.classList.add('hidden');
                         if (stageNameInput) stageNameInput.value = '';
                         if (fileInput) fileInput.value = '';
+                        loadPublicFilters();
                     } else {
                         alert("❌ Errore: " + result.error);
                     }
