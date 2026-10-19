@@ -136,68 +136,120 @@
 
     <!-- VISTA ADMIN -->
     <div id="view-admin" class="w-full max-w-7xl hidden space-y-6 fade-in">
-        <!-- STEP 1: GESTIONE GERARCHIA -->
-        <div class="glass-panel p-6 rounded-xl">
-            <h2 class="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2"><i data-lucide="folder-plus"></i> 1. Configurazione Campionato & Tracciato</h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                    <label class="text-xs text-slate-400 font-semibold block mb-1">Campionato</label>
-                    <div class="flex gap-2">
+        
+        <!-- HEADER ADMIN & SWITCHER MODALITÀ -->
+        <div class="flex flex-wrap justify-between items-center gap-4 bg-slate-800/60 p-4 rounded-xl border border-slate-700">
+            <div>
+                <h2 class="text-xl font-bold text-white flex items-center gap-2"><i data-lucide="shield-check" class="text-emerald-400"></i> Gestione Campionati & Rally</h2>
+                <p class="text-xs text-slate-400">Pannello di controllo, creazione guidata e caricamento tempi OCR</p>
+            </div>
+            <div class="flex gap-3">
+                <button id="btnModeManage" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                    <i data-lucide="folder"></i> Seleziona / Carica Tempi
+                </button>
+                <button id="btnModeWizard" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                    <i data-lucide="plus-circle"></i> Programma Nuovo Rally / Campionato
+                </button>
+            </div>
+        </div>
+
+        <!-- SEZIONE 1: MODALITÀ SELEZIONE & CARICAMENTO RISULTATI -->
+        <div id="sectionManage" class="space-y-6">
+            <div class="glass-panel p-6 rounded-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-md font-bold text-emerald-400 flex items-center gap-2"><i data-lucide="list-tree"></i> Seleziona lo Stage per Gestione o Caricamento</h3>
+                    <button id="btnDeleteSelected" class="text-xs text-rose-400 hover:text-rose-300 font-semibold hidden flex items-center gap-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Elimina Elemento Selezionato</button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="text-xs text-slate-400 font-semibold block mb-1">Campionato</label>
                         <select id="selectChamp" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700"><option value="">Seleziona...</option></select>
-                        <button id="btnNewChamp" class="bg-purple-600 hover:bg-purple-500 text-white px-3 rounded-lg text-sm font-bold" title="Nuovo Campionato">+</button>
                     </div>
-                </div>
-                <div>
-                    <label class="text-xs text-slate-400 font-semibold block mb-1">Rally</label>
-                    <div class="flex gap-2">
+                    <div>
+                        <label class="text-xs text-slate-400 font-semibold block mb-1">Rally</label>
                         <select id="selectRally" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700" disabled><option value="">Seleziona...</option></select>
-                        <button id="btnNewRally" class="bg-blue-600 hover:bg-blue-500 text-white px-3 rounded-lg text-sm font-bold hidden" id="btnNewRally" title="Nuovo Rally">+</button>
                     </div>
-                </div>
-                <div>
-                    <label class="text-xs text-slate-400 font-semibold block mb-1">Leg</label>
-                    <div class="flex gap-2">
+                    <div>
+                        <label class="text-xs text-slate-400 font-semibold block mb-1">Leg</label>
                         <select id="selectLeg" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700" disabled><option value="">Seleziona...</option></select>
-                        <button id="btnNewLeg" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 rounded-lg text-sm font-bold hidden" title="Nuovo Leg">+</button>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 font-semibold block mb-1">Stage Attivo</label>
+                        <select id="selectStage" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700" disabled><option value="">Seleziona...</option></select>
                     </div>
                 </div>
-                <div>
-                    <label class="text-xs text-slate-400 font-semibold block mb-1">Stage (es. SS1)</label>
-                    <input type="text" id="stageName" placeholder="SS1 - Special Stage" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700" disabled>
+            </div>
+
+            <!-- UPLOAD SCREENSHOT (Visibile SOLO quando uno Stage è selezionato) -->
+            <div id="uploadSection" class="glass-panel p-6 rounded-xl hidden border border-blue-500/30">
+                <h3 class="text-lg font-bold text-blue-400 mb-2 flex items-center gap-2"><i data-lucide="upload-cloud"></i> Acquisizione Screenshot per lo Stage Selezionato</h3>
+                <p class="text-xs text-slate-400 mb-4">Carica lo screenshot OVERALL del tracciato attivo per estrarre tempi, auto e penalità con l'OCR.</p>
+                
+                <input type="file" id="fileInput" accept="image/*" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer mb-4">
+                <button id="uploadBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-all hidden mb-4 shadow-lg shadow-emerald-600/20">Estrai Dati con OCR Engine</button>
+                <div id="loading" class="text-center hidden mb-4"><p class="text-blue-400 animate-pulse font-semibold">Elaborazione OCR in corso...</p></div>
+                
+                <div id="resultBox" class="hidden border-t border-slate-800 pt-6 mt-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 id="trackName" class="text-md font-semibold text-slate-300">Tracciato Rilevato</h4>
+                        <button id="saveBtn" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-6 rounded-lg transition-all shadow-lg shadow-blue-600/30">💾 Salva Tempi nel DB</button>
+                    </div>
+                    <div class="overflow-x-auto max-h-96">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead class="sticky top-0 bg-slate-900/90 backdrop-blur">
+                                <tr class="text-slate-400 text-xs font-semibold uppercase">
+                                    <th class="p-2.5 w-12 text-center">POS</th>
+                                    <th class="p-2.5">PILOTA</th>
+                                    <th class="p-2.5">VETTURA</th>
+                                    <th class="p-2.5 w-32">TEMPO</th>
+                                    <th class="p-2.5 w-24 text-center">PENALITÀ</th>
+                                    <th class="p-2.5 w-28">GAP</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody" class="divide-y divide-slate-800"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- STEP 2: UPLOAD SCREENSHOT (Visibile solo se lo Stage è attivo) -->
-        <div id="uploadSection" class="glass-panel p-6 rounded-xl hidden border border-blue-500/30">
-            <h2 class="text-lg font-bold text-blue-400 mb-2 flex items-center gap-2"><i data-lucide="upload-cloud"></i> 2. Acquisizione Screenshot per lo Stage Selezionato</h2>
-            <p class="text-xs text-slate-400 mb-4">Carica lo screenshot della schermata OVERALL. I dati verranno associati allo stage attivo.</p>
+        <!-- SEZIONE 2: MODALITÀ CREAZIONE GUIDATA (WIZARD) -->
+        <div id="sectionWizard" class="glass-panel p-6 rounded-xl hidden space-y-6">
+            <h3 class="text-lg font-bold text-purple-400 border-b border-slate-800 pb-3 flex items-center gap-2"><i data-lucide="sparkles"></i> Programmazione Guidata Evento</h3>
             
-            <input type="file" id="fileInput" accept="image/*" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer mb-4">
-            <button id="uploadBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-all hidden mb-4 shadow-lg shadow-emerald-600/20">Estrai Dati con OCR Engine 2</button>
-            <div id="loading" class="text-center hidden mb-4"><p class="text-blue-400 animate-pulse font-semibold">Elaborazione OCR e parsing in corso...</p></div>
-            
-            <div id="resultBox" class="hidden border-t border-slate-800 pt-6 mt-4">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 id="trackName" class="text-md font-semibold text-slate-300">Tracciato Rilevato</h3>
-                    <button id="saveBtn" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-6 rounded-lg transition-all shadow-lg shadow-blue-600/30">💾 Conferma e Salva in DB</button>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="text-sm font-semibold text-slate-300 block mb-2">Tipologia Evento</label>
+                    <select id="wizType" class="w-full bg-slate-900 text-white p-3 rounded-lg border border-slate-700 font-bold">
+                        <option value="single">Rally Singolo</option>
+                        <option value="championship">Campionato Multi-Rally</option>
+                    </select>
                 </div>
-                <div class="overflow-x-auto max-h-96">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead class="sticky top-0 bg-slate-900/90 backdrop-blur">
-                            <tr class="text-slate-400 text-xs font-semibold uppercase">
-                                <th class="p-2.5 w-12 text-center">POS</th>
-                                <th class="p-2.5">PILOTA</th>
-                                <th class="p-2.5">VETTURA</th>
-                                <th class="p-2.5 w-32">TEMPO STAGE</th>
-                                <th class="p-2.5 w-24 text-center">PENALITÀ</th>
-                                <th class="p-2.5 w-28">GAP</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody" class="divide-y divide-slate-800"></tbody>
-                    </table>
+                <div>
+                    <label class="text-sm font-semibold text-slate-300 block mb-2">Nome Campionato / Rally</label>
+                    <input type="text" id="wizName" placeholder="es. ACR World Championship 2026" class="w-full bg-slate-900 text-white p-3 rounded-lg border border-slate-700">
                 </div>
             </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div id="boxRallyCount" class="hidden">
+                    <label class="text-sm font-semibold text-slate-300 block mb-2">Numero di Rally</label>
+                    <input type="number" id="wizRallyCount" min="1" max="12" value="1" class="w-full bg-slate-900 text-white p-3 rounded-lg border border-slate-700">
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-300 block mb-2">Numero di Leg per Rally</label>
+                    <input type="number" id="wizLegCount" min="1" max="5" value="1" class="w-full bg-slate-900 text-white p-3 rounded-lg border border-slate-700">
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-300 block mb-2">Stage per Leg</label>
+                    <input type="number" id="wizStageCount" min="1" max="10" value="2" class="w-full bg-slate-900 text-white p-3 rounded-lg border border-slate-700">
+                </div>
+            </div>
+
+            <button id="btnBuildWizard" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg transition-all shadow-lg shadow-purple-600/20 flex justify-center items-center gap-2">
+                Genera Struttura Evento & Tracciati <i data-lucide="arrow-right"></i>
+            </button>
         </div>
     </div>  
 
@@ -486,7 +538,7 @@
         }
 
         // ==========================================
-        // VISTA ADMIN (Setup, Gerarchia & Upload)
+        // VISTA ADMIN (Gestione & Wizard)
         // ==========================================
         async function loadSetup() {
             try {
@@ -503,47 +555,123 @@
             } catch (e) { console.error("Errore caricamento setup admin:", e); }
         }
 
-        function checkStageReady() {
-            const champId = document.getElementById('selectChamp').value;
-            const rallyId = document.getElementById('selectRally').value;
-            const legId = document.getElementById('selectLeg').value;
-            const stageName = document.getElementById('stageName').value.trim();
-            const uploadSection = document.getElementById('uploadSection');
+        // Switch Modalità Admin
+        const btnModeManage = document.getElementById('btnModeManage');
+        const btnModeWizard = document.getElementById('btnModeWizard');
+        const sectionManage = document.getElementById('sectionManage');
+        const sectionWizard = document.getElementById('sectionWizard');
 
-            if (champId && rallyId && legId && stageName.length > 0) {
+        if (btnModeManage && btnModeWizard) {
+            btnModeManage.addEventListener('click', () => {
+                sectionManage.classList.remove('hidden');
+                sectionWizard.classList.add('hidden');
+                loadSetup();
+            });
+            btnModeWizard.addEventListener('click', () => {
+                sectionManage.classList.add('hidden');
+                sectionWizard.classList.remove('hidden');
+            });
+        }
+
+        const wizType = document.getElementById('wizType');
+        if (wizType) {
+            wizType.addEventListener('change', (e) => {
+                const boxRallyCount = document.getElementById('boxRallyCount');
+                if (e.target.value === 'championship') {
+                    boxRallyCount.classList.remove('hidden');
+                } else {
+                    boxRallyCount.classList.add('hidden');
+                }
+            });
+        }
+
+        // Generatore Wizard Guidato
+        document.getElementById('btnBuildWizard')?.addEventListener('click', async () => {
+            const type = document.getElementById('wizType').value;
+            const name = document.getElementById('wizName').value.trim();
+            const rallyCount = parseInt(document.getElementById('wizRallyCount').value) || 1;
+            const legCount = parseInt(document.getElementById('wizLegCount').value) || 1;
+            const stageCount = parseInt(document.getElementById('wizStageCount').value) || 1;
+
+            if (!name) { alert("Inserisci il nome del Campionato o del Rally!"); return; }
+
+            try {
+                let champId = null;
+                if (type === 'championship') {
+                    const cRes = await fetch(`${API_BASE}/create-championship`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name })
+                    });
+                    const cData = await cRes.json();
+                    if (!cData.success) throw new Error(cData.error);
+                    champId = cData.championship.id;
+                }
+
+                const totalRallies = type === 'championship' ? rallyCount : 1;
+                for (let r = 1; r <= totalRallies; r++) {
+                    const rName = type === 'championship' ? `${name} - Rally ${r}` : name;
+                    const rRes = await fetch(`${API_BASE}/create-rally`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: rName, championship_id: champId })
+                    });
+                    const rData = await rRes.json();
+
+                    for (let l = 1; l <= legCount; l++) {
+                        const lRes = await fetch(`${API_BASE}/create-leg`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ rally_id: rData.rally.id, name: `Leg ${l}` })
+                        });
+                        const lData = await lRes.json();
+
+                        for (let s = 1; s <= stageCount; s++) {
+                            await fetch(`${API_BASE}/save-stage`, {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ leg_id: lData.leg.id, stage_name: `SS${s}`, track_name: `Tracciato SS${s}`, results: [] })
+                            });
+                        }
+                    }
+                }
+
+                alert("✅ Evento programmato con successo!");
+                sectionWizard.classList.add('hidden');
+                sectionManage.classList.remove('hidden');
+                await loadSetup();
+                await loadPublicFilters();
+            } catch (err) {
+                alert("❌ Errore durante la creazione: " + err.message);
+            }
+        });
+
+        // Selezione a cascata Admin
+        const selectChamp = document.getElementById('selectChamp');
+        const selectRally = document.getElementById('selectRally');
+        const selectLeg = document.getElementById('selectLeg');
+        const selectStage = document.getElementById('selectStage');
+        const uploadSection = document.getElementById('uploadSection');
+
+        function checkStageReady() {
+            if (selectStage && selectStage.value) {
                 uploadSection.classList.remove('hidden');
             } else {
                 uploadSection.classList.add('hidden');
             }
         }
 
-        const selectChamp = document.getElementById('selectChamp');
-        const selectRally = document.getElementById('selectRally');
-        const selectLeg = document.getElementById('selectLeg');
-        const stageNameInput = document.getElementById('stageName');
-
         if (selectChamp) {
             selectChamp.addEventListener('change', (e) => {
                 const champId = e.target.value;
-                const btnNewRally = document.getElementById('btnNewRally');
-                
                 selectRally.innerHTML = '<option value="">Seleziona...</option>';
                 selectLeg.innerHTML = '<option value="">Seleziona...</option>';
+                selectStage.innerHTML = '<option value="">Seleziona...</option>';
                 selectRally.disabled = !champId;
                 selectLeg.disabled = true;
-                stageNameInput.disabled = true;
-                stageNameInput.value = '';
+                selectStage.disabled = true;
 
                 if (champId) {
-                    btnNewRally.classList.remove('hidden');
                     const champ = dbChamps.find(c => c.id == champId);
                     if (champ && champ.rally) {
-                        champ.rally.forEach(r => {
-                            selectRally.innerHTML += `<option value="${r.id}">${r.name}</option>`;
-                        });
+                        champ.rally.forEach(r => selectRally.innerHTML += `<option value="${r.id}">${r.name}</option>`);
                     }
-                } else {
-                    btnNewRally.classList.add('hidden');
                 }
                 checkStageReady();
             });
@@ -552,25 +680,17 @@
         if (selectRally) {
             selectRally.addEventListener('change', (e) => {
                 const rallyId = e.target.value;
-                const btnNewLeg = document.getElementById('btnNewLeg');
-
                 selectLeg.innerHTML = '<option value="">Seleziona...</option>';
+                selectStage.innerHTML = '<option value="">Seleziona...</option>';
                 selectLeg.disabled = !rallyId;
-                stageNameInput.disabled = true;
-                stageNameInput.value = '';
+                selectStage.disabled = true;
 
                 if (rallyId) {
-                    btnNewLeg.classList.remove('hidden');
-                    const champId = selectChamp.value;
-                    const champ = dbChamps.find(c => c.id == champId);
+                    const champ = dbChamps.find(c => c.id == selectChamp.value);
                     const rally = champ?.rally?.find(r => r.id == rallyId);
                     if (rally && rally.leg) {
-                        rally.leg.forEach(l => {
-                            selectLeg.innerHTML += `<option value="${l.id}">${l.name}</option>`;
-                        });
+                        rally.leg.forEach(l => selectLeg.innerHTML += `<option value="${l.id}">${l.name}</option>`);
                     }
-                } else {
-                    btnNewLeg.classList.add('hidden');
                 }
                 checkStageReady();
             });
@@ -579,121 +699,26 @@
         if (selectLeg) {
             selectLeg.addEventListener('change', (e) => {
                 const legId = e.target.value;
-                stageNameInput.disabled = !legId;
-                if (!legId) stageNameInput.value = '';
+                selectStage.innerHTML = '<option value="">Seleziona...</option>';
+                selectStage.disabled = !legId;
+
+                if (legId) {
+                    const champ = dbChamps.find(c => c.id == selectChamp.value);
+                    const rally = champ?.rally?.find(r => r.id == selectRally.value);
+                    const leg = rally?.leg?.find(l => l.id == legId);
+                    if (leg && leg.stage) {
+                        leg.stage.forEach(s => selectStage.innerHTML += `<option value="${s.id}">${s.name} (${s.track_name})</option>`);
+                    }
+                }
                 checkStageReady();
             });
         }
 
-        if (stageNameInput) {
-            stageNameInput.addEventListener('input', checkStageReady);
+        if (selectStage) {
+            selectStage.addEventListener('change', checkStageReady);
         }
 
-        // Pulsante Nuovo Campionato con selezione automatica
-document.getElementById('btnNewChamp').addEventListener('click', async () => {
-    const name = prompt("Nome del nuovo Campionato:");
-    if (!name) return;
-
-    try {
-        const response = await fetch(`${API_BASE}/create-championship`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name })
-        });
-        const result = await response.json();
-
-        if (result.success) {
-            // Ricarica la lista dal DB
-            await loadSetup();
-            await loadPublicFilters();
-
-            // Seleziona automaticamente il nuovo campionato e scatena l'evento 'change'
-            const selectChamp = document.getElementById('selectChamp');
-            selectChamp.value = result.championship.id;
-            selectChamp.dispatchEvent(new Event('change'));
-        } else {
-            alert("❌ Errore durante la creazione del campionato: " + (result.error || "Errore sconosciuto"));
-        }
-    } catch (err) {
-        alert("❌ Errore di rete: " + err.message);
-    }
-});
-
-// Pulsante Nuovo Rally con selezione automatica
-document.getElementById('btnNewRally').addEventListener('click', async () => {
-    const champId = document.getElementById('selectChamp').value;
-    const name = prompt("Nome del nuovo Rally:");
-    if (!name || !champId) return;
-
-    try {
-        const response = await fetch(`${API_BASE}/create-rally`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, championship_id: champId })
-        });
-        const result = await response.json();
-
-        if (result.success) {
-            await loadSetup();
-            await loadPublicFilters();
-
-            // Rileziona il campionato corrente per ripopolare la lista dei rally
-            const selectChamp = document.getElementById('selectChamp');
-            selectChamp.value = champId;
-            selectChamp.dispatchEvent(new Event('change'));
-
-            // Seleziona automaticamente il nuovo rally
-            const selectRally = document.getElementById('selectRally');
-            selectRally.value = result.rally.id;
-            selectRally.dispatchEvent(new Event('change'));
-        } else {
-            alert("❌ Errore durante la creazione del rally: " + (result.error || "Errore sconosciuto"));
-        }
-    } catch (err) {
-        alert("❌ Errore di rete: " + err.message);
-    }
-});
-
-// Pulsante Nuovo Leg con selezione automatica
-    document.getElementById('btnNewLeg').addEventListener('click', async () => {
-        const rallyId = document.getElementById('selectRally').value;
-        const name = prompt("Nome del nuovo Leg (es. Leg 1):");
-        if (!name || !rallyId) return;
-
-     try {
-        const response = await fetch(`${API_BASE}/create-leg`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rally_id: rallyId, name })
-        });
-        const result = await response.json();
-
-        if (result.success) {
-            const champId = document.getElementById('selectChamp').value;
-            await loadSetup();
-            await loadPublicFilters();
-
-            // Ripopola
-            const selectChamp = document.getElementById('selectChamp');
-            selectChamp.value = champId;
-            selectChamp.dispatchEvent(new Event('change'));
-
-            const selectRally = document.getElementById('selectRally');
-            selectRally.value = rallyId;
-            selectRally.dispatchEvent(new Event('change'));
-
-            // Seleziona il nuovo leg
-            const selectLeg = document.getElementById('selectLeg');
-            selectLeg.value = result.leg.id;
-            selectLeg.dispatchEvent(new Event('change'));
-        } else {
-            alert("❌ Errore durante la creazione del leg: " + (result.error || "Errore sconosciuto"));
-        }
-        } catch (err) {
-        alert("❌ Errore di rete: " + err.message);
-        }
-    });
-
+        // Upload Screenshot & OCR
         const fileInput = document.getElementById('fileInput');
         if (fileInput) {
             fileInput.addEventListener('change', () => {
@@ -762,14 +787,12 @@ document.getElementById('btnNewRally').addEventListener('click', async () => {
         const saveBtn = document.getElementById('saveBtn');
         if (saveBtn) {
             saveBtn.addEventListener('click', async () => {
-                const legId = document.getElementById('selectLeg').value;
-                const stageNameInput = document.getElementById('stageName');
-                const stageName = stageNameInput ? stageNameInput.value : '';
+                const stageId = document.getElementById('selectStage').value;
                 const trackNameEl = document.getElementById('trackName');
                 const trackName = trackNameEl ? trackNameEl.textContent.replace("Tracciato: ", "") : '';
                 
-                if (!legId || !stageName) {
-                    alert("⚠️ Seleziona un Campionato, un Rally, un Leg e inserisci il nome dello Stage prima di salvare.");
+                if (!stageId) {
+                    alert("⚠️ Seleziona uno Stage valido prima di salvare.");
                     return;
                 }
 
@@ -794,15 +817,13 @@ document.getElementById('btnNewRally').addEventListener('click', async () => {
                 try {
                     const response = await fetch(`${API_BASE}/save-stage`, {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ leg_id: legId, stage_name: stageName, track_name: trackName, results: finalData })
+                        body: JSON.stringify({ leg_id: document.getElementById('selectLeg').value, stage_id: stageId, stage_name: "Stage", track_name: trackName, results: finalData })
                     });
                     const result = await response.json();
                     
                     if (result.success) {
                         alert("✅ " + result.message);
-                        const resultBox = document.getElementById('resultBox');
-                        if (resultBox) resultBox.classList.add('hidden');
-                        if (stageNameInput) stageNameInput.value = '';
+                        document.getElementById('resultBox').classList.add('hidden');
                         if (fileInput) fileInput.value = '';
                         document.getElementById('uploadSection').classList.add('hidden');
                         loadPublicFilters();
@@ -813,7 +834,7 @@ document.getElementById('btnNewRally').addEventListener('click', async () => {
                     alert("❌ Errore di rete: " + error.message);
                 } finally {
                     saveBtn.disabled = false; 
-                    saveBtn.textContent = "💾 Conferma e Salva in DB";
+                    saveBtn.textContent = "💾 Salva Tempi nel DB";
                 }
             });
         }
