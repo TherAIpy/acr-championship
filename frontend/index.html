@@ -585,7 +585,7 @@
             });
         }
 
-        // Generatore Wizard Guidato
+        // Generatore Wizard Guidato Corretto
         document.getElementById('btnBuildWizard')?.addEventListener('click', async () => {
             const type = document.getElementById('wizType').value;
             const name = document.getElementById('wizName').value.trim();
@@ -593,52 +593,86 @@
             const legCount = parseInt(document.getElementById('wizLegCount').value) || 1;
             const stageCount = parseInt(document.getElementById('wizStageCount').value) || 1;
 
-            if (!name) { alert("Inserisci il nome del Campionato o del Rally!"); return; }
+            if (!name) { alert("⚠️ Inserisci il nome del Campionato o del Rally!"); return; }
+
+            const btnBuild = document.getElementById('btnBuildWizard');
+            btnBuild.disabled = true;
+            btnBuild.textContent = "Creazione struttura in corso...";
 
             try {
-                let champId = null;
-                if (type === 'championship') {
-                    const cRes = await fetch(`${API_BASE}/create-championship`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name })
-                    });
-                    const cData = await cRes.json();
-                    if (!cData.success) throw new Error(cData.error);
-                    champId = cData.championship.id;
-                }
+                // 1. Per i Rally Singoli creiamo comunque un Campionato contenitore
+                const champName = type === 'championship' ? name : `Single Rally: ${name}`;
+                
+                const cRes = await fetch(`${API_BASE}/create-championship`, {
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: champName })
+                });
+                const cData = await cRes.json();
+                if (!cData.success) throw new Error(cData.error || "Impossibile creare il Campionato");
+                
+                const champId = cData.championship.id;
 
+                // 2. Creazione dei Rally
                 const totalRallies = type === 'championship' ? rallyCount : 1;
+                
                 for (let r = 1; r <= totalRallies; r++) {
                     const rName = type === 'championship' ? `${name} - Rally ${r}` : name;
+                    
                     const rRes = await fetch(`${API_BASE}/create-rally`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: rName, championship_id: champId })
                     });
                     const rData = await rRes.json();
+                    if (!rData.success) throw new Error(rData.error || "Impossibile creare il Rally");
 
+                    const rallyId = rData.rally.id;
+
+                    // 3. Creazione dei Leg
                     for (let l = 1; l <= legCount; l++) {
                         const lRes = await fetch(`${API_BASE}/create-leg`, {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ rally_id: rData.rally.id, name: `Leg ${l}` })
+                            method: 'POST', 
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ rally_id: rallyId, name: `Leg ${l}` })
                         });
                         const lData = await lRes.json();
+                        if (!lData.success) throw new Error(lData.error || "Impossibile creare il Leg");
 
+                        const legId = lData.leg.id;
+
+                        // 4. Creazione degli Stage iniziali per il Leg
                         for (let s = 1; s <= stageCount; s++) {
                             await fetch(`${API_BASE}/save-stage`, {
-                                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ leg_id: lData.leg.id, stage_name: `SS${s}`, track_name: `Tracciato SS${s}`, results: [] })
+                                method: 'POST', 
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ 
+                                    leg_id: legId, 
+                                    stage_name: `SS${s}`, 
+                                    track_name: `Tracciato SS${s}`, 
+                                    results: [] 
+                                })
                             });
                         }
                     }
                 }
 
-                alert("✅ Evento programmato con successo!");
+                alert("✅ Evento programmato e salvato con successo nel Database!");
+                
+                // Reset interfaccia e ricaricamento dati
+                document.getElementById('wizName').value = '';
                 sectionWizard.classList.add('hidden');
                 sectionManage.classList.remove('hidden');
+                
                 await loadSetup();
                 await loadPublicFilters();
+
             } catch (err) {
-                alert("❌ Errore durante la creazione: " + err.message);
+                alert("❌ Errore durante la creazione della struttura: " + err.message);
+            } finally {
+                btnBuild.disabled = false;
+                btnBuild.innerHTML = `Genera Struttura Evento & Tracciati <i data-lucide="arrow-right"></i>`;
+                lucide.createIcons();
             }
         });
 
