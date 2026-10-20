@@ -129,21 +129,20 @@ def upload_screenshot():
         if img is None:
             return jsonify({"success": False, "error": "Impossibile leggere l'immagine"}), 400
 
-        # OCR Extraction
+        # Elaborazione EasyOCR
         results_ocr = reader.readtext(img)
         parsed_data = []
         track_name = "Stage Rilevato"
         
-        # Logica base di parsing OCR (estrae righe di testo rilevate)
         pos = 1
         for bbox, text, prob in results_ocr:
             text_clean = text.strip()
-            # Filtro euristico per identificare tempi o piloti
+            # Identificazione basica dei tempi o delle righe di classifica
             if ":" in text_clean or "." in text_clean:
                 parsed_data.append({
                     "position": pos,
-                    "driver": f"Pilota Test {pos}",
-                    "car": "Skoda Fabia RS",
+                    "driver": f"Pilota {pos}",
+                    "car": "Vettura Rilevata",
                     "time": text_clean,
                     "penalty": "-",
                     "gap": "-"
@@ -178,8 +177,11 @@ def save_stage():
                 "track_name": track_name
             }).execute()
             stage_id = s_res.data[0]['id']
+        else:
+            # Pulisci i vecchi risultati per sovrascrivere
+            supabase.table('stage_result').delete().eq('stage_id', stage_id).execute()
             
-        # Salva i risultati dei piloti
+        # Inserisci i nuovi risultati
         for r in results:
             supabase.table('stage_result').insert({
                 "stage_id": stage_id,
@@ -191,7 +193,7 @@ def save_stage():
                 "gap": r.get('gap', '-')
             }).execute()
             
-        return jsonify({"success": True, "message": "Tempi salvati con successo nello stage!"})
+        return jsonify({"success": True, "message": "Tempi salvati con successo!"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -204,15 +206,60 @@ def get_standings(type, id):
         if type == 'stage':
             res = supabase.table('stage_result').select('*').eq('stage_id', id).order('position').execute()
             data = res.data
+        elif type == 'leg':
+            # Recupera tutti gli stage del leg e i relativi risultati
+            stages = supabase.table('stage').select('id').eq('leg_id', id).execute().data
+            stage_ids = [s['id'] for s in stages]
+            if stage_ids:
+                res = supabase.table('stage_result').select('*').in_('stage_id', stage_ids).execute()
+                data = res.data
         elif type == 'rally':
-            # Raggruppa e somma i punteggi o tempi del rally
-            res = supabase.table('stage_result').select('driver_name, time_str').execute()
-            data = res.data # Logica semplificata di aggregazione
-        else:
-            res = supabase.table('stage_result').select('*').limit(20).execute()
+            # Recupera i leg del rally
+            legs = supabase.table('leg').select('id').eq('rally_id', id).execute().data
+            leg_ids = [l['id'] for l in legs]
+            if leg_ids:
+                stages = supabase.table('stage').select('id').in_('leg_id', leg_ids).execute().data
+                stage_ids = [s['id'] for s in stages]
+                if stage_ids:
+                    res = supabase.table('stage_result').select('*').in_('stage_id', stage_ids).execute()
+                    data = res.data
+        elif type == 'championship':
+            res = supabase.table('stage_result').select('*').execute()
             data = res.data
             
         return jsonify(data)
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# Rotte per la gestione delle Classi Auto e Modelli
+@app.route('/api/car-class', methods=['GET', 'POST'])
+def manage_car_class():
+    try:
+        supabase = get_supabase()
+        if request.method == 'POST':
+            data = request.json
+            res = supabase.table('car_class').insert({
+                "name": data.get('name'),
+                "description": data.get('description', '')
+            }).execute()
+            return jsonify({"success": True, "data": res.data[0]})
+        else:
+            res = supabase.table('car_class').select('*, car(*)').execute()
+            return jsonify({"success": True, "data": res.data})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/car', methods=['POST'])
+def add_car():
+    try:
+        data = request.json
+        supabase = get_supabase()
+        res = supabase.table('car').insert({
+            "class_id": data.get('class_id'),
+            "name": data.get('name'),
+            "brand": data.get('brand', '')
+        }).execute()
+        return jsonify({"success": True, "data": res.data[0]})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
