@@ -1,302 +1,258 @@
 <!DOCTYPE html>
-<html lang="it" class="dark">
+<html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACR Championship - VRG Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <title>ACR Championship - Official Timing</title>
+    <script src="https://cdn.tailwindcss.com" data-cfasync="false"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        dark: { 950: '#090d16', 900: '#0f172a', 800: '#1e293b', 700: '#334155' }
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
-        body { font-family: 'Outfit', sans-serif; background-color: #090d16; color: #f8fafc; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+        body { background-color: #0b0e14; color: #e2e8f0; font-family: 'Inter', sans-serif; }
         .font-mono-time { font-family: 'JetBrains Mono', monospace; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        .glass-panel { background: rgba(18, 24, 38, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .glass-card { background: rgba(26, 34, 52, 0.6); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .tab-btn { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        .tab-active { background-color: #3b82f6; color: white; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+        .fade-in { animation: fadeIn 0.35s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body class="min-h-screen flex flex-col items-center p-4 md:p-6">
 
-    <!-- SIDEBAR FISSA A SINISTRA (VRG DASHBOARD STYLE) -->
-    <aside class="w-64 bg-dark-900 border-r border-dark-800 flex flex-col justify-between z-20">
-        <div>
-            <!-- Logo & Brand -->
-            <div class="p-6 border-b border-dark-800 flex items-center gap-3">
-                <div class="bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/20 text-emerald-400">
-                    <i data-lucide="trophy" class="w-6 h-6"></i>
+    <!-- NAVBAR -->
+    <nav class="w-full max-w-7xl flex justify-between items-center mb-6 glass-panel px-6 py-4 rounded-xl shadow-2xl">
+        <div class="flex items-center space-x-3">
+            <span class="p-2 bg-blue-600/20 text-blue-400 rounded-lg border border-blue-500/30">
+                <i data-lucide="trophy" class="w-6 h-6"></i>
+            </span>
+            <div>
+                <h1 class="text-xl font-extrabold tracking-wider bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">ACR CHAMPIONSHIP</h1>
+                <p class="text-xs text-slate-400 font-medium">Timing & Live Telemetry Hub</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+            <a href="/" class="text-sm font-semibold text-slate-300 hover:text-white transition-colors flex items-center gap-1.5">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Standings
+            </a>
+            <div id="authSection" class="border-l border-slate-700/80 pl-4 flex items-center gap-2">
+                <button id="btnLogin" class="text-sm font-semibold text-slate-300 hover:text-blue-400 transition-colors flex items-center gap-1.5">
+                    <i data-lucide="lock" class="w-4 h-4"></i> Admin Login
+                </button>
+                <a href="?admin=true" id="linkAdmin" class="hidden text-sm font-bold text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1.5">
+                    <i data-lucide="settings" class="w-4 h-4"></i> Management
+                </a>
+                <button id="btnLogout" class="hidden text-sm font-semibold text-rose-400 hover:text-rose-300 transition-colors flex items-center gap-1.5">
+                    <i data-lucide="log-out" class="w-4 h-4"></i> Logout
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MODALE LOGIN -->
+    <div id="loginModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center hidden z-50 p-4">
+        <div class="glass-panel p-8 rounded-2xl w-full max-w-md shadow-2xl border border-slate-700">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2"><i data-lucide="shield-check" class="text-blue-500"></i> Area Amministratore</h2>
+                <button id="btnCancelLogin" class="text-slate-400 hover:text-white"><i data-lucide="x"></i></button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Email</label>
+                    <input type="email" id="loginEmail" class="w-full bg-slate-900/80 text-white p-3 rounded-lg border border-slate-700 focus:outline-none focus:border-blue-500">
                 </div>
                 <div>
-                    <h1 class="font-bold text-lg text-white tracking-wide">VRG SERIES</h1>
-                    <p class="text-xs text-slate-400">Championship Hub</p>
+                    <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Password</label>
+                    <input type="password" id="loginPassword" class="w-full bg-slate-900/80 text-white p-3 rounded-lg border border-slate-700 focus:outline-none focus:border-blue-500">
                 </div>
-            </div>
-
-            <!-- Navigation Links -->
-            <nav class="p-4 space-y-1.5">
-                <button onclick="switchView('dashboard')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-300 hover:bg-dark-800 hover:text-white transition-all bg-dark-800 text-white" data-target="dashboard">
-                    <i data-lucide="layout-dashboard" class="w-5 h-5 text-emerald-400"></i> Dashboard
-                </button>
-                <button onclick="switchView('championships')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-300 hover:bg-dark-800 hover:text-white transition-all" data-target="championships">
-                    <i data-lucide="award" class="w-5 h-5 text-blue-400"></i> Campionati
-                </button>
-                <button onclick="switchView('rallies')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-300 hover:bg-dark-800 hover:text-white transition-all" data-target="rallies">
-                    <i data-lucide="flag" class="w-5 h-5 text-amber-400"></i> Rally Singolo
-                </button>
-                <button onclick="switchView('standings')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-300 hover:bg-dark-800 hover:text-white transition-all" data-target="standings">
-                    <i data-lucide="bar-chart-3" class="w-5 h-5 text-purple-400"></i> Classifiche
-                </button>
-                <button onclick="switchView('admin')" id="linkAdmin" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-300 hover:bg-dark-800 hover:text-white transition-all hidden" data-target="admin">
-                    <i data-lucide="shield-alert" class="w-5 h-5 text-rose-400"></i> Gestione & OCR
-                </button>
-                <button onclick="switchView('cars')" id="linkCars" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-300 hover:bg-dark-800 hover:text-white transition-all hidden" data-target="cars">
-                    <i data-lucide="car" class="w-5 h-5 text-cyan-400"></i> Gestione Auto
-                </button>
-            </nav>
-        </div>
-
-        <!-- Server Status & Auth Footer -->
-        <div class="p-4 border-t border-dark-800 space-y-3">
-            <div class="flex items-center justify-between px-3 py-2 bg-dark-950 rounded-lg border border-dark-800">
-                <div class="flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span class="text-xs font-medium text-slate-300">Server Online</span>
-                </div>
-                <span class="text-[10px] text-slate-500 font-mono">v2.6</span>
-            </div>
-
-            <button id="btnLogin" class="w-full bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-2">
-                <i data-lucide="log-in" class="w-4 h-4"></i> Login Admin
-            </button>
-            <button id="btnLogout" class="w-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-2 hidden border border-rose-500/20">
-                <i data-lucide="log-out" class="w-4 h-4"></i> Logout
-            </button>
-        </div>
-    </aside>
-
-    <!-- MAIN CONTENT AREA -->
-    <main class="flex-1 flex flex-col overflow-y-auto bg-dark-950">
-        
-        <!-- Top Header Bar -->
-        <header class="h-16 border-b border-dark-800 bg-dark-900/50 backdrop-blur px-8 flex items-center justify-between sticky top-0 z-10">
-            <div class="flex items-center gap-4">
-                <h2 id="pageTitle" class="text-lg font-bold text-white">Dashboard Panoramica</h2>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="text-right">
-                    <p id="userNameDisplay" class="text-xs font-bold text-slate-300">Ospite (Visitatore)</p>
-                    <p class="text-[10px] text-slate-500">Modalità Sola Lettura</p>
-                </div>
-            </div>
-        </header>
-
-        <!-- Dynamic Content Container -->
-        <div class="p-8 max-w-7xl mx-auto w-full space-y-6">
-
-            <!-- 1. DASHBOARD VIEW -->
-            <div id="view-dashboard" class="view-section space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-dark-900 border border-dark-800 p-6 rounded-2xl">
-                        <p class="text-xs text-slate-400 font-semibold uppercase">Campionati Attivi</p>
-                        <h3 id="statChamps" class="text-3xl font-extrabold text-white mt-2">0</h3>
-                    </div>
-                    <div class="bg-dark-900 border border-dark-800 p-6 rounded-2xl">
-                        <p class="text-xs text-slate-400 font-semibold uppercase">Rally Programmati</p>
-                        <h3 id="statRallies" class="text-3xl font-extrabold text-white mt-2">0</h3>
-                    </div>
-                    <div class="bg-dark-900 border border-dark-800 p-6 rounded-2xl">
-                        <p class="text-xs text-slate-400 font-semibold uppercase">Classi Auto Categoria</p>
-                        <h3 id="statClasses" class="text-3xl font-extrabold text-white mt-2">0</h3>
-                    </div>
-                </div>
-                <div class="bg-dark-900 border border-dark-800 p-8 rounded-2xl text-center">
-                    <h3 class="text-xl font-bold text-white mb-2">Benvenuto nel Portale VRG Championship</h3>
-                    <p class="text-slate-400 text-sm max-w-xl mx-auto mb-6">Esplora i campionati, consulta le classifiche in tempo reale o accedi come amministratore per caricare i tempi con OCR.</p>
-                    <button onclick="switchView('championships')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-3 rounded-xl text-sm transition-all shadow-lg shadow-emerald-600/20">Esplora Campionati</button>
-                </div>
-            </div>
-
-            <!-- 2. CHAMPIONSHIPS VIEW -->
-            <div id="view-championships" class="view-section space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h3 class="text-xl font-bold text-white">Campionati Ufficiali</h3>
-                        <p class="text-xs text-slate-400">Elenco competizioni stagionali</p>
-                    </div>
-                    <button onclick="switchView('admin'); setAdminTab('wizard');" id="btnNewChamp" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm flex items-center gap-2 hidden">
-                        <i data-lucide="plus-circle" class="w-4 h-4"></i> Programma Nuovo
-                    </button>
-                </div>
-                <div id="championshipsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
-            </div>
-
-            <!-- 3. RALLIES VIEW -->
-            <div id="view-rallies" class="view-section space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h3 class="text-xl font-bold text-white">Rally Singoli</h3>
-                        <p class="text-xs text-slate-400">Eventi singoli programmati</p>
-                    </div>
-                </div>
-                <div id="ralliesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
-            </div>
-
-            <!-- 4. STANDINGS VIEW -->
-            <div id="view-standings" class="view-section space-y-6 hidden">
-                <div class="bg-dark-900 border border-dark-800 p-6 rounded-2xl space-y-4">
-                    <h3 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="filter" class="text-purple-400"></i> Filtri Classifica</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <select id="filterChamp" class="bg-dark-950 border border-dark-800 text-white p-3 rounded-xl text-sm"><option value="">Seleziona Campionato...</option></select>
-                        <select id="filterRally" class="bg-dark-950 border border-dark-800 text-white p-3 rounded-xl text-sm" disabled><option value="">Seleziona Rally...</option></select>
-                        <select id="filterLeg" class="bg-dark-950 border border-dark-800 text-white p-3 rounded-xl text-sm" disabled><option value="">Seleziona Leg...</option></select>
-                        <select id="filterStage" class="bg-dark-950 border border-dark-800 text-white p-3 rounded-xl text-sm" disabled><option value="">Seleziona Stage...</option></select>
-                    </div>
-                </div>
-
-                <div class="bg-dark-900 border border-dark-800 rounded-2xl overflow-hidden">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead class="bg-dark-950/80 border-b border-dark-800 text-slate-400 text-xs uppercase font-semibold">
-                            <tr>
-                                <th class="p-4 w-16 text-center">POS</th>
-                                <th class="p-4">PILOTA</th>
-                                <th class="p-4">TEMPO / GAP</th>
-                                <th id="extraColHead" class="p-4 text-right">PUNTI / PENALITÀ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="standingsBody" class="divide-y divide-dark-800/60">
-                            <tr><td colspan="4" class="p-8 text-center text-slate-500">Seleziona un evento nei filtri per mostrare i tempi.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- 5. ADMIN & OCR VIEW -->
-            <div id="view-admin" class="view-section space-y-6 hidden">
-                <div class="bg-dark-900 border border-dark-800 p-6 rounded-2xl flex justify-between items-center">
-                    <div>
-                        <h3 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="shield-check" class="text-emerald-400"></i> Pannello Amministrazione</h3>
-                        <p class="text-xs text-slate-400">Gestione, programmazione guidata eventi e caricamento OCR</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="setAdminTab('ocr')" class="admin-tab-btn bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all">Gestione & OCR</button>
-                        <button onclick="setAdminTab('wizard')" class="admin-tab-btn bg-dark-800 text-slate-300 px-4 py-2 rounded-xl text-xs font-bold transition-all">Wizard Programmazione</button>
-                    </div>
-                </div>
-
-                <!-- Tab Gestione & OCR -->
-                <div id="adminTabOcr" class="space-y-6">
-                    <div class="bg-dark-900 border border-dark-800 p-6 rounded-2xl space-y-4">
-                        <h4 class="text-sm font-bold text-emerald-400 flex items-center gap-2"><i data-lucide="list-tree"></i> Seleziona Stage per Caricamento Risultati</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <select id="selChamp" class="bg-dark-950 border border-dark-800 text-white p-3 rounded-xl text-sm"><option value="">Campionato...</option></select>
-                            <select id="selRally" class="bg-dark-950 border border-dark-800 text-white p-3 rounded-xl text-sm" disabled><option value="">Rally...</option></select>
-                            <select id="selLeg" class="bg-dark-950 border border-dark-800 text-white p-3 rounded-xl text-sm" disabled><option value="">Leg...</option></select>
-                            <select id="selStage" class="bg-dark-950 border border-dark-800 text-white p-3 rounded-xl text-sm" disabled><option value="">Stage...</option></select>
-                        </div>
-                    </div>
-
-                    <!-- Upload Box -->
-                    <div id="uploadSection" class="bg-dark-900 border border-blue-500/30 p-6 rounded-2xl hidden space-y-4">
-                        <h4 class="text-md font-bold text-blue-400 flex items-center gap-2"><i data-lucide="upload-cloud"></i> Acquisizione Screenshot OCR</h4>
-                        <input type="file" id="fileInput" accept="image/*" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer">
-                        <button id="uploadBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all hidden shadow-lg shadow-emerald-600/20">Estrai Dati con OCR Engine</button>
-                        <div id="loading" class="text-center hidden"><p class="text-blue-400 animate-pulse text-sm font-semibold">Elaborazione immagine in corso...</p></div>
-
-                        <div id="resultBox" class="hidden pt-4 border-t border-dark-800 space-y-4">
-                            <div class="flex justify-between items-center">
-                                <h5 id="trackName" class="text-sm font-bold text-slate-300">Tracciato</h5>
-                                <button id="saveBtn" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-2.5 px-6 rounded-xl shadow-lg shadow-blue-600/30">💾 Salva Tempi nel DB</button>
-                            </div>
-                            <div class="overflow-x-auto max-h-80">
-                                <table class="w-full text-left border-collapse text-xs">
-                                    <thead class="sticky top-0 bg-dark-950">
-                                        <tr class="text-slate-400 uppercase">
-                                            <th class="p-2 w-12 text-center">POS</th>
-                                            <th class="p-2">PILOTA</th>
-                                            <th class="p-2">AUTO</th>
-                                            <th class="p-2">TEMPO</th>
-                                            <th class="p-2 text-center">PEN</th>
-                                            <th class="p-2">GAP</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tableBody" class="divide-y divide-dark-800"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tab Wizard Nuovo Evento -->
-                <div id="adminTabWizard" class="bg-dark-900 border border-dark-800 p-6 rounded-2xl space-y-6 hidden">
-                    <h4 class="text-md font-bold text-purple-400 flex items-center gap-2"><i data-lucide="sparkles"></i> Programmazione Guidata Evento</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-xs font-semibold text-slate-400 block mb-1">Tipologia Evento</label>
-                            <select id="wizType" class="w-full bg-dark-950 border border-dark-800 text-white p-3 rounded-xl text-sm font-bold">
-                                <option value="championship">Campionato Multi-Rally</option>
-                                <option value="single">Rally Singolo</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="text-xs font-semibold text-slate-400 block mb-1">Nome Competizione</label>
-                            <input type="text" id="wizName" placeholder="es. VRG World Championship 2026" class="w-full bg-dark-950 border border-dark-800 text-white p-3 rounded-xl text-sm">
-                        </div>
-                    </div>
-
-                    <div class="bg-dark-950 p-4 rounded-xl border border-dark-800 space-y-3">
-                        <p class="text-xs font-bold text-slate-300">Builder Dinamico Rally -> Leg -> Stage</p>
-                        <div id="wizardRallyList" class="space-y-4"></div>
-                        <button onclick="addWizardRally()" class="bg-dark-800 hover:bg-dark-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2">
-                            <i data-lucide="plus" class="w-4 h-4"></i> Aggiungi Rally
-                        </button>
-                    </div>
-
-                    <button id="btnBuildWizard" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-purple-600/20">Salva e Programma Evento nel Database</button>
-                </div>
-            </div>
-
-            <!-- 6. CARS MANAGEMENT VIEW -->
-            <div id="view-cars" class="view-section space-y-6 hidden">
-                <div class="bg-dark-900 border border-dark-800 p-6 rounded-2xl flex justify-between items-center">
-                    <div>
-                        <h3 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="car" class="text-cyan-400"></i> Gestione Classi & Vetture</h3>
-                        <p class="text-xs text-slate-400">Configura le categorie e i modelli di auto ammessi</p>
-                    </div>
-                </div>
-                <div id="carsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
-            </div>
-
-        </div>
-    </main>
-
-    <!-- LOGIN MODAL -->
-    <div id="loginModal" class="fixed inset-0 bg-dark-950/80 backdrop-blur-sm flex items-center justify-center z-50 hidden">
-        <div class="bg-dark-900 border border-dark-800 p-8 rounded-2xl w-full max-w-md space-y-4">
-            <h3 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="lock" class="text-emerald-400"></i> Accesso Amministratore</h3>
-            <p class="text-xs text-slate-400">Inserisci le credenziali di servizio per sbloccare l'Area Admin.</p>
-            <input type="email" id="loginEmail" placeholder="Email admin" class="w-full bg-dark-950 border border-dark-800 text-white p-3 rounded-xl text-sm">
-            <input type="password" id="loginPassword" placeholder="Password" class="w-full bg-dark-950 border border-dark-800 text-white p-3 rounded-xl text-sm">
-            <p id="loginError" class="text-xs text-rose-400 hidden"></p>
-            <div class="flex gap-3 pt-2">
-                <button id="btnCancelLogin" class="flex-1 bg-dark-800 hover:bg-dark-700 text-white text-xs font-bold py-3 rounded-xl">Annulla</button>
-                <button id="btnDoLogin" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-3 rounded-xl">Accedi</button>
+                <button id="btnDoLogin" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-all shadow-lg shadow-blue-600/30">Accedi</button>
+                <p id="loginError" class="text-rose-400 text-sm mt-2 hidden text-center"></p>
             </div>
         </div>
     </div>
 
-    <!-- SCRIPTS DI GESTIONE APPLICAZIONE -->
+    <!-- VISTA PUBBLICA -->
+    <div id="view-public" class="w-full max-w-7xl">
+        <!-- FILTRI SELEZIONE GERARCHICA A CASCATA -->
+        <div class="glass-panel p-4 rounded-xl mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="award" class="w-4 h-4 text-purple-400"></i>
+                    <select id="pubChampSelect" class="bg-slate-900 text-slate-200 text-sm font-semibold p-2.5 rounded-lg border border-slate-700 focus:border-blue-500">
+                        <option value="">Seleziona Campionato...</option>
+                    </select>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="flag" class="w-4 h-4 text-blue-400"></i>
+                    <select id="pubRallySelect" class="bg-slate-900 text-slate-200 text-sm font-semibold p-2.5 rounded-lg border border-slate-700 focus:border-blue-500" disabled>
+                        <option value="">Seleziona Rally...</option>
+                    </select>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
+                    <select id="pubLegSelect" class="bg-slate-900 text-slate-200 text-sm font-semibold p-2.5 rounded-lg border border-slate-700 focus:border-blue-500" disabled>
+                        <option value="">Seleziona Leg...</option>
+                    </select>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="timer" class="w-4 h-4 text-amber-400"></i>
+                    <select id="pubStageSelect" class="bg-slate-900 text-slate-200 text-sm font-semibold p-2.5 rounded-lg border border-slate-700 focus:border-blue-500" disabled>
+                        <option value="">Seleziona Stage...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- TABS CLASSIFICA -->
+            <div class="flex bg-slate-900/80 p-1 rounded-lg border border-slate-800">
+                <button class="tab-btn tab-active px-3 py-2 text-xs font-bold rounded-md flex items-center gap-1" onclick="setTab('championship', event)">Campionato</button>
+                <button class="tab-btn text-slate-400 hover:text-white px-3 py-2 text-xs font-bold rounded-md flex items-center gap-1" onclick="setTab('rally', event)">Rally</button>
+                <button class="tab-btn text-slate-400 hover:text-white px-3 py-2 text-xs font-bold rounded-md flex items-center gap-1" onclick="setTab('leg', event)">Leg</button>
+                <button class="tab-btn text-slate-400 hover:text-white px-3 py-2 text-xs font-bold rounded-md flex items-center gap-1" onclick="setTab('stage', event)">Stage</button>
+            </div>
+        </div>
+
+        <!-- TABELLA CLASSIFICHE -->
+        <div class="glass-panel p-6 rounded-xl shadow-2xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                            <th class="p-4 w-16 text-center">POS</th>
+                            <th class="p-4">PILOTA</th>
+                            <th class="p-4">TEMPO / DISTACCO</th>
+                            <th class="p-4 text-right" id="extraColHead">PUNTI</th>
+                        </tr>
+                    </thead>
+                    <tbody id="standingsBody" class="divide-y divide-slate-800/50 text-sm font-medium fade-in">
+                        <tr><td colspan="4" class="p-8 text-center text-slate-500">Seleziona un campionato o evento per visualizzare i tempi.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- VISTA ADMIN -->
+    <div id="view-admin" class="w-full max-w-7xl hidden space-y-6 fade-in">
+        
+        <!-- HEADER ADMIN & SWITCHER MODALITÀ -->
+        <div class="flex flex-wrap justify-between items-center gap-4 bg-slate-800/60 p-4 rounded-xl border border-slate-700">
+            <div>
+                <h2 class="text-xl font-bold text-white flex items-center gap-2"><i data-lucide="shield-check" class="text-emerald-400"></i> Gestione Campionati & Rally</h2>
+                <p class="text-xs text-slate-400">Pannello di controllo, creazione guidata e caricamento tempi OCR</p>
+            </div>
+            <div class="flex gap-3">
+                <button id="btnModeManage" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                    <i data-lucide="folder"></i> Seleziona / Carica Tempi
+                </button>
+                <button id="btnModeWizard" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                    <i data-lucide="plus-circle"></i> Programma Nuovo Rally / Campionato
+                </button>
+            </div>
+        </div>
+
+        <!-- SEZIONE 1: MODALITÀ SELEZIONE & CARICAMENTO RISULTATI -->
+        <div id="sectionManage" class="space-y-6">
+            <div class="glass-panel p-6 rounded-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-md font-bold text-emerald-400 flex items-center gap-2"><i data-lucide="list-tree"></i> Seleziona lo Stage per Gestione o Caricamento</h3>
+                    <button id="btnDeleteSelected" class="text-xs text-rose-400 hover:text-rose-300 font-semibold hidden flex items-center gap-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Elimina Elemento Selezionato</button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="text-xs text-slate-400 font-semibold block mb-1">Campionato</label>
+                        <select id="selectChamp" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700"><option value="">Seleziona...</option></select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 font-semibold block mb-1">Rally</label>
+                        <select id="selectRally" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700" disabled><option value="">Seleziona...</option></select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 font-semibold block mb-1">Leg</label>
+                        <select id="selectLeg" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700" disabled><option value="">Seleziona...</option></select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 font-semibold block mb-1">Stage Attivo</label>
+                        <select id="selectStage" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-700" disabled><option value="">Seleziona...</option></select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UPLOAD SCREENSHOT (Visibile SOLO quando uno Stage è selezionato) -->
+            <div id="uploadSection" class="glass-panel p-6 rounded-xl hidden border border-blue-500/30">
+                <h3 class="text-lg font-bold text-blue-400 mb-2 flex items-center gap-2"><i data-lucide="upload-cloud"></i> Acquisizione Screenshot per lo Stage Selezionato</h3>
+                <p class="text-xs text-slate-400 mb-4">Carica lo screenshot OVERALL del tracciato attivo per estrarre tempi, auto e penalità con l'OCR.</p>
+                
+                <input type="file" id="fileInput" accept="image/*" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer mb-4">
+                <button id="uploadBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-all hidden mb-4 shadow-lg shadow-emerald-600/20">Estrai Dati con OCR Engine</button>
+                <div id="loading" class="text-center hidden mb-4"><p class="text-blue-400 animate-pulse font-semibold">Elaborazione OCR in corso...</p></div>
+                
+                <div id="resultBox" class="hidden border-t border-slate-800 pt-6 mt-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 id="trackName" class="text-md font-semibold text-slate-300">Tracciato Rilevato</h4>
+                        <button id="saveBtn" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-6 rounded-lg transition-all shadow-lg shadow-blue-600/30">💾 Salva Tempi nel DB</button>
+                    </div>
+                    <div class="overflow-x-auto max-h-96">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead class="sticky top-0 bg-slate-900/90 backdrop-blur">
+                                <tr class="text-slate-400 text-xs font-semibold uppercase">
+                                    <th class="p-2.5 w-12 text-center">POS</th>
+                                    <th class="p-2.5">PILOTA</th>
+                                    <th class="p-2.5">VETTURA</th>
+                                    <th class="p-2.5 w-32">TEMPO</th>
+                                    <th class="p-2.5 w-24 text-center">PENALITÀ</th>
+                                    <th class="p-2.5 w-28">GAP</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody" class="divide-y divide-slate-800"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEZIONE 2: MODALITÀ CREAZIONE GUIDATA (WIZARD) -->
+        <div id="sectionWizard" class="glass-panel p-6 rounded-xl hidden space-y-6">
+            <h3 class="text-lg font-bold text-purple-400 border-b border-slate-800 pb-3 flex items-center gap-2"><i data-lucide="sparkles"></i> Programmazione Guidata Evento</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="text-sm font-semibold text-slate-300 block mb-2">Tipologia Evento</label>
+                    <select id="wizType" class="w-full bg-slate-900 text-white p-3 rounded-lg border border-slate-700 font-bold">
+                        <option value="single">Rally Singolo</option>
+                        <option value="championship">Campionato Multi-Rally</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-300 block mb-2">Nome Campionato / Rally</label>
+                    <input type="text" id="wizName" placeholder="es. ACR World Championship 2026" class="w-full bg-slate-900 text-white p-3 rounded-lg border border-slate-700">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div id="boxRallyCount" class="hidden">
+                    <label class="text-sm font-semibold text-slate-300 block mb-2">Numero di Rally</label>
+                    <input type="number" id="wizRallyCount" min="1" max="12" value="1" class="w-full bg-slate-900 text-white p-3 rounded-lg border border-slate-700">
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-300 block mb-2">Numero di Leg per Rally</label>
+                    <input type="number" id="wizLegCount" min="1" max="5" value="1" class="w-full bg-slate-900 text-white p-3 rounded-lg border border-slate-700">
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-300 block mb-2">Stage per Leg</label>
+                    <input type="number" id="wizStageCount" min="1" max="10" value="2" class="w-full bg-slate-900 text-white p-3 rounded-lg border border-slate-700">
+                </div>
+            </div>
+
+            <button id="btnBuildWizard" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg transition-all shadow-lg shadow-purple-600/20 flex justify-center items-center gap-2">
+                Genera Struttura Evento & Tracciati <i data-lucide="arrow-right"></i>
+            </button>
+        </div>
+    </div>  
+
     <script>
         lucide.createIcons();
         const SUPABASE_URL = 'https://rvqorpdebooklqtjbnwl.supabase.co'; 
@@ -304,449 +260,618 @@
         const API_BASE = 'https://acr-backend-wv98.onrender.com/api';
         
         let supabaseClient = null;
-        let dbData = { championships: [], car_classes: [] };
+        let dbChamps = [];
+        let currentTab = 'championship';
 
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                if (window.supabase) supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            } catch(e) { console.error(e); }
-
-            document.getElementById('btnLogin')?.addEventListener('click', () => document.getElementById('loginModal').classList.remove('hidden'));
-            document.getElementById('btnCancelLogin')?.addEventListener('click', () => document.getElementById('loginModal').classList.add('hidden'));
-            
-            document.getElementById('btnDoLogin')?.addEventListener('click', async () => {
-                const email = document.getElementById('loginEmail').value;
-                const password = document.getElementById('loginPassword').value;
-                const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-                if (error) {
-                    const errEl = document.getElementById('loginError');
-                    errEl.textContent = error.message;
-                    errEl.classList.remove('hidden');
-                } else {
-                    document.getElementById('loginModal').classList.add('hidden');
-                    checkAuth();
+                if (window.supabase) {
+                    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 }
-            });
+            } catch(e) { console.error("Error initializing Supabase:", e); }
 
-            document.getElementById('btnLogout')?.addEventListener('click', async () => {
-                if (supabaseClient) await supabaseClient.auth.signOut();
-                window.location.reload();
-            });
+            const btnLogin = document.getElementById('btnLogin');
+            const loginModal = document.getElementById('loginModal');
+            const btnCancelLogin = document.getElementById('btnCancelLogin');
+
+            if (btnLogin) btnLogin.addEventListener('click', () => loginModal.classList.remove('hidden'));
+            if (btnCancelLogin) btnCancelLogin.addEventListener('click', () => loginModal.classList.add('hidden'));
+
+            const btnDoLogin = document.getElementById('btnDoLogin');
+            if (btnDoLogin) {
+                btnDoLogin.addEventListener('click', async () => {
+                    const email = document.getElementById('loginEmail').value;
+                    const password = document.getElementById('loginPassword').value;
+                    const errorMsg = document.getElementById('loginError');
+
+                    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                    if (error) {
+                        errorMsg.textContent = error.message;
+                        errorMsg.classList.remove('hidden');
+                    } else {
+                        loginModal.classList.add('hidden');
+                        checkAuth();
+                    }
+                });
+            }
+
+            const btnLogout = document.getElementById('btnLogout');
+            if (btnLogout) {
+                btnLogout.addEventListener('click', async () => {
+                    if (supabaseClient) await supabaseClient.auth.signOut();
+                    window.location.href = '/';
+                });
+            }
 
             await checkAuth();
-            await loadAppData();
-            addWizardRally(); // Inizializza 1 rally di default nel wizard
+            await loadPublicFilters();
         });
 
-        function switchView(viewName) {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('bg-dark-800', 'text-white'));
-            
-            const targetBtn = document.querySelector(`.nav-btn[data-target="${viewName}"]`);
-            if (targetBtn) targetBtn.classList.add('bg-dark-800', 'text-white');
-
-            const targetView = document.getElementById(`view-${viewName}`);
-            if (targetView) targetView.classList.remove('hidden');
-
-            const titles = { dashboard: 'Dashboard Panoramica', championships: 'Campionati Ufficiali', rallies: 'Rally Singoli', standings: 'Classifiche in Tempo Reale', admin: 'Pannello Amministrazione', cars: 'Gestione Classi e Vetture' };
-            document.getElementById('pageTitle').textContent = titles[viewName] || 'VRG Series';
-            lucide.createIcons();
-        }
-
         async function checkAuth() {
+            const linkAdmin = document.getElementById('linkAdmin');
+            const btnLogout = document.getElementById('btnLogout');
+            const btnLogin = document.getElementById('btnLogin');
+            const viewPublic = document.getElementById('view-public');
+            const viewAdmin = document.getElementById('view-admin');
+            const urlParams = new URLSearchParams(window.location.search);
+
             if (!supabaseClient) return;
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            const isAdmin = !!session;
-            
-            document.getElementById('btnLogin').classList.toggle('hidden', isAdmin);
-            document.getElementById('btnLogout').classList.toggle('hidden', !isAdmin);
-            document.getElementById('linkAdmin').classList.toggle('hidden', !isAdmin);
-            document.getElementById('linkCars').classList.toggle('hidden', !isAdmin);
-            document.getElementById('btnNewChamp').classList.toggle('hidden', !isAdmin);
-            
-            document.getElementById('userNameDisplay').textContent = isAdmin ? session.user.email : 'Ospite (Visitatore)';
+
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session) {
+                    if (btnLogin) btnLogin.classList.add('hidden');
+                    if (btnLogout) btnLogout.classList.remove('hidden');
+                    if (linkAdmin) linkAdmin.classList.remove('hidden');
+                    
+                    if (urlParams.get('admin') === 'true') {
+                        viewPublic.classList.add('hidden');
+                        viewAdmin.classList.remove('hidden');
+                        loadSetup();
+                    } else {
+                        viewPublic.classList.remove('hidden');
+                        viewAdmin.classList.add('hidden');
+                    }
+                } else {
+                    if (btnLogin) btnLogin.classList.remove('hidden');
+                    if (btnLogout) btnLogout.classList.add('hidden');
+                    if (linkAdmin) linkAdmin.classList.add('hidden');
+                    viewPublic.classList.remove('hidden');
+                    viewAdmin.classList.add('hidden');
+                }
+            } catch (err) { console.error(err); }
         }
 
-        async function loadAppData() {
+        // ==========================================
+        // VISTA PUBBLICA & FILTRI A CASCATA
+        // ==========================================
+        function setTab(tab, event) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('tab-active', 'text-white');
+                btn.classList.add('text-slate-400');
+            });
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('tab-active');
+                event.currentTarget.classList.remove('text-slate-400');
+            }
+            loadStandings();
+        }
+
+        async function loadPublicFilters() {
             try {
                 const res = await fetch(`${API_BASE}/setup`);
                 const data = await res.json();
-                if (data.success) {
-                    dbData.championships = data.championships || [];
-                    dbData.car_classes = data.car_classes || [];
-                    renderDashboardStats();
-                    renderChampionships();
-                    renderRallies();
-                    renderCars();
-                    populateFilters();
-                }
-            } catch (e) { console.error("Errore caricamento dati:", e); }
-        }
-
-        function renderDashboardStats() {
-            document.getElementById('statChamps').textContent = dbData.championships.length;
-            const totalRallies = dbData.championships.reduce((acc, c) => acc + (c.rally ? c.rally.length : 0), 0);
-            document.getElementById('statRallies').textContent = totalRallies;
-            document.getElementById('statClasses').textContent = dbData.car_classes.length;
-        }
-
-        function renderChampionships() {
-            const container = document.getElementById('championshipsContainer');
-            if (!container) return;
-            container.innerHTML = '';
-            
-            dbData.championships.forEach(c => {
-                const rallyCount = c.rally ? c.rally.length : 0;
-                container.innerHTML += `
-                    <div class="bg-dark-900 border border-dark-800 p-6 rounded-2xl space-y-4">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <span class="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20 uppercase">Stagione ${c.season || '2026'}</span>
-                                <h4 class="text-lg font-bold text-white mt-2">${c.name}</h4>
-                            </div>
-                            <span class="text-xs text-slate-400 font-bold bg-dark-950 px-3 py-1.5 rounded-lg border border-dark-800">${rallyCount} Rally</span>
-                        </div>
-                        <div class="border-t border-dark-800 pt-4 flex justify-between items-center text-xs text-slate-400">
-                            <span>Stato: <strong class="text-white uppercase">${c.status || 'non_iniziato'}</strong></span>
-                            <button onclick="switchView('standings')" class="text-emerald-400 hover:underline font-bold">Vedi Classifica →</button>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        function renderRallies() {
-            const container = document.getElementById('ralliesContainer');
-            if (!container) return;
-            container.innerHTML = '';
-
-            dbData.championships.forEach(c => {
-                if (c.rally) {
-                    c.rally.forEach(r => {
-                        const legCount = r.leg ? r.leg.length : 0;
-                        container.innerHTML += `
-                            <div class="bg-dark-900 border border-dark-800 p-6 rounded-2xl space-y-4">
-                                <div class="flex justify-between items-start">
-                                    <div>
-                                        <p class="text-xs text-slate-500">${c.name}</p>
-                                        <h4 class="text-lg font-bold text-white mt-1">${r.name}</h4>
-                                    </div>
-                                    <span class="text-xs text-slate-400 font-bold bg-dark-950 px-3 py-1.5 rounded-lg border border-dark-800">${legCount} Leg</span>
-                                </div>
-                            </div>
-                        `;
-                    });
-                }
-            });
-        }
-
-        function renderCars() {
-            const container = document.getElementById('carsContainer');
-            if (!container) return;
-            container.innerHTML = '';
-            dbData.car_classes.forEach(cls => {
-                let html = `<div class="bg-dark-900 border border-dark-800 p-5 rounded-2xl space-y-3">
-                    <h4 class="font-bold text-white text-md">${cls.name}</h4>
-                    <p class="text-xs text-slate-400">${cls.description || 'Nessuna descrizione'}</p>
-                    <div class="border-t border-dark-800 pt-3 space-y-1">
-                        <p class="text-[10px] font-bold text-slate-500 uppercase">Vetture Associate:</p>`;
-                if (cls.car && cls.car.length > 0) {
-                    cls.car.forEach(car => { html += `<div class="text-xs text-slate-300 bg-dark-950 px-3 py-1.5 rounded-lg border border-dark-800">${car.brand} ${car.name}</div>`; });
-                } else {
-                    html += `<p class="text-xs text-slate-500 italic">Nessuna vettura registrata.</p>`;
-                }
-                html += `</div></div>`;
-                container.innerHTML += html;
-            });
-        }
-
-        function populateFilters() {
-            const selChamp = document.getElementById('filterChamp');
-            const adminChamp = document.getElementById('selChamp');
-            if (selChamp) selChamp.innerHTML = '<option value="">Seleziona Campionato...</option>';
-            if (adminChamp) adminChamp.innerHTML = '<option value="">Campionato...</option>';
-
-            dbData.championships.forEach(c => {
-                if (selChamp) selChamp.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-                if (adminChamp) adminChamp.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-            });
-        }
-
-        // Filtri a cascata per Admin & OCR
-        const selChamp = document.getElementById('selChamp');
-        const selRally = document.getElementById('selRally');
-        const selLeg = document.getElementById('selLeg');
-        const selStage = document.getElementById('selStage');
-        const uploadSection = document.getElementById('uploadSection');
-
-        if (selChamp) {
-            selChamp.addEventListener('change', (e) => {
-                const cId = e.target.value;
-                selRally.innerHTML = '<option value="">Rally...</option>';
-                selLeg.innerHTML = '<option value="">Leg...</option>';
-                selStage.innerHTML = '<option value="">Stage...</option>';
-                selRally.disabled = !cId;
-                selLeg.disabled = true;
-                selStage.disabled = true;
-
-                if (cId) {
-                    const c = dbData.championships.find(x => x.id == cId);
-                    if (c && c.rally) c.rally.forEach(r => selRally.innerHTML += `<option value="${r.id}">${r.name}</option>`);
-                }
-                uploadSection.classList.add('hidden');
-            });
-        }
-
-        if (selRally) {
-            selRally.addEventListener('change', (e) => {
-                const rId = e.target.value;
-                selLeg.innerHTML = '<option value="">Leg...</option>';
-                selStage.innerHTML = '<option value="">Stage...</option>';
-                selLeg.disabled = !rId;
-                selStage.disabled = true;
-
-                if (rId) {
-                    const c = dbData.championships.find(x => x.id == selChamp.value);
-                    const r = c?.rally?.find(x => x.id == rId);
-                    if (r && r.leg) r.leg.forEach(l => selLeg.innerHTML += `<option value="${l.id}">${l.name}</option>`);
-                }
-                uploadSection.classList.add('hidden');
-            });
-        }
-
-        if (selLeg) {
-            selLeg.addEventListener('change', (e) => {
-                const lId = e.target.value;
-                selStage.innerHTML = '<option value="">Stage...</option>';
-                selStage.disabled = !lId;
-
-                if (lId) {
-                    const c = dbData.championships.find(x => x.id == selChamp.value);
-                    const r = c?.rally?.find(x => x.id == selRally.value);
-                    const l = r?.leg?.find(x => x.id == lId);
-                    if (l && l.stage) l.stage.forEach(s => selStage.innerHTML += `<option value="${s.id}">${s.name} (${s.track_name})</option>`);
-                }
-                uploadSection.classList.add('hidden');
-            });
-        }
-
-        if (selStage) {
-            selStage.addEventListener('change', (e) => {
-                if (e.target.value) uploadSection.classList.remove('hidden');
-                else uploadSection.classList.add('hidden');
-            });
-        }
-
-        // Gestione Upload OCR
-        const fileInput = document.getElementById('fileInput');
-        const uploadBtn = document.getElementById('uploadBtn');
-
-        if (fileInput) {
-            fileInput.addEventListener('change', () => {
-                if (fileInput.files.length > 0) uploadBtn.classList.remove('hidden');
-            });
-        }
-
-        if (uploadBtn) {
-            uploadBtn.addEventListener('click', async () => {
-                const file = fileInput.files[0];
-                if (!file) return;
-
-                const formData = new FormData();
-                formData.append('screenshot', file);
-
-                uploadBtn.classList.add('hidden');
-                document.getElementById('loading').classList.remove('hidden');
-
-                try {
-                    const res = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
-                    const data = await res.json();
-
-                    if (data.success) {
-                        document.getElementById('trackName').textContent = "Tracciato: " + data.track_name;
-                        const tbody = document.getElementById('tableBody');
-                        tbody.innerHTML = '';
-
-                        data.parsed_data.forEach((row) => {
-                            const tr = document.createElement('tr');
-                            tr.className = "border-b border-dark-800";
-                            tr.innerHTML = `
-                                <td class="p-2 text-center font-bold text-emerald-400">${row.position}</td>
-                                <td class="p-2"><input type="text" class="w-full bg-dark-950 border border-dark-800 rounded px-2 py-1 text-white font-semibold" value="${row.driver || ''}"></td>
-                                <td class="p-2"><input type="text" class="w-full bg-dark-950 border border-dark-800 rounded px-2 py-1 text-slate-400" value="${row.car || ''}"></td>
-                                <td class="p-2"><input type="text" class="w-full bg-dark-950 border border-dark-800 rounded px-2 py-1 text-slate-200 font-mono-time" value="${row.time || ''}"></td>
-                                <td class="p-2"><input type="text" class="w-full bg-dark-950 border border-dark-800 rounded px-2 py-1 text-amber-400 font-mono-time text-center" value="${row.penalty || '-'}"></td>
-                                <td class="p-2"><input type="text" class="w-full bg-dark-950 border border-dark-800 rounded px-2 py-1 text-rose-400 font-mono-time" value="${row.gap || '-'}"></td>
-                            `;
-                            tbody.appendChild(tr);
-                        });
-                        document.getElementById('resultBox').classList.remove('hidden');
-                    } else { alert("Errore OCR: " + data.error); }
-                } catch (e) { alert("Errore di rete: " + e.message); }
-                finally {
-                    document.getElementById('loading').classList.add('hidden');
-                    uploadBtn.classList.remove('hidden');
-                }
-            });
-        }
-
-        // Salvataggio Tempi
-        document.getElementById('saveBtn')?.addEventListener('click', async () => {
-            const stageId = selStage.value;
-            const legId = selLeg.value;
-            if (!stageId) return alert("Seleziona uno Stage!");
-
-            const results = [];
-            document.querySelectorAll('#tableBody tr').forEach((tr, i) => {
-                const inputs = tr.querySelectorAll('input');
-                if (inputs.length >= 5) {
-                    results.push({
-                        position: i + 1,
-                        driver: inputs[0].value,
-                        car: inputs[1].value,
-                        time: inputs[2].value,
-                        penalty: inputs[3].value,
-                        gap: inputs[4].value
-                    });
-                }
-            });
-
-            try {
-                const res = await fetch(`${API_BASE}/save-stage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ leg_id: legId, stage_id: stageId, results: results })
+                dbChamps = data.championships || [];
+                
+                const pubChampSelect = document.getElementById('pubChampSelect');
+                if (!pubChampSelect) return;
+                
+                pubChampSelect.innerHTML = '<option value="">Seleziona Campionato...</option>';
+                dbChamps.forEach(c => {
+                    pubChampSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
                 });
-                const data = await res.json();
-                if (data.success) {
-                    alert("✅ " + data.message);
-                    uploadSection.classList.add('hidden');
-                    loadAppData();
-                } else { alert("❌ " + data.error); }
-            } catch (e) { alert("Errore di rete: " + e.message); }
-        });
-
-        function setAdminTab(tab) {
-            document.getElementById('adminTabOcr').classList.toggle('hidden', tab !== 'ocr');
-            document.getElementById('adminTabWizard').classList.toggle('hidden', tab !== 'wizard');
+            } catch (e) { console.error("Errore caricamento filtri pubblici:", e); }
         }
 
-        // Builder Dinamico Wizard (Approccio B)
-        function addWizardRally() {
-            const list = document.getElementById('wizardRallyList');
-            const rallyId = Date.now();
-            const div = document.createElement('div');
-            div.className = "bg-dark-900 p-4 rounded-xl border border-dark-800 space-y-3 rally-builder-item";
-            div.dataset.id = rallyId;
-            div.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <input type="text" placeholder="Nome Rally (es. Rally di Sanremo)" class="bg-dark-950 border border-dark-800 text-white p-2 rounded-lg text-xs w-2/3 rally-name-input font-bold">
-                    <button onclick="this.closest('.rally-builder-item').remove()" class="text-rose-400 hover:text-rose-300 text-xs font-bold">Rimuovi Rally</button>
-                </div>
-                <div class="legs-container space-y-2 pl-4 border-l-2 border-dark-800"></div>
-                <button onclick="addWizardLeg('${rallyId}')" class="text-xs text-emerald-400 font-bold hover:underline">+ Aggiungi Leg</button>
-            `;
-            list.appendChild(div);
-            addWizardLeg(rallyId);
+        const pubChampSelect = document.getElementById('pubChampSelect');
+        if (pubChampSelect) {
+            pubChampSelect.addEventListener('change', (e) => {
+                const champId = e.target.value;
+                const pubRallySelect = document.getElementById('pubRallySelect');
+                const pubLegSelect = document.getElementById('pubLegSelect');
+                const pubStageSelect = document.getElementById('pubStageSelect');
+                
+                pubRallySelect.innerHTML = '<option value="">Seleziona Rally...</option>';
+                pubLegSelect.innerHTML = '<option value="">Seleziona Leg...</option>';
+                pubStageSelect.innerHTML = '<option value="">Seleziona Stage...</option>';
+                pubRallySelect.disabled = true;
+                pubLegSelect.disabled = true;
+                pubStageSelect.disabled = true;
+
+                if (!champId) return;
+
+                const selectedChamp = dbChamps.find(c => c.id == champId);
+                if (selectedChamp && selectedChamp.rally) {
+                    selectedChamp.rally.forEach(r => {
+                        pubRallySelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+                    });
+                    pubRallySelect.disabled = false;
+                }
+                loadStandings('championship', champId);
+            });
         }
 
-        function addWizardLeg(rallyId) {
-            const rallyDiv = document.querySelector(`.rally-builder-item[data-id="${rallyId}"]`);
-            if (!rallyDiv) return;
-            const legsContainer = rallyDiv.querySelector('.legs-container');
-            const legId = Date.now();
-            const legDiv = document.createElement('div');
-            legDiv.className = "bg-dark-950 p-3 rounded-lg border border-dark-800 space-y-2 leg-builder-item";
-            legDiv.dataset.id = legId;
-            legDiv.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <input type="text" value="Leg 1" class="bg-dark-900 border border-dark-800 text-white p-1.5 rounded text-xs w-1/2 leg-name-input font-semibold">
-                    <button onclick="this.closest('.leg-builder-item').remove()" class="text-rose-400 text-[10px]">Rimuovi Leg</button>
-                </div>
-                <div class="stages-list flex flex-wrap gap-2"></div>
-                <button onclick="addWizardStage('${legId}')" class="text-[10px] text-blue-400 font-bold hover:underline">+ Aggiungi Stage</button>
-            `;
-            legsContainer.appendChild(legDiv);
-            addWizardStage(legId);
+        const pubRallySelect = document.getElementById('pubRallySelect');
+        if (pubRallySelect) {
+            pubRallySelect.addEventListener('change', (e) => {
+                const rallyId = e.target.value;
+                const pubLegSelect = document.getElementById('pubLegSelect');
+                const pubStageSelect = document.getElementById('pubStageSelect');
+                
+                pubLegSelect.innerHTML = '<option value="">Seleziona Leg...</option>';
+                pubStageSelect.innerHTML = '<option value="">Seleziona Stage...</option>';
+                pubLegSelect.disabled = true;
+                pubStageSelect.disabled = true;
+
+                if (!rallyId) return;
+
+                const champId = document.getElementById('pubChampSelect').value;
+                const selectedChamp = dbChamps.find(c => c.id == champId);
+                const selectedRally = selectedChamp?.rally?.find(r => r.id == rallyId);
+
+                if (selectedRally && selectedRally.leg) {
+                    selectedRally.leg.forEach(l => {
+                        pubLegSelect.innerHTML += `<option value="${l.id}">${l.name}</option>`;
+                    });
+                    pubLegSelect.disabled = false;
+                }
+                loadStandings('rally', rallyId);
+            });
         }
 
-        function addWizardStage(legId) {
-            const legDiv = document.querySelector(`.leg-builder-item[data-id="${legId}"]`);
-            if (!legDiv) return;
-            const stagesList = legDiv.querySelector('.stages-list');
-            const stageSpan = document.createElement('div');
-            stageSpan.className = "flex items-center gap-1 bg-dark-900 p-1.5 rounded border border-dark-800 stage-item";
-            stageSpan.innerHTML = `
-                <input type="text" value="SS1" class="bg-transparent text-white text-xs w-12 text-center stage-name-input font-bold">
-                <button onclick="this.parentElement.remove()" class="text-rose-400 hover:text-rose-300 text-xs px-1">×</button>
-            `;
-            stagesList.appendChild(stageSpan);
+        const pubLegSelect = document.getElementById('pubLegSelect');
+        if (pubLegSelect) {
+            pubLegSelect.addEventListener('change', (e) => {
+                const legId = e.target.value;
+                const pubStageSelect = document.getElementById('pubStageSelect');
+                
+                pubStageSelect.innerHTML = '<option value="">Seleziona Stage...</option>';
+                pubStageSelect.disabled = true;
+
+                if (!legId) return;
+
+                const champId = document.getElementById('pubChampSelect').value;
+                const rallyId = document.getElementById('pubRallySelect').value;
+                const selectedChamp = dbChamps.find(c => c.id == champId);
+                const selectedRally = selectedChamp?.rally?.find(r => r.id == rallyId);
+                const selectedLeg = selectedRally?.leg?.find(l => l.id == legId);
+
+                if (selectedLeg && selectedLeg.stage) {
+                    selectedLeg.stage.forEach(s => {
+                        pubStageSelect.innerHTML += `<option value="${s.id}">${s.name} (${s.track_name})</option>`;
+                    });
+                    pubStageSelect.disabled = false;
+                }
+                loadStandings('leg', legId);
+            });
         }
 
-        // Invio e salvataggio dell'intero evento generato dal Wizard
-        document.getElementById('btnBuildWizard')?.addEventListener('click', async () => {
-            const name = document.getElementById('wizName').value.trim();
-            if (!name) return alert("Inserisci il nome della competizione!");
+        const pubStageSelect = document.getElementById('pubStageSelect');
+        if (pubStageSelect) {
+            pubStageSelect.addEventListener('change', (e) => {
+                const stageId = e.target.value;
+                if (stageId) loadStandings('stage', stageId);
+            });
+        }
 
-            const btn = document.getElementById('btnBuildWizard');
-            btn.disabled = true;
-            btn.textContent = "Salvataggio albero evento in corso...";
+        async function loadStandings(forcedType = null, forcedId = null) {
+            const type = forcedType || currentTab;
+            let id = forcedId;
+
+            if (!id) {
+                if (type === 'championship') id = document.getElementById('pubChampSelect')?.value;
+                if (type === 'rally') id = document.getElementById('pubRallySelect')?.value;
+                if (type === 'leg') id = document.getElementById('pubLegSelect')?.value;
+                if (type === 'stage') id = document.getElementById('pubStageSelect')?.value;
+            }
+
+            const tbody = document.getElementById('standingsBody');
+            if (!tbody) return;
+
+            if (!id) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-500">Seleziona un evento per visualizzare i tempi.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-500">Caricamento classifiche in corso...</td></tr>';
 
             try {
-                // 1. Creazione Campionato Padre
+                const res = await fetch(`${API_BASE}/standings/${type}/${id}`);
+                const data = await res.json();
+                
+                tbody.innerHTML = '';
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-500">Nessun risultato disponibile.</td></tr>';
+                    return;
+                }
+
+                data.forEach((row) => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-800/40 transition-colors border-b border-slate-800/50";
+                    
+                    let posBadge = `<span class="font-bold text-slate-400">${row.position}</span>`;
+                    if (row.position === 1) posBadge = `<span class="px-2.5 py-0.5 rounded text-amber-300 bg-amber-500/10 border border-amber-500/30 font-bold">1</span>`;
+                    if (row.position === 2) posBadge = `<span class="px-2.5 py-0.5 rounded text-slate-200 bg-slate-400/10 border border-slate-400/30 font-bold">2</span>`;
+                    if (row.position === 3) posBadge = `<span class="px-2.5 py-0.5 rounded text-amber-600 bg-amber-700/10 border border-amber-700/30 font-bold">3</span>`;
+
+                    let timeDisplay = row.time_str || row.total_str || '-';
+                    let gapDisplay = row.gap_first || row.gap || '-';
+                    
+                    let extra = '';
+                    const extraHead = document.getElementById('extraColHead');
+                    if (type === 'championship' || type === 'rally') {
+                        extra = `<td class="p-4 font-bold text-amber-400 text-right">${row.points || 0} PTS</td>`;
+                        if (extraHead) extraHead.textContent = "PUNTI";
+                    } else {
+                        if (extraHead) extraHead.textContent = "PENALITÀ";
+                        extra = `<td class="p-4 font-mono-time text-amber-400 text-right">${row.penalty || '-'}</td>`;
+                    }
+
+                    tr.innerHTML = `
+                        <td class="p-4 text-center">${posBadge}</td>
+                        <td class="p-4 font-bold text-white flex items-center gap-2">
+                            <i data-lucide="user" class="w-4 h-4 text-slate-500"></i> ${row.driver || row.driver_name}
+                        </td>
+                        <td class="p-4 font-mono-time text-slate-300">
+                            ${timeDisplay} 
+                            <span class="text-rose-400 text-xs ml-2">${gapDisplay !== '-' ? '(+' + gapDisplay + ')' : ''}</span>
+                        </td>
+                        ${extra}
+                    `;
+                    tbody.appendChild(tr);
+                });
+                lucide.createIcons();
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-rose-400">Errore nel recupero dati.</td></tr>`;
+            }
+        }
+
+        // ==========================================
+        // VISTA ADMIN (Gestione & Wizard)
+        // ==========================================
+        async function loadSetup() {
+            try {
+                const res = await fetch(`${API_BASE}/setup`);
+                const data = await res.json();
+                dbChamps = data.championships || [];
+                
+                const selectChamp = document.getElementById('selectChamp');
+                if (!selectChamp) return;
+                selectChamp.innerHTML = '<option value="">Seleziona...</option>';
+                dbChamps.forEach(c => {
+                    selectChamp.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                });
+            } catch (e) { console.error("Errore caricamento setup admin:", e); }
+        }
+
+        // Switch Modalità Admin
+        const btnModeManage = document.getElementById('btnModeManage');
+        const btnModeWizard = document.getElementById('btnModeWizard');
+        const sectionManage = document.getElementById('sectionManage');
+        const sectionWizard = document.getElementById('sectionWizard');
+
+        if (btnModeManage && btnModeWizard) {
+            btnModeManage.addEventListener('click', () => {
+                sectionManage.classList.remove('hidden');
+                sectionWizard.classList.add('hidden');
+                loadSetup();
+            });
+            btnModeWizard.addEventListener('click', () => {
+                sectionManage.classList.add('hidden');
+                sectionWizard.classList.remove('hidden');
+            });
+        }
+
+        const wizType = document.getElementById('wizType');
+        if (wizType) {
+            wizType.addEventListener('change', (e) => {
+                const boxRallyCount = document.getElementById('boxRallyCount');
+                if (e.target.value === 'championship') {
+                    boxRallyCount.classList.remove('hidden');
+                } else {
+                    boxRallyCount.classList.add('hidden');
+                }
+            });
+        }
+
+        // Generatore Wizard Guidato Corretto
+        document.getElementById('btnBuildWizard')?.addEventListener('click', async () => {
+            const type = document.getElementById('wizType').value;
+            const name = document.getElementById('wizName').value.trim();
+            const rallyCount = parseInt(document.getElementById('wizRallyCount').value) || 1;
+            const legCount = parseInt(document.getElementById('wizLegCount').value) || 1;
+            const stageCount = parseInt(document.getElementById('wizStageCount').value) || 1;
+
+            if (!name) { alert("⚠️ Inserisci il nome del Campionato o del Rally!"); return; }
+
+            const btnBuild = document.getElementById('btnBuildWizard');
+            btnBuild.disabled = true;
+            btnBuild.textContent = "Creazione struttura in corso...";
+
+            try {
+                // 1. Per i Rally Singoli creiamo comunque un Campionato contenitore
+                const champName = type === 'championship' ? name : `Single Rally: ${name}`;
+                
                 const cRes = await fetch(`${API_BASE}/create-championship`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: name })
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: champName })
                 });
                 const cData = await cRes.json();
-                if (!cData.success) throw new Error(cData.error);
-
+                if (!cData.success) throw new Error(cData.error || "Impossibile creare il Campionato");
+                
                 const champId = cData.championship.id;
 
-                // 2. Iterazione Rally -> Leg -> Stage
-                const rallyItems = document.querySelectorAll('.rally-builder-item');
-                for (let rEl of rallyItems) {
-                    const rName = rEl.querySelector('.rally-name-input').value || 'Rally';
+                // 2. Creazione dei Rally
+                const totalRallies = type === 'championship' ? rallyCount : 1;
+                
+                for (let r = 1; r <= totalRallies; r++) {
+                    const rName = type === 'championship' ? `${name} - Rally ${r}` : name;
+                    
                     const rRes = await fetch(`${API_BASE}/create-rally`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: rName, championship_id: champId })
                     });
                     const rData = await rRes.json();
+                    if (!rData.success) throw new Error(rData.error || "Impossibile creare il Rally");
+
                     const rallyId = rData.rally.id;
 
-                    const legItems = rEl.querySelectorAll('.leg-builder-item');
-                    for (let lEl of legItems) {
-                        const lName = lEl.querySelector('.leg-name-input').value || 'Leg';
+                    // 3. Creazione dei Leg
+                    for (let l = 1; l <= legCount; l++) {
                         const lRes = await fetch(`${API_BASE}/create-leg`, {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ name: lName, rally_id: rallyId })
+                            method: 'POST', 
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ rally_id: rallyId, name: `Leg ${l}` })
                         });
                         const lData = await lRes.json();
+                        if (!lData.success) throw new Error(lData.error || "Impossibile creare il Leg");
+
                         const legId = lData.leg.id;
 
-                        const stageItems = lEl.querySelectorAll('.stage-item');
-                        for (let sEl of stageItems) {
-                            const sName = sEl.querySelector('.stage-name-input').value || 'SS';
-                            await fetch(`${API_BASE}/create-stage`, {
-                                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ leg_id: legId, name: sName, track_name: `Tracciato ${sName}` })
+                        // 4. Creazione degli Stage iniziali per il Leg
+                        for (let s = 1; s <= stageCount; s++) {
+                            await fetch(`${API_BASE}/save-stage`, {
+                                method: 'POST', 
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ 
+                                    leg_id: legId, 
+                                    stage_name: `SS${s}`, 
+                                    track_name: `Tracciato SS${s}`, 
+                                    results: [] 
+                                })
                             });
                         }
                     }
                 }
 
-                alert("✅ Evento programmato e salvato con successo nel database!");
+                alert("✅ Evento programmato e salvato con successo nel Database!");
+                
+                // Reset interfaccia e ricaricamento dati
                 document.getElementById('wizName').value = '';
-                setAdminTab('ocr');
-                await loadAppData();
+                sectionWizard.classList.add('hidden');
+                sectionManage.classList.remove('hidden');
+                
+                await loadSetup();
+                await loadPublicFilters();
 
             } catch (err) {
-                alert("❌ Errore durante il salvataggio: " + err.message);
+                alert("❌ Errore durante la creazione della struttura: " + err.message);
             } finally {
-                btn.disabled = false;
-                btn.textContent = "Salva e Programma Evento nel Database";
+                btnBuild.disabled = false;
+                btnBuild.innerHTML = `Genera Struttura Evento & Tracciati <i data-lucide="arrow-right"></i>`;
+                lucide.createIcons();
             }
         });
+
+        // Selezione a cascata Admin
+        const selectChamp = document.getElementById('selectChamp');
+        const selectRally = document.getElementById('selectRally');
+        const selectLeg = document.getElementById('selectLeg');
+        const selectStage = document.getElementById('selectStage');
+        const uploadSection = document.getElementById('uploadSection');
+
+        function checkStageReady() {
+            if (selectStage && selectStage.value) {
+                uploadSection.classList.remove('hidden');
+            } else {
+                uploadSection.classList.add('hidden');
+            }
+        }
+
+        if (selectChamp) {
+            selectChamp.addEventListener('change', (e) => {
+                const champId = e.target.value;
+                selectRally.innerHTML = '<option value="">Seleziona...</option>';
+                selectLeg.innerHTML = '<option value="">Seleziona...</option>';
+                selectStage.innerHTML = '<option value="">Seleziona...</option>';
+                selectRally.disabled = !champId;
+                selectLeg.disabled = true;
+                selectStage.disabled = true;
+
+                if (champId) {
+                    const champ = dbChamps.find(c => c.id == champId);
+                    if (champ && champ.rally) {
+                        champ.rally.forEach(r => selectRally.innerHTML += `<option value="${r.id}">${r.name}</option>`);
+                    }
+                }
+                checkStageReady();
+            });
+        }
+
+        if (selectRally) {
+            selectRally.addEventListener('change', (e) => {
+                const rallyId = e.target.value;
+                selectLeg.innerHTML = '<option value="">Seleziona...</option>';
+                selectStage.innerHTML = '<option value="">Seleziona...</option>';
+                selectLeg.disabled = !rallyId;
+                selectStage.disabled = true;
+
+                if (rallyId) {
+                    const champ = dbChamps.find(c => c.id == selectChamp.value);
+                    const rally = champ?.rally?.find(r => r.id == rallyId);
+                    if (rally && rally.leg) {
+                        rally.leg.forEach(l => selectLeg.innerHTML += `<option value="${l.id}">${l.name}</option>`);
+                    }
+                }
+                checkStageReady();
+            });
+        }
+
+        if (selectLeg) {
+            selectLeg.addEventListener('change', (e) => {
+                const legId = e.target.value;
+                selectStage.innerHTML = '<option value="">Seleziona...</option>';
+                selectStage.disabled = !legId;
+
+                if (legId) {
+                    const champ = dbChamps.find(c => c.id == selectChamp.value);
+                    const rally = champ?.rally?.find(r => r.id == selectRally.value);
+                    const leg = rally?.leg?.find(l => l.id == legId);
+                    if (leg && leg.stage) {
+                        leg.stage.forEach(s => selectStage.innerHTML += `<option value="${s.id}">${s.name} (${s.track_name})</option>`);
+                    }
+                }
+                checkStageReady();
+            });
+        }
+
+        if (selectStage) {
+            selectStage.addEventListener('change', checkStageReady);
+        }
+
+        // Upload Screenshot & OCR
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) {
+            fileInput.addEventListener('change', () => {
+                const uploadBtn = document.getElementById('uploadBtn');
+                if (fileInput.files.length > 0 && uploadBtn) {
+                    uploadBtn.classList.remove('hidden');
+                }
+            });
+        }
+
+        const uploadBtn = document.getElementById('uploadBtn');
+        if (uploadBtn) {
+            uploadBtn.addEventListener('click', async () => {
+                const file = document.getElementById('fileInput').files[0];
+                if (!file) return;
+                
+                const formData = new FormData();
+                formData.append('screenshot', file);
+
+                uploadBtn.classList.add('hidden');
+                const loadingDiv = document.getElementById('loading');
+                if (loadingDiv) loadingDiv.classList.remove('hidden');
+
+                try {
+                    const response = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const trackNameEl = document.getElementById('trackName');
+                        if (trackNameEl) trackNameEl.textContent = "Tracciato: " + data.track_name;
+                        
+                        const tbody = document.getElementById('tableBody');
+                        if (tbody) {
+                            tbody.innerHTML = '';
+                            
+                            data.parsed_data.forEach((row, index) => {
+                                if (index > 0 && data.parsed_data.slice(0, index).some(r => r.driver === row.driver)) return; 
+
+                                const tr = document.createElement('tr');
+                                tr.className = "border-b border-slate-800 hover:bg-slate-800/40 transition-colors";
+                                tr.innerHTML = `
+                                    <td class="p-3 text-center font-bold text-emerald-400">${row.position}</td>
+                                    <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white font-semibold" value="${row.driver || ''}" data-field="driver"></td>
+                                    <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-400 text-xs" value="${row.car || ''}" data-field="car"></td>
+                                    <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 font-mono-time" value="${row.time || ''}" data-field="time"></td>
+                                    <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-amber-400 font-mono-time text-center" value="${row.penalty || '-'}" data-field="penalty"></td>
+                                    <td class="p-3"><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-rose-400 font-mono-time" value="${row.gap || '-'}" data-field="gap"></td>
+                                `;
+                                tbody.appendChild(tr);
+                            });
+                        }
+                        const resultBox = document.getElementById('resultBox');
+                        if (resultBox) resultBox.classList.remove('hidden');
+                    } else {
+                        alert("Errore OCR: " + (data.error || "Impossibile estrarre i dati"));
+                    }
+                } catch (error) {
+                    alert("Errore di rete durante l'upload: " + error.message);
+                } finally {
+                    if (loadingDiv) loadingDiv.classList.add('hidden');
+                    if (uploadBtn) uploadBtn.classList.remove('hidden');
+                }
+            });
+        }
+
+        const saveBtn = document.getElementById('saveBtn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', async () => {
+                const stageId = document.getElementById('selectStage').value;
+                const trackNameEl = document.getElementById('trackName');
+                const trackName = trackNameEl ? trackNameEl.textContent.replace("Tracciato: ", "") : '';
+                
+                if (!stageId) {
+                    alert("⚠️ Seleziona uno Stage valido prima di salvare.");
+                    return;
+                }
+
+                const finalData = [];
+                document.querySelectorAll('#tableBody tr').forEach((tr, index) => {
+                    const inputs = tr.querySelectorAll('input');
+                    if (inputs.length >= 5) {
+                        finalData.push({
+                            position: index + 1,
+                            driver: inputs[0].value,
+                            car: inputs[1].value,
+                            time: inputs[2].value,
+                            penalty: inputs[3].value || '-',
+                            gap: inputs[4].value
+                        });
+                    }
+                });
+
+                saveBtn.disabled = true; 
+                saveBtn.textContent = "Salvataggio in corso...";
+
+                try {
+                    const response = await fetch(`${API_BASE}/save-stage`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ leg_id: document.getElementById('selectLeg').value, stage_id: stageId, stage_name: "Stage", track_name: trackName, results: finalData })
+                    });
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        alert("✅ " + result.message);
+                        document.getElementById('resultBox').classList.add('hidden');
+                        if (fileInput) fileInput.value = '';
+                        document.getElementById('uploadSection').classList.add('hidden');
+                        loadPublicFilters();
+                    } else {
+                        alert("❌ Errore: " + result.error);
+                    }
+                } catch (error) {
+                    alert("❌ Errore di rete: " + error.message);
+                } finally {
+                    saveBtn.disabled = false; 
+                    saveBtn.textContent = "💾 Salva Tempi nel DB";
+                }
+            });
+        }
     </script>
 </body>
 </html>
