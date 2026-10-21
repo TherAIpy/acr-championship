@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACR Championship - Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome per le icone -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Configurazione colori Tailwind personalizzati -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        vrg: {
+                            bg: '#0B1120',
+                            sidebar: '#0F172A',
+                            card: '#1E293B',
+                            accent: '#EAB308',
+                            text: '#94A3B8',
+                            textlight: '#F1F5F9'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-vrg-bg text-vrg-text font-sans h-screen flex overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-vrg-sidebar border-r border-slate-800 flex flex-col justify-between hidden md:flex">
+        <div>
+            <!-- Logo -->
+            <div class="p-6 flex items-center gap-3">
+                <div class="text-vrg-accent text-2xl font-bold italic tracking-tighter">
+                    VRG
+                </div>
+                <div class="text-xs text-slate-500 font-semibold tracking-widest uppercase mt-1">Rally Series</div>
+            </div>
+
+            <!-- Menu -->
+            <nav class="mt-4 px-3 space-y-1">
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-house w-5"></i> Dashboard
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg bg-slate-800 text-white border-l-4 border-vrg-accent">
+                    <i class="fa-solid fa-trophy w-5 text-vrg-accent"></i> Campionati
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-flag-checkered w-5"></i> Rally Singolo
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-list-ol w-5"></i> Risultati
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-ranking-star w-5"></i> Classifiche
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-gear w-5"></i> Impostazioni
+                </a>
+            </nav>
+        </div>
+
+        <!-- Status Server -->
+        <div class="p-6 border-t border-slate-800">
+            <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+                Server Online
+            </div>
+            <div class="text-[10px] text-slate-600 mt-1">Ultimo aggiornamento 17:42</div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden">
+        
+        <!-- HEADER -->
+        <header class="h-20 bg-vrg-bg border-b border-slate-800 flex items-center justify-between px-8">
+            <div class="flex items-center gap-4">
+                <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-trophy text-vrg-accent"></i> Campionati
+                </h1>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <!-- Ricerca -->
+                <div class="relative hidden lg:block">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
+                    <input type="text" placeholder="Cerca un campionato..." class="bg-vrg-card text-sm text-white pl-10 pr-4 py-2 rounded-lg border border-slate-700 focus:outline-none focus:border-vrg-accent w-64 transition-colors">
+                </div>
+                
+                <!-- Profilo Utente -->
+                <div class="flex items-center gap-3 cursor-pointer">
+                    <img src="https://ui-avatars.com/api/?name=Antonio+Meloni&background=1E293B&color=F1F5F9" alt="Profilo" class="w-8 h-8 rounded-full border border-slate-600">
+                    <div class="hidden md:block">
+                        <p id="user-name" class="text-sm text-white font-medium">Caricamento...</p>
+                        <p class="text-[11px] text-vrg-accent">Admin</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-down text-slate-500 text-xs"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTENUTO PAGINA -->
+        <div class="flex-1 overflow-y-auto p-8">
+            
+            <!-- Toolbar (Filtri e Bottone Nuovo) -->
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex gap-2">
+                    <button class="bg-vrg-card text-white px-4 py-2 rounded-lg text-sm font-medium border border-slate-700">Tutti (6)</button>
+                    <button class="text-slate-400 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">In corso (3)</button>
+                    <button class="text-slate-400 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Conclusi (3)</button>
+                </div>
+                
+                <!-- Bottone Admin (nascosto se non admin) -->
+                <button class="admin-only bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-yellow-500/20 hidden">
+                    <i class="fa-solid fa-plus"></i> Nuovo Campionato
+                </button>
+            </div>
+
+            <!-- Tabella Campionati -->
+            <div class="bg-vrg-card rounded-xl border border-slate-700 overflow-hidden">
+                <table class="w-full text-left text-sm text-slate-300">
+                    <thead class="text-xs uppercase bg-slate-800/50 text-slate-400 border-b border-slate-700">
+                        <tr>
+                            <th class="px-6 py-4 font-semibold">Nome Campionato</th>
+                            <th class="px-6 py-4 font-semibold">Stagione</th>
+                            <th class="px-6 py-4 font-semibold">Rally</th>
+                            <th class="px-6 py-4 font-semibold w-48">Progresso</th>
+                            <th class="px-6 py-4 font-semibold">Classe Auto</th>
+                            <th class="px-6 py-4 font-semibold">Partecipanti</th>
+                            <th class="px-6 py-4 font-semibold">Stato</th>
+                            <th class="px-6 py-4 font-semibold text-right">Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="campionati-tbody" class="divide-y divide-slate-700/50">
+                        <!-- Riga di esempio (verrà popolata via JS) -->
+                        <tr class="hover:bg-slate-800/30 transition-colors group">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-8 rounded bg-slate-700 overflow-hidden">
+                                        <img src="https://images.unsplash.com/photo-1541343672885-9be56236302a?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" class="w-full h-full object-cover" alt="Rally">
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-white text-base">VRG Winter Championship</div>
+                                        <div class="text-xs text-slate-500">Campionato Invernale</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">2025</td>
+                            <td class="px-6 py-4 font-medium">5 / 5</td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-full bg-slate-700 rounded-full h-1.5">
+                                        <div class="bg-emerald-500 h-1.5 rounded-full" style="width: 100%"></div>
+                                    </div>
+                                    <span class="text-xs font-bold text-white w-8">100%</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">R5</td>
+                            <td class="px-6 py-4 flex items-center gap-2">
+                                <i class="fa-solid fa-users text-slate-500"></i> 16 / 20
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="bg-slate-700 text-slate-300 px-3 py-1 rounded-full text-xs font-medium border border-slate-600">Concluso</span>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <button class="text-slate-500 hover:text-white transition-colors">
+                                    <i class="fa-solid fa-chevron-right"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <!-- Fine riga di esempio -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Inclusione Script (Blocco B) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+
+    <!-- Logica della Dashboard -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. Inizializza l'interfaccia (mostra/nasconde bottoni admin, carica nome utente)
+            await initAuthUI();
+
+            // 2. Controllo di sicurezza: se non è loggato, rimandalo al login (o index)
+            const user = await getCurrentUser();
+            if (!user) {
+                console.log("Utente non loggato, reindirizzamento...");
+                // window.location.href = 'index.html'; 
+                // (Decommenta quando avrai la pagina di login pronta)
+            }
+
+            // 3. Qui in futuro chiameremo api.getChampionships() per popolare la tabella
+            // per ora la tabella ha la riga di esempio statica
+        });
+    </script>
+</body>
+</html>
