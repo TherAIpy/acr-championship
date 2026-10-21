@@ -45,6 +45,8 @@ async function apiCall(endpoint, method = 'GET', body = null) {
 // Endpoint specifici (esempi che userai tra poco)
 const api = {
     getChampionships: () => apiCall('/championships'),
+    getChampionshipDetail: (champ_id) => apiCall(`/championship/${champ_id}`),
+    getRallies: (champ_id) => apiCall(`/rallies/${champ_id}`),
     saveStage: (data) => apiCall('/save-stage', 'POST', data),
     saveChampionship: (data) => apiCall('/create-championship', 'POST', data)
     // ... altri endpoint

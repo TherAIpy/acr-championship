@@ -377,6 +377,41 @@ def get_standings(type, id):
             s['position'] = i + 1
         return jsonify(final_standings)
 
+@app.route('/api/championship/<int:champ_id>', methods=['GET'])
+def get_championship_detail(champ_id):
+    try:
+        supabase = get_supabase()
+        res = supabase.table('championship').select('*').eq('id', champ_id).execute()
+        if not res.data:
+            return jsonify({"success": False, "error": "Campionato non trovato"}), 404
+        return jsonify({"success": True, "data": res.data[0]}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/rallies/<int:champ_id>', methods=['GET'])
+def get_rallies(champ_id):
+    try:
+        supabase = get_supabase()
+        res = supabase.table('rally').select('*').eq('championship_id', champ_id).order('id', desc=False).execute()
+        return jsonify({"success": True, "data": res.data}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/create-rally', methods=['POST'])
+@admin_required
+def create_rally():
+    try:
+        data = request.json
+        supabase = get_supabase()
+        res = supabase.table('rally').insert({
+            "championship_id": data['championship_id'],
+            "name": data['name'],
+            "discord_webhook_url": data.get('discord_webhook_url', '')
+        }).execute()
+        return jsonify({"success": True, "data": res.data[0]}), 201
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)

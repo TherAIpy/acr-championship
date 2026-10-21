@@ -247,16 +247,10 @@
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-slate-800/30 transition-colors group";
                     tr.innerHTML = `
-                        <td class="px-6 py-4">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-8 rounded bg-slate-700 overflow-hidden flex items-center justify-center">
-                                    <i class="fa-solid fa-trophy text-slate-500"></i>
-                                </div>
-                                <div>
-                                    <div class="font-bold text-white text-base">${champ.name}</div>
-                                    <div class="text-xs text-slate-500">Creato il ${new Date(champ.created_at).toLocaleDateString('it-IT')}</div>
-                                </div>
-                            </div>
+                        <td class="px-6 py-4 text-right">
+                            <button onclick="window.location.href='championship-detail.html?id=${champ.id}'" class="text-slate-500 hover:text-vrg-accent transition-colors">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </button>
                         </td>
                         <td class="px-6 py-4">${anno}</td>
                         <td class="px-6 py-4 font-medium">- / -</td>
