@@ -175,14 +175,19 @@ def create_championship():
     return jsonify({"success": True, "championship": res.data[0]})
 
 @app.route('/api/create-rally', methods=['POST'])
+@admin_required
 def create_rally():
-    data = request.json
-    supabase = get_supabase()
-    res = supabase.table('rally').insert({
-        "name": data['name'],
-        "championship_id": data.get('championship_id')
-    }).execute()
-    return jsonify({"success": True, "rally": res.data[0]})
+    try:
+        data = request.json
+        supabase = get_supabase()
+        res = supabase.table('rally').insert({
+            "championship_id": data['championship_id'],
+            "name": data['name'],
+            "discord_webhook_url": data.get('discord_webhook_url', '')
+        }).execute()
+        return jsonify({"success": True, "data": res.data[0]}), 201
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/create-leg', methods=['POST'])
 def create_leg():
@@ -394,21 +399,6 @@ def get_rallies(champ_id):
         supabase = get_supabase()
         res = supabase.table('rally').select('*').eq('championship_id', champ_id).order('id', desc=False).execute()
         return jsonify({"success": True, "data": res.data}), 200
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route('/api/create-rally', methods=['POST'])
-@admin_required
-def create_rally():
-    try:
-        data = request.json
-        supabase = get_supabase()
-        res = supabase.table('rally').insert({
-            "championship_id": data['championship_id'],
-            "name": data['name'],
-            "discord_webhook_url": data.get('discord_webhook_url', '')
-        }).execute()
-        return jsonify({"success": True, "data": res.data[0]}), 201
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
