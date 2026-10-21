@@ -5,6 +5,9 @@ import re
 from datetime import datetime
 from services.ocr_service import extract_text_from_image
 from utils.db import get_supabase
+from utils.auth import admin_required
+from pydantic import BaseModel, ValidationError
+from typing import List, Optional
 
 app = Flask(__name__)
 CORS(app)
@@ -12,17 +15,35 @@ CORS(app)
 # =============================================================================
 # UTILITY
 # =============================================================================
-def time_str_to_ms(time_str):
-    if not time_str or time_str == '-' or not isinstance(time_str, str):
+def time_str_to_ms(time_str: str) -> int:
+    """
+    Converte una stringa tempo in millisecondi interi.
+    Supporta formati: "MM:SS.mmm", "MM:SS,mmm", "SS.mmm", "MM:SS".
+    I decimali vengono normalizzati a 3 cifre (es. ".6" → 600 ms).
+    """
+    if not time_str or time_str in ("-", "DNF", "DNS", "DSQ"):
         return 0
+    if not isinstance(time_str, str):
+        return 0
+    s = time_str.strip().replace(',', '.')
     try:
-        parts = time_str.replace(',', '.').split(':')
-        minutes = int(parts[0])
-        seconds_ms = parts[1].split('.')
-        seconds = int(seconds_ms[0])
-        ms = int(seconds_ms[1]) if len(seconds_ms) > 1 else 0
-        return (minutes * 60000) + (seconds * 1000) + ms
-    except:
+        if ':' in s:
+            minutes_part, rest = s.split(':', 1)
+            minutes = int(minutes_part)
+        else:
+            minutes = 0
+            rest = s
+        if '.' in rest:
+            sec_part, frac_part = rest.split('.', 1)
+            seconds = int(sec_part)
+            # Normalizza i decimali a 3 cifre
+            frac_part = frac_part[:3].ljust(3, '0')
+            ms = int(frac_part)
+        else:
+            seconds = int(rest)
+            ms = 0
+        return (minutes * 60 + seconds) * 1000 + ms
+    except (ValueError, IndexError):
         return 0
 
 def ms_to_time_str(ms):
@@ -146,6 +167,7 @@ def get_setup():
     return jsonify({"championships": champs.data})
 
 @app.route('/api/create-championship', methods=['POST'])
+@admin_required
 def create_championship():
     data = request.json
     supabase = get_supabase()
@@ -169,40 +191,72 @@ def create_leg():
     res = supabase.table('leg').insert({"rally_id": data['rally_id'], "name": data['name']}).execute()
     return jsonify({"success": True, "leg": res.data[0]})
 
-@app.route('/api/save-stage', methods=['POST'])
-def save_stage():
-    data = request.json
-    results = data.get('results', [])
-    stage_name = data.get('stage_name')
-    track_name = data.get('track_name')
-    leg_id = data.get('leg_id')
-    
-    if not results or not leg_id or not stage_name:
-        return jsonify({"success": False, "error": "Dati mancanti"}), 400
+class StageResultIn(BaseModel):
+    position: Optional[int] = None
+    driver: str
+    car: Optional[str] = None
+    time: str
+    penalty: Optional[str] = "-"
+    gap: Optional[str] = None
+    car_id: Optional[int] = None
+    car_class_id: Optional[int] = None
+    is_disqualified: bool = False
 
+class SaveStageIn(BaseModel):
+    stage_id: Optional[int] = None
+    stage_name: str
+    track_name: Optional[str] = None
+    leg_id: Optional[int] = None
+    results: List[StageResultIn] = []
+
+@app.route('/api/save-stage', methods=['POST'])
+@admin_required
+def save_stage():
     try:
-        supabase = get_supabase()
+        payload = SaveStageIn(**request.json)
+    except ValidationError as e:
+        return jsonify({"success": False, "error": e.errors()}), 400
+
+    supabase = get_supabase()
+
+    if payload.stage_id:
+        # Aggiornamento: verifica che lo stage esista
+        existing = supabase.table('stage').select('id').eq('id', payload.stage_id).execute()
+        if not existing.data:
+            return jsonify({"success": False, "error": "Stage non trovato"}), 404
+        stage_id = payload.stage_id
+        supabase.table('stage').update({
+            "name": payload.stage_name,
+            "track_name": payload.track_name
+        }).eq('id', stage_id).execute()
+        # Sostituisci i risultati (in una transazione ideale; qui usiamo delete + insert)
+        supabase.table('stage_result').delete().eq('stage_id', stage_id).execute()
+    else:
+        if not payload.leg_id:
+            return jsonify({"success": False, "error": "leg_id obbligatorio per la creazione"}), 400
         stage_res = supabase.table('stage').insert({
-            "leg_id": leg_id, "name": stage_name, "track_name": track_name
+            "leg_id": payload.leg_id,
+            "name": payload.stage_name,
+            "track_name": payload.track_name
         }).execute()
         stage_id = stage_res.data[0]['id']
 
-        insert_data = []
-        for r in results:
-            insert_data.append({
-                "stage_id": stage_id,
-                "position": r.get("position"),
-                "driver_name": r.get("driver"),
-                "car_model": r.get("car"),
-                "time_str": r.get("time"),
-                "penalty": r.get("penalty", "-"),
-                "gap": r.get("gap")
-            })
+    if payload.results:
+        insert_data = [{
+            "stage_id": stage_id,
+            "position": r.position,
+            "driver_name": r.driver,
+            "car_model": r.car,
+            "time_str": r.time,
+            "penalty": r.penalty,
+            "gap": r.gap,
+            "car_id": r.car_id,
+            "car_class_id": r.car_class_id,
+            "is_disqualified": r.is_disqualified
+        } for r in payload.results]
         supabase.table('stage_result').insert(insert_data).execute()
 
-        return jsonify({"success": True, "message": f"Salvati {len(insert_data)} piloti"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    return jsonify({"success": True, "stage_id": stage_id, "saved": len(payload.results)})
 
 @app.route('/api/calendar', methods=['GET'])
 def get_calendar():
