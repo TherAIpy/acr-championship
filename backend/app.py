@@ -258,6 +258,16 @@ def save_stage():
 
     return jsonify({"success": True, "stage_id": stage_id, "saved": len(payload.results)})
 
+@app.route('/api/championships', methods=['GET'])
+def get_championships():
+    try:
+        supabase = get_supabase()
+        # Prende tutti i campionati, ordinati dal più recente
+        res = supabase.table('championship').select('*').order('created_at', desc=True).execute()
+        return jsonify({"success": True, "data": res.data}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/api/calendar', methods=['GET'])
 def get_calendar():
     supabase = get_supabase()
