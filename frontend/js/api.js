@@ -46,5 +46,6 @@ async function apiCall(endpoint, method = 'GET', body = null) {
 const api = {
     getChampionships: () => apiCall('/championships'),
     saveStage: (data) => apiCall('/save-stage', 'POST', data),
+    saveChampionship: (data) => apiCall('/create-championship', 'POST', data)
     // ... altri endpoint
 };

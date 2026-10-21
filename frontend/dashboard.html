@@ -116,7 +116,7 @@
                 </div>
                 
                 <!-- Bottone Admin (nascosto se non admin) -->
-                <button class="admin-only bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-yellow-500/20 hidden">
+                <button id="btn-nuovo-campionato" class="admin-only bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-yellow-500/20 hidden">
                     <i class="fa-solid fa-plus"></i> Nuovo Campionato
                 </button>
             </div>
@@ -137,48 +137,33 @@
                         </tr>
                     </thead>
                     <tbody id="campionati-tbody" class="divide-y divide-slate-700/50">
-                        <!-- Riga di esempio (verrà popolata via JS) -->
-                        <tr class="hover:bg-slate-800/30 transition-colors group">
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-8 rounded bg-slate-700 overflow-hidden">
-                                        <img src="https://images.unsplash.com/photo-1541343672885-9be56236302a?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" class="w-full h-full object-cover" alt="Rally">
-                                    </div>
-                                    <div>
-                                        <div class="font-bold text-white text-base">VRG Winter Championship</div>
-                                        <div class="text-xs text-slate-500">Campionato Invernale</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4">2025</td>
-                            <td class="px-6 py-4 font-medium">5 / 5</td>
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-full bg-slate-700 rounded-full h-1.5">
-                                        <div class="bg-emerald-500 h-1.5 rounded-full" style="width: 100%"></div>
-                                    </div>
-                                    <span class="text-xs font-bold text-white w-8">100%</span>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4">R5</td>
-                            <td class="px-6 py-4 flex items-center gap-2">
-                                <i class="fa-solid fa-users text-slate-500"></i> 16 / 20
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="bg-slate-700 text-slate-300 px-3 py-1 rounded-full text-xs font-medium border border-slate-600">Concluso</span>
-                            </td>
-                            <td class="px-6 py-4 text-right">
-                                <button class="text-slate-500 hover:text-white transition-colors">
-                                    <i class="fa-solid fa-chevron-right"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        <!-- Fine riga di esempio -->
+                        <!-- Popolato via JS -->
                     </tbody>
                 </table>
             </div>
         </div>
     </main>
+
+        <!-- MODALE NUOVO CAMPIONATO (Nascosta di default) -->
+    <div id="modal-nuovo-campionato" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-vrg-card p-8 rounded-xl w-full max-w-md border border-slate-700 shadow-2xl">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-trophy text-vrg-accent"></i> Crea Nuovo Campionato
+            </h2>
+            
+            <div class="mb-4">
+                <label class="block text-sm text-slate-400 mb-2">Nome Campionato</label>
+                <input type="text" id="input-nome-campionato" placeholder="Es. VRG Summer Cup" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
+            </div>
+            
+            <div class="flex justify-end gap-3 mt-8">
+                <button id="btn-annulla" class="px-5 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">Annulla</button>
+                <button id="btn-salva" class="bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-yellow-500/20">
+                    <i class="fa-solid fa-floppy-disk"></i> Salva
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Inclusione Script (Blocco B) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -189,20 +174,120 @@
     <!-- Logica della Dashboard -->
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            // 1. Inizializza l'interfaccia (mostra/nasconde bottoni admin, carica nome utente)
+            // 1. Inizializza auth
             await initAuthUI();
+            
+            // 2. Carica i campionati
+            loadChampionships();
 
-            // 2. Controllo di sicurezza: se non è loggato, rimandalo al login (o index)
-            const user = await getCurrentUser();
-            if (!user) {
-                console.log("Utente non loggato, reindirizzamento...");
-                // window.location.href = 'index.html'; 
-                // (Decommenta quando avrai la pagina di login pronta)
+            // 3. Logica Modale
+            const btnNuovo = document.getElementById('btn-nuovo-campionato');
+            const modal = document.getElementById('modal-nuovo-campionato');
+            const btnAnnulla = document.getElementById('btn-annulla');
+            const btnSalva = document.getElementById('btn-salva');
+            const inputNome = document.getElementById('input-nome-campionato');
+
+            // Apri modale
+            if(btnNuovo) {
+                btnNuovo.addEventListener('click', () => {
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                });
             }
 
-            // 3. Qui in futuro chiameremo api.getChampionships() per popolare la tabella
-            // per ora la tabella ha la riga di esempio statica
+            // Chiudi modale
+            btnAnnulla.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            });
+
+            // Salva sul database
+            btnSalva.addEventListener('click', async () => {
+                const nome = inputNome.value.trim();
+                if(!nome) return alert('Inserisci un nome per il campionato');
+
+                btnSalva.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvataggio...';
+                btnSalva.disabled = true;
+
+                try {
+                    // Chiama il backend (che abbiamo protetto con admin_required)
+                    const res = await api.saveChampionship({ name: nome });
+                    
+                    if(res.success) {
+                        modal.classList.add('hidden');
+                        modal.classList.remove('flex');
+                        inputNome.value = '';
+                        loadChampionships(); // Ricarica la tabella!
+                    } else {
+                        alert('Errore: ' + (res.error || 'Sconosciuto'));
+                    }
+                } catch(e) {
+                    alert('Errore di connessione al server. Controlla la console (F12).');
+                    console.error(e);
+                } finally {
+                    btnSalva.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salva';
+                    btnSalva.disabled = false;
+                }
+            });
         });
+
+        async function loadChampionships() {
+            const tbody = document.getElementById('campionati-tbody');
+            try {
+                const response = await api.getChampionships();
+                
+                if (!response.success || response.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-500">Nessun campionato trovato. Clicca "Nuovo Campionato" per iniziare.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                response.data.forEach(champ => {
+                    const anno = new Date(champ.created_at).getFullYear();
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-800/30 transition-colors group";
+                    tr.innerHTML = `
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-8 rounded bg-slate-700 overflow-hidden flex items-center justify-center">
+                                    <i class="fa-solid fa-trophy text-slate-500"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-white text-base">${champ.name}</div>
+                                    <div class="text-xs text-slate-500">Creato il ${new Date(champ.created_at).toLocaleDateString('it-IT')}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">${anno}</td>
+                        <td class="px-6 py-4 font-medium">- / -</td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-full bg-slate-700 rounded-full h-1.5">
+                                    <div class="bg-vrg-accent h-1.5 rounded-full" style="width: 0%"></div>
+                                </div>
+                                <span class="text-xs font-bold text-white w-8">0%</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">-</td>
+                        <td class="px-6 py-4 flex items-center gap-2">
+                            <i class="fa-solid fa-users text-slate-500"></i> 0
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="bg-slate-700 text-slate-300 px-3 py-1 rounded-full text-xs font-medium border border-slate-600">In corso</span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <button class="text-slate-500 hover:text-white transition-colors">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                console.error("Errore:", error);
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-red-400">Errore nel caricamento dei dati. Sei loggato?</td></tr>`;
+            }
+        }
     </script>
 </body>
 </html>
