@@ -12,6 +12,11 @@ async function apiCall(endpoint, method = 'GET', body = null) {
 
     try {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+        
+        if (response.status === 401 || response.status === 403) {
+            console.error("Accesso negato o sessione scaduta.");
+        }
+
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Errore API');
         return data;
@@ -23,6 +28,9 @@ async function apiCall(endpoint, method = 'GET', body = null) {
 
 const api = {
     getChampionships: () => apiCall('/championships'),
+    getChampionshipDetail: (champ_id) => apiCall(`/championship/${champ_id}`),
+    getRallies: (champ_id) => apiCall(`/rallies/${champ_id}`),
     saveChampionship: (data) => apiCall('/create-championship', 'POST', data),
+    createRally: (data) => apiCall('/create-rally', 'POST', data),
     saveStage: (data) => apiCall('/save-stage', 'POST', data)
 };
