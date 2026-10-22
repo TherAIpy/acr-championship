@@ -151,7 +151,6 @@
 
             // Init Auth e UI
             await initAuthUI();
-            setupLogout();
             
             // Carica i dati
             await loadTree();
@@ -196,26 +195,6 @@
                 } catch (e) { alert("Errore: " + e.message); }
             });
         });
-
-        // Gestione Logout
-        function setupLogout() {
-            const btnLogout = document.getElementById('btn-logout');
-            const userEmail = document.getElementById('user-email');
-            
-            // Se esiste una sessione, mostra il bottone
-            supabase.auth.getSession().then(({ data: { session } }) => {
-                if (session) {
-                    btnLogout.classList.remove('hidden');
-                    userEmail.textContent = session.user.email;
-                    userEmail.classList.remove('hidden');
-                }
-            });
-
-            btnLogout.addEventListener('click', async () => {
-                await supabase.auth.signOut();
-                window.location.href = 'dashboard.html';
-            });
-        }
 
         function openModal(id) {
             const el = document.getElementById(id);

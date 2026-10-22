@@ -1,61 +1,53 @@
 // frontend/js/auth.js
 
-async function login(email, password) {
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-        email: email,
-        password: password,
-    });
-    if (error) throw error;
-    return data;
-}
+// js/auth.js
 
-async function logout() {
-    await supabaseClient.auth.signOut();
-    window.location.reload();
-}
-
-async function getCurrentUser() {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    return user;
-}
-
-// Controlla se l'utente ha il ruolo admin (salvato in app_metadata)
-async function isAdmin() {
-    const user = await getCurrentUser();
-    if (!user) return false;
-    // Controlla app_metadata (non user_metadata!)
-    return user.app_metadata?.role === 'admin';
-}
-
-// Funzione di inizializzazione UI
 async function initAuthUI() {
-    const user = await getCurrentUser();
-    
-    // Esempio: nascondi i bottoni di scrittura se non sei admin
-    const adminElements = document.querySelectorAll('.admin-only');
-    
-    if (user && await isAdmin()) {
-        // Mostra elementi admin
-        adminElements.forEach(el => el.style.display = 'block');
+    const { data: { session } } = await supabase.auth.getSession();
+    const userEmail = document.getElementById('user-email');
+    const btnLogout = document.getElementById('btn-logout');
+    const btnLogin = document.getElementById('btn-login');
+
+    if (session) {
+        // Utente Loggato
+        if (userEmail) {
+            userEmail.textContent = session.user.email;
+            userEmail.classList.remove('hidden');
+        }
+        if (btnLogout) {
+            btnLogout.classList.remove('hidden');
+            // Rimuoviamo eventuali listener precedenti per evitare doppioni
+            btnLogout.onclick = async () => {
+                await supabase.auth.signOut();
+                window.location.reload();
+            };
+        }
+        if (btnLogin) btnLogin.classList.add('hidden');
     } else {
-        // Nascondi elementi admin
-        adminElements.forEach(el => el.style.display = 'none');
+        // Utente NON Loggato
+        if (userEmail) userEmail.classList.add('hidden');
+        if (btnLogout) btnLogout.classList.add('hidden');
+        if (btnLogin) btnLogin.classList.remove('hidden');
     }
 
-    // Aggiorna il nome utente nell'header se presente
-    const userNameEl = document.getElementById('user-name');
-    if (userNameEl && user) {
-        userNameEl.textContent = user.email; // O user.user_metadata.full_name
-    }
+    applyAdminUI(session);
 }
 
-// Ascolta i cambiamenti di stato dell'autenticazione
-supabaseClient.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN') {
-        console.log('Utente loggato');
-        initAuthUI();
-    } else if (event === 'SIGNED_OUT') {
-        console.log('Utente sloggato');
-        initAuthUI();
+function applyAdminUI(session = null) {
+    // Se non passiamo la sessione, la recuperiamo (utile se chiamata da altre funzioni)
+    if (!session) {
+        supabase.auth.getSession().then(({ data }) => applyAdminUI(data.session));
+        return;
     }
-});
+
+    const isAdmin = session && session.user && session.user.app_metadata && session.user.app_metadata.role === 'admin';
+    const adminElements = document.querySelectorAll('.admin-only');
+
+    adminElements.forEach(el => {
+        if (isAdmin) {
+            el.classList.remove('hidden');
+        } else {
+            el.classList.add('hidden');
+        }
+    });
+}
