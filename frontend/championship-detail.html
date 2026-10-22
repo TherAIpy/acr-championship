@@ -306,7 +306,7 @@
                 
                 // Bottone + Leg (visibile solo se admin)
                 const adminLegBtn = isAdmin 
-                    ? `<button onclick="event.stopPropagation(); openStageResults(${stage.id}, '${stage.name.replace(/'/g, "\\'")}')" class="text-slate-500 hover:text-vrg-accent opacity-0 group-hover:opacity-100 transition-all" title="Gestisci Risultati">
+                    ? `<button onclick="event.stopPropagation(); openStageResults(${stage.id})" class="text-slate-500 hover:text-vrg-accent opacity-0 group-hover:opacity-100 transition-all" title="Gestisci Risultati">
     <i class="fa-solid fa-list-ol"></i>
 </button>` 
                     : '';
@@ -394,12 +394,34 @@
             document.getElementById('input-stage-leg-id').value = legId;
             openModal('modal-stage');
         }
-    async function openStageResults(stageId, stageName) {
+    async function openStageResults(stageId) {
+    // 1. Recuperiamo il nome dello stage dai dati già caricati in memoria
+    let stageName = 'Stage';
+    if (treeData && treeData.rallies) {
+        for (const rally of treeData.rallies) {
+            if (rally.legs) {
+                for (const leg of rally.legs) {
+                    if (leg.stages) {
+                        const s = leg.stages.find(st => st.id === stageId);
+                        if (s) { 
+                            stageName = s.name; 
+                            break; 
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Popoliamo la modale
     document.getElementById('input-risultati-stage-id').value = stageId;
     document.getElementById('modal-risultati-title').textContent = stageName;
     document.getElementById('risultati-tbody').innerHTML = '';
+    
+    // Mostra la modale
     openModal('modal-risultati');
     
+    // 3. Carichiamo i risultati esistenti se ci sono
     try {
         const res = await apiCall(`/stage-results/${stageId}`);
         if (res.success && res.data.length > 0) {
@@ -407,7 +429,9 @@
         } else {
             addResultRow(); // Riga vuota se non ci sono risultati
         }
-    } catch(e) { console.error("Errore caricamento risultati:", e); }
+    } catch(e) { 
+        console.error("Errore caricamento risultati:", e); 
+    }
 }
 
 function addResultRow(data = {}) {
