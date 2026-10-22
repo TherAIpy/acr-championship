@@ -306,6 +306,24 @@ def get_tree(champ_id):
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+class StageResultIn(BaseModel):
+    position: Optional[int] = None
+    driver: str
+    car: Optional[str] = None
+    time: str
+    penalty: Optional[str] = "-"
+    gap: Optional[str] = None
+    car_id: Optional[int] = None
+    car_class_id: Optional[int] = None
+    is_disqualified: bool = False
+
+class SaveStageIn(BaseModel):
+    stage_id: Optional[int] = None
+    stage_name: str
+    track_name: Optional[str] = None
+    leg_id: Optional[int] = None
+    results: List[StageResultIn] = []
+
 @app.route('/api/save-stage', methods=['POST'])
 @admin_required
 def save_stage():
