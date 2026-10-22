@@ -568,10 +568,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert("Risultati salvati con successo!");
                 } else {
                     alert("Errore: " + res.error);
-                }
+                }            
             } catch(e) {
-                alert("Errore di connessione. Vedi console.");
-                console.error(e);
+                // Sostituisci "Errore di connessione. Vedi console." con questo:
+                alert("Errore durante il salvataggio: " + e.message);
+                console.error("Dettaglio errore:", e);
             } finally {
                 btnSalvaRisultati.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salva Risultati';
                 btnSalvaRisultati.disabled = false;
