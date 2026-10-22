@@ -310,75 +310,82 @@ def get_tree(champ_id):
 @admin_required
 def save_stage():
     try:
-        payload = SaveStageIn(**request.json)
-    except ValidationError as e:
-        return jsonify({"success": False, "error": e.errors()}), 400
+        # 1. Validazione
+        try:
+            payload = SaveStageIn(**request.json)
+        except ValidationError as e:
+            return jsonify({"success": False, "error": e.errors()}), 400
 
-    supabase = get_supabase()
+        supabase = get_supabase()
 
-    if payload.stage_id:
-        existing = supabase.table('stage').select('id').eq('id', payload.stage_id).execute()
-        if not existing.data:
-            return jsonify({"success": False, "error": "Stage non trovato"}), 404
-        stage_id = payload.stage_id
-        
-        # Aggiorna i dati dello stage solo se il nome è fornito
-        if payload.stage_name and payload.stage_name != "Update":
-            supabase.table('stage').update({
+        # 2. Gestione Stage (Update o Insert)
+        if payload.stage_id:
+            existing = supabase.table('stage').select('id').eq('id', payload.stage_id).execute()
+            if not existing.data:
+                return jsonify({"success": False, "error": "Stage non trovato"}), 404
+            stage_id = payload.stage_id
+            
+            if payload.stage_name and payload.stage_name != "Update":
+                supabase.table('stage').update({
+                    "name": payload.stage_name,
+                    "track_name": payload.track_name or 'Sconosciuto' # Evita NULL
+                }).eq('id', stage_id).execute()
+                
+            supabase.table('stage_result').delete().eq('stage_id', stage_id).execute()
+        else:
+            if not payload.leg_id:
+                return jsonify({"success": False, "error": "leg_id obbligatorio per la creazione"}), 400
+            stage_res = supabase.table('stage').insert({
+                "leg_id": payload.leg_id,
                 "name": payload.stage_name,
-                "track_name": payload.track_name
-            }).eq('id', stage_id).execute()
-            
-        supabase.table('stage_result').delete().eq('stage_id', stage_id).execute()
-    else:
-        if not payload.leg_id:
-            return jsonify({"success": False, "error": "leg_id obbligatorio per la creazione"}), 400
-        stage_res = supabase.table('stage').insert({
-            "leg_id": payload.leg_id,
-            "name": payload.stage_name,
-            "track_name": payload.track_name
-        }).execute()
-        stage_id = stage_res.data[0]['id']
+                "track_name": payload.track_name or 'Sconosciuto'
+            }).execute()
+            stage_id = stage_res.data[0]['id']
 
-    if payload.results:
-        insert_data = []
-        for r in payload.results:
-            # Calcolo millisecondi
-            t_ms = time_str_to_ms(r.time)
-            
-            # Estrazione penalità in secondi (es. "+5" o "+00:05")
-            p_sec = 0.0
-            if r.penalty and r.penalty != '-':
-                p_str = r.penalty.replace('+', '').replace('s', '').strip()
-                try:
-                    if ':' in p_str:
-                        p_parts = p_str.split(':')
-                        p_sec = float(p_parts[0])*60 + float(p_parts[1])
-                    else:
-                        p_sec = float(p_str)
-                except:
-                    pass
-            
-            insert_data.append({
-                "stage_id": stage_id,
-                "position": r.position,
-                "driver_name": r.driver,
-                "car_model": r.car,
-                "time_str": r.time,
-                "penalty": r.penalty,
-                "gap": r.gap,
-                "car_id": r.car_id,
-                "car_class_id": r.car_class_id,
-                "is_disqualified": r.is_disqualified,
-                "time_ms": t_ms,
-                "penalty_sec": p_sec,
-                "status": "official",
-                "is_official": True,
-                "version": 1
-            })
-        supabase.table('stage_result').insert(insert_data).execute()
+        # 3. Inserimento Risultati
+        if payload.results:
+            insert_data = []
+            for r in payload.results:
+                t_ms = time_str_to_ms(r.time)
+                p_sec = 0.0
+                if r.penalty and r.penalty != '-':
+                    p_str = r.penalty.replace('+', '').replace('s', '').strip()
+                    try:
+                        if ':' in p_str:
+                            p_parts = p_str.split(':')
+                            p_sec = float(p_parts[0])*60 + float(p_parts[1])
+                        else:
+                            p_sec = float(p_str)
+                    except:
+                        pass
+                
+                # Pulizia dati per evitare errori di validazione del DB
+                insert_data.append({
+                    "stage_id": stage_id,
+                    "position": r.position,
+                    "driver_name": r.driver or "Sconosciuto",
+                    "car_model": r.car or "Sconosciuta",
+                    "time_str": r.time or "00:00.000",
+                    "penalty": r.penalty or "-",
+                    "gap": r.gap or "-",
+                    "car_id": r.car_id,
+                    "car_class_id": r.car_class_id,
+                    "is_disqualified": r.is_disqualified,
+                    "time_ms": t_ms,
+                    "penalty_sec": p_sec,
+                    "status": "official",
+                    "is_official": True,
+                    "version": 1
+                })
+            supabase.table('stage_result').insert(insert_data).execute()
 
-    return jsonify({"success": True, "stage_id": stage_id, "saved": len(payload.results)})
+        return jsonify({"success": True, "stage_id": stage_id, "saved": len(payload.results)})
+        
+    except Exception as e:
+        import traceback
+        print("ERRORE SALVATAGGIO STAGE:")
+        print(traceback.format_exc()) # Questo lo vedrai nei log di Render
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/championships', methods=['GET'])
 def get_championships():
