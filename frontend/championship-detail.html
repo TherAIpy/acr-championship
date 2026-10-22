@@ -119,6 +119,45 @@
         </div>
     </div>
 
+    <!-- MODALE INSERIMENTO RISULTATI -->
+    <div id="modal-risultati" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-vrg-card p-6 rounded-xl w-full max-w-4xl border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-list-ol text-vrg-accent"></i> Risultati: <span id="modal-risultati-title" class="text-vrg-accent"></span>
+            </h2>
+            <input type="hidden" id="input-risultati-stage-id">
+        
+            <div class="flex-1 overflow-y-auto pr-2">
+                <table class="w-full text-left text-sm text-slate-300">
+                    <thead class="text-xs uppercase bg-slate-800 text-slate-400 sticky top-0 z-10">
+                        <tr>
+                            <th class="px-2 py-2 w-12 text-center">Pos</th>
+                            <th class="px-2 py-2">Pilota</th>
+                            <th class="px-2 py-2">Auto</th>
+                            <th class="px-2 py-2 w-32">Tempo</th>
+                            <th class="px-2 py-2 w-24">Penalità</th>
+                            <th class="px-2 py-2 w-10 text-center">X</th>
+                        </tr>
+                    </thead>
+                    <tbody id="risultati-tbody">
+                        <!-- Righe aggiunte via JS -->
+                    </tbody>
+                </table>
+                <button onclick="addResultRow()" class="mt-4 text-sm text-vrg-accent hover:text-yellow-400 font-bold flex items-center gap-2 transition-colors">
+                    <i class="fa-solid fa-plus"></i> Aggiungi Pilota
+                </button>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-700">
+                <button onclick="closeModal('modal-risultati')" class="px-5 py-2 rounded-lg text-sm text-slate-300 hover:text-white transition-colors">Annulla</button>
+                <button id="btn-salva-risultati" class="bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors">
+                    <i class="fa-solid fa-floppy-disk"></i> Salva Risultati
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase.js"></script>
     <script src="js/api.js"></script>
@@ -254,7 +293,7 @@
                 
                 // Bottone + Leg (visibile solo se admin)
                 const adminLegBtn = isAdmin 
-                    ? `<button onclick="event.stopPropagation(); openAddLeg(${rally.id})" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-plus"></i> Leg</button>` 
+                    ? `<button onclick="alert('Modulo inserimento risultati in arrivo nel prossimo blocco!')" class="text-slate-500 hover:text-vrg-accent opacity-0 group-hover:opacity-100 transition-all" title="Gestisci Risultati"></i> Leg</button>` 
                     : '';
 
                 let innerHtml = `
@@ -340,6 +379,103 @@
             document.getElementById('input-stage-leg-id').value = legId;
             openModal('modal-stage');
         }
+    async function openStageResults(stageId, stageName) {
+    document.getElementById('input-risultati-stage-id').value = stageId;
+    document.getElementById('modal-risultati-title').textContent = stageName;
+    document.getElementById('risultati-tbody').innerHTML = '';
+    openModal('modal-risultati');
+    
+    try {
+        const res = await apiCall(`/stage-results/${stageId}`);
+        if (res.success && res.data.length > 0) {
+            res.data.forEach(r => addResultRow(r));
+        } else {
+            addResultRow(); // Riga vuota se non ci sono risultati
+        }
+    } catch(e) { console.error("Errore caricamento risultati:", e); }
+}
+
+function addResultRow(data = {}) {
+    const tbody = document.getElementById('risultati-tbody');
+    const tr = document.createElement('tr');
+    tr.className = "border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors";
+    
+    const pos = tbody.children.length + 1;
+
+    tr.innerHTML = `
+        <td class="px-2 py-2 text-center font-bold text-slate-400 pos-col">${data.position || pos}</td>
+        <td class="px-2 py-2"><input type="text" class="driver-input w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white focus:border-vrg-accent focus:outline-none" value="${data.driver_name || ''}" placeholder="Es. Mario Rossi"></td>
+        <td class="px-2 py-2"><input type="text" class="car-input w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white focus:border-vrg-accent focus:outline-none" value="${data.car_model || ''}" placeholder="Es. Subaru"></td>
+        <td class="px-2 py-2"><input type="text" class="time-input w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white font-mono focus:border-vrg-accent focus:outline-none" value="${data.time_str || ''}" placeholder="00:00.000"></td>
+        <td class="px-2 py-2"><input type="text" class="penalty-input w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white font-mono focus:border-vrg-accent focus:outline-none" value="${data.penalty || '-'}" placeholder="-"></td>
+        <td class="px-2 py-2 text-center">
+            <button onclick="this.closest('tr').remove(); updateRowPositions();" class="text-red-400 hover:text-red-300 transition-colors"><i class="fa-solid fa-trash"></i></button>
+        </td>
+    `;
+    tbody.appendChild(tr);
+}
+
+function updateRowPositions() {
+    const rows = document.querySelectorAll('#risultati-tbody tr');
+    rows.forEach((tr, index) => {
+        tr.querySelector('.pos-col').textContent = index + 1;
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const btnSalvaRisultati = document.getElementById('btn-salva-risultati');
+    if(btnSalvaRisultati) {
+        btnSalvaRisultati.addEventListener('click', async () => {
+            const stageId = parseInt(document.getElementById('input-risultati-stage-id').value);
+            const tbody = document.getElementById('risultati-tbody');
+            const rows = tbody.querySelectorAll('tr');
+            
+            const results = [];
+            rows.forEach((tr, index) => {
+                const driver = tr.querySelector('.driver-input').value.trim();
+                const car = tr.querySelector('.car-input').value.trim();
+                const time = tr.querySelector('.time-input').value.trim();
+                const penalty = tr.querySelector('.penalty-input').value.trim();
+                
+                if(driver && time) {
+                    results.push({
+                        position: index + 1,
+                        driver: driver,
+                        car: car,
+                        time: time,
+                        penalty: penalty
+                    });
+                }
+            });
+
+            if(results.length === 0) return alert("Inserisci almeno un pilota con il tempo.");
+            
+            btnSalvaRisultati.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvataggio...';
+            btnSalvaRisultati.disabled = true;
+
+            try {
+                const res = await apiCall('/save-stage', 'POST', {
+                    stage_id: stageId,
+                    stage_name: "Update",
+                    results: results
+                });
+                if(res.success) {
+                    closeModal('modal-risultati');
+                    // Notifica di successo con un mini toast (o alert classico)
+                    alert("Risultati salvati con successo!");
+                } else {
+                    alert("Errore: " + res.error);
+                }
+            } catch(e) {
+                alert("Errore di connessione. Vedi console.");
+                console.error(e);
+            } finally {
+                btnSalvaRisultati.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salva Risultati';
+                btnSalvaRisultati.disabled = false;
+            }
+        });
+    }
+});
     </script>
 </body>
 </html>

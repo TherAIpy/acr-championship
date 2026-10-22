@@ -196,8 +196,8 @@
             // 3. Logout
             const btnLogout = document.getElementById('btn-logout');
             if (btnLogout) {
-                btnLogout.addEventListener('click', async () => {
-                    await supabase.auth.signOut();
+                btnLogout.addEventListener('click', () => {
+                    supabase.auth.signOut().catch(console.error);
                     window.location.href = 'login.html';
                 });
             }

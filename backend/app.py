@@ -262,6 +262,14 @@ def get_stages(leg_id):
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/stage-results/<int:stage_id>', methods=['GET'])
+def get_stage_results(stage_id):
+    try:
+        supabase = get_supabase()
+        res = supabase.table('stage_result').select('*').eq('stage_id', stage_id).order('position').execute()
+        return jsonify({"success": True, "data": res.data}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/tree/<int:champ_id>', methods=['GET'])
 def get_tree(champ_id):
@@ -309,16 +317,18 @@ def save_stage():
     supabase = get_supabase()
 
     if payload.stage_id:
-        # Aggiornamento: verifica che lo stage esista
         existing = supabase.table('stage').select('id').eq('id', payload.stage_id).execute()
         if not existing.data:
             return jsonify({"success": False, "error": "Stage non trovato"}), 404
         stage_id = payload.stage_id
-        supabase.table('stage').update({
-            "name": payload.stage_name,
-            "track_name": payload.track_name
-        }).eq('id', stage_id).execute()
-        # Sostituisci i risultati (in una transazione ideale; qui usiamo delete + insert)
+        
+        # Aggiorna i dati dello stage solo se il nome è fornito
+        if payload.stage_name and payload.stage_name != "Update":
+            supabase.table('stage').update({
+                "name": payload.stage_name,
+                "track_name": payload.track_name
+            }).eq('id', stage_id).execute()
+            
         supabase.table('stage_result').delete().eq('stage_id', stage_id).execute()
     else:
         if not payload.leg_id:
@@ -331,18 +341,41 @@ def save_stage():
         stage_id = stage_res.data[0]['id']
 
     if payload.results:
-        insert_data = [{
-            "stage_id": stage_id,
-            "position": r.position,
-            "driver_name": r.driver,
-            "car_model": r.car,
-            "time_str": r.time,
-            "penalty": r.penalty,
-            "gap": r.gap,
-            "car_id": r.car_id,
-            "car_class_id": r.car_class_id,
-            "is_disqualified": r.is_disqualified
-        } for r in payload.results]
+        insert_data = []
+        for r in payload.results:
+            # Calcolo millisecondi
+            t_ms = time_str_to_ms(r.time)
+            
+            # Estrazione penalità in secondi (es. "+5" o "+00:05")
+            p_sec = 0.0
+            if r.penalty and r.penalty != '-':
+                p_str = r.penalty.replace('+', '').replace('s', '').strip()
+                try:
+                    if ':' in p_str:
+                        p_parts = p_str.split(':')
+                        p_sec = float(p_parts[0])*60 + float(p_parts[1])
+                    else:
+                        p_sec = float(p_str)
+                except:
+                    pass
+            
+            insert_data.append({
+                "stage_id": stage_id,
+                "position": r.position,
+                "driver_name": r.driver,
+                "car_model": r.car,
+                "time_str": r.time,
+                "penalty": r.penalty,
+                "gap": r.gap,
+                "car_id": r.car_id,
+                "car_class_id": r.car_class_id,
+                "is_disqualified": r.is_disqualified,
+                "time_ms": t_ms,
+                "penalty_sec": p_sec,
+                "status": "official",
+                "is_official": True,
+                "version": 1
+            })
         supabase.table('stage_result').insert(insert_data).execute()
 
     return jsonify({"success": True, "stage_id": stage_id, "saved": len(payload.results)})
