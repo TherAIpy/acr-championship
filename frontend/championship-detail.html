@@ -306,7 +306,9 @@
                 
                 // Bottone + Leg (visibile solo se admin)
                 const adminLegBtn = isAdmin 
-                    ? `<button onclick="alert('Modulo inserimento risultati in arrivo nel prossimo blocco!')" class="text-slate-500 hover:text-vrg-accent opacity-0 group-hover:opacity-100 transition-all" title="Gestisci Risultati"></i> Leg</button>` 
+                    ? `<button onclick="event.stopPropagation(); openStageResults(${stage.id}, '${stage.name.replace(/'/g, "\\'")}')" class="text-slate-500 hover:text-vrg-accent opacity-0 group-hover:opacity-100 transition-all" title="Gestisci Risultati">
+    <i class="fa-solid fa-list-ol"></i>
+</button>` 
                     : '';
 
                 let innerHtml = `
