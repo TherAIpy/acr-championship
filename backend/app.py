@@ -391,7 +391,7 @@ def save_stage():
                     "is_disqualified": r.is_disqualified,
                     "time_ms": t_ms,
                     "penalty_sec": p_sec,
-                    "status": "official",
+                    "status": "completed",
                     "is_official": True,
                     "version": 1
                 })
