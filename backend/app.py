@@ -189,30 +189,114 @@ def create_rally():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+# =============================================================================
+# BLOCCO 1: LEG & STAGE
+# =============================================================================
+
 @app.route('/api/create-leg', methods=['POST'])
+@admin_required
 def create_leg():
-    data = request.json
-    supabase = get_supabase()
-    res = supabase.table('leg').insert({"rally_id": data['rally_id'], "name": data['name']}).execute()
-    return jsonify({"success": True, "leg": res.data[0]})
+    try:
+        data = request.json or {}
+        rally_id = data.get('rally_id')
+        name = (data.get('name') or '').strip()
+        if not rally_id or not name:
+            return jsonify({"success": False, "error": "rally_id e name obbligatori"}), 400
 
-class StageResultIn(BaseModel):
-    position: Optional[int] = None
-    driver: str
-    car: Optional[str] = None
-    time: str
-    penalty: Optional[str] = "-"
-    gap: Optional[str] = None
-    car_id: Optional[int] = None
-    car_class_id: Optional[int] = None
-    is_disqualified: bool = False
+        supabase = get_supabase()
+        rally = supabase.table('rally').select('id').eq('id', rally_id).execute()
+        if not rally.data:
+            return jsonify({"success": False, "error": "Rally non trovato"}), 404
 
-class SaveStageIn(BaseModel):
-    stage_id: Optional[int] = None
-    stage_name: str
-    track_name: Optional[str] = None
-    leg_id: Optional[int] = None
-    results: List[StageResultIn] = []
+        res = supabase.table('leg').insert({
+            "rally_id": rally_id,
+            "name": name
+        }).execute()
+        return jsonify({"success": True, "data": res.data[0]}), 201
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/legs/<int:rally_id>', methods=['GET'])
+def get_legs(rally_id):
+    try:
+        supabase = get_supabase()
+        res = supabase.table('leg').select('*').eq('rally_id', rally_id).order('id').execute()
+        return jsonify({"success": True, "data": res.data}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/create-stage', methods=['POST'])
+@admin_required
+def create_stage():
+    try:
+        data = request.json or {}
+        leg_id = data.get('leg_id')
+        name = (data.get('name') or '').strip()
+        track_name = (data.get('track_name') or '').strip() or None
+        if not leg_id or not name:
+            return jsonify({"success": False, "error": "leg_id e name obbligatori"}), 400
+
+        supabase = get_supabase()
+        leg = supabase.table('leg').select('id').eq('id', leg_id).execute()
+        if not leg.data:
+            return jsonify({"success": False, "error": "Leg non trovato"}), 404
+
+        res = supabase.table('stage').insert({
+            "leg_id": leg_id,
+            "name": name,
+            "track_name": track_name or name
+        }).execute()
+        return jsonify({"success": True, "data": res.data[0]}), 201
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/stages/<int:leg_id>', methods=['GET'])
+def get_stages(leg_id):
+    try:
+        supabase = get_supabase()
+        res = supabase.table('stage').select('*').eq('leg_id', leg_id).order('id').execute()
+        return jsonify({"success": True, "data": res.data}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/tree/<int:champ_id>', methods=['GET'])
+def get_tree(champ_id):
+    """
+    Ritorna l'albero completo del campionato in una singola chiamata.
+    Utile per la vista gerarchica nel championship-detail.html.
+    """
+    try:
+        supabase = get_supabase()
+        champ = supabase.table('championship').select('*').eq('id', champ_id).execute()
+        if not champ.data:
+            return jsonify({"success": False, "error": "Campionato non trovato"}), 404
+
+        rallies = supabase.table('rally').select('*').eq('championship_id', champ_id).order('id').execute().data or []
+        if not rallies:
+            return jsonify({"success": True, "data": {"championship": champ.data[0], "rallies": []}}), 200
+
+        rally_ids = [r['id'] for r in rallies]
+        legs = supabase.table('leg').select('*').in_('rally_id', rally_ids).order('id').execute().data or []
+        leg_ids = [l['id'] for l in legs]
+        stages = supabase.table('stage').select('*').in_('leg_id', leg_ids).order('id').execute().data if leg_ids else []
+
+        stages_by_leg = {}
+        for s in stages:
+            stages_by_leg.setdefault(s['leg_id'], []).append(s)
+        legs_by_rally = {}
+        for l in legs:
+            l['stages'] = stages_by_leg.get(l['id'], [])
+            legs_by_rally.setdefault(l['rally_id'], []).append(l)
+        for r in rallies:
+            r['legs'] = legs_by_rally.get(r['id'], [])
+
+        return jsonify({"success": True, "data": {"championship": champ.data[0], "rallies": rallies}}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/save-stage', methods=['POST'])
 @admin_required

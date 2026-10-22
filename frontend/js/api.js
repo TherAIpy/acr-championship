@@ -32,5 +32,12 @@ const api = {
     getRallies: (champ_id) => apiCall(`/rallies/${champ_id}`),
     saveChampionship: (data) => apiCall('/create-championship', 'POST', data),
     createRally: (data) => apiCall('/create-rally', 'POST', data),
-    saveStage: (data) => apiCall('/save-stage', 'POST', data)
+    saveStage: (data) => apiCall('/save-stage', 'POST', data),
+
+    // BLOCCO 1 — Leg & Stage
+    createLeg: (data) => apiCall('/create-leg', 'POST', data),
+    getLegs: (rally_id) => apiCall(`/legs/${rally_id}`),
+    createStage: (data) => apiCall('/create-stage', 'POST', data),
+    getStages: (leg_id) => apiCall(`/stages/${leg_id}`),
+    getTree: (champ_id) => apiCall(`/tree/${champ_id}`)
 };
