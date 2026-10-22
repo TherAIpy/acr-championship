@@ -93,15 +93,40 @@
                 </div>
                 
                 <!-- Profilo Utente -->
-                <div class="flex items-center gap-3 cursor-pointer">
-                    <img src="https://ui-avatars.com/api/?name=Antonio+Meloni&background=1E293B&color=F1F5F9" alt="Profilo" class="w-8 h-8 rounded-full border border-slate-600">
-                    <div class="hidden md:block">
-                        <p id="user-name" class="text-sm text-white font-medium">Caricamento...</p>
-                        <p class="text-[11px] text-vrg-accent">Admin</p>
+                <div class="relative" id="user-profile-container">
+                    <!-- Bottone Profilo -->
+                    <button id="btn-user-menu" class="flex items-center gap-3 focus:outline-none hover:opacity-80 transition-opacity">
+                        <!-- Avatar con Iniziali -->
+                        <div id="user-avatar" class="w-10 h-10 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center text-white font-bold">
+            ?
+                        </div>
+                        <!-- Nome ed Email -->
+                        <div class="text-left hidden md:block">
+                            <div id="user-name" class="text-sm font-bold text-white">Caricamento...</div>
+                            <div id="user-role" class="text-xs text-slate-400">...</div>
+                        </div>
+                        <!-- Freccia Menu -->
+                        <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
+                    </button>
+
+                    <!-- Menu a Tendina (Nascosto di default) -->
+                    <div id="user-dropdown" class="absolute right-0 mt-3 w-56 bg-vrg-card border border-slate-700 rounded-xl shadow-2xl hidden z-50 overflow-hidden">
+                        <div class="p-4 border-b border-slate-700 bg-slate-800/50">
+                            <p class="text-sm font-bold text-white truncate" id="dropdown-email">email@esempio.com</p>
+                            <p class="text-xs text-vrg-accent mt-1" id="dropdown-role">Admin</p>
+                        </div>
+                    <div class="p-2">
+                        <button id="btn-logout" class="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2">
+                            <i class="fa-solid fa-power-off"></i> Disconnetti
+                        </button>
                     </div>
-                    <i class="fa-solid fa-chevron-down text-slate-500 text-xs"></i>
                 </div>
             </div>
+        </header>
+
+        <!-- CONTENUTO PAGINA -->
+        <div class="flex-1 overflow-y-auto p-8">
+
         </header>
 
         <!-- CONTENUTO PAGINA -->
@@ -227,7 +252,6 @@
             });
         });
 
-        // QUESTA E' LA FUNZIONE CHE MANCAVA
         async function loadChampionships() {
             const tbody = document.getElementById('campionati-tbody');
             try {
@@ -286,6 +310,61 @@
                 tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-red-400">Errore nel caricamento dei dati. Backend offline o utente non autorizzato.</td></tr>`;
             }
         }
+        // --- GESTIONE UTENTE E LOGOUT ---
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Controlla se c'è una sessione attiva
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (session) {
+        const user = session.user;
+        
+        // Prendi l'email (es. mario.rossi@email.com)
+        const email = user.email;
+        
+        // Calcola le iniziali (es. MR)
+        const initials = email.substring(0, 2).toUpperCase();
+        
+        // Prendi il ruolo dai metadati (se non c'è, metti 'Utente')
+        const role = user.app_metadata?.role === 'admin' ? 'Amministratore' : 'Utente';
+
+        // Aggiorna l'interfaccia
+        document.getElementById('user-avatar').textContent = initials;
+        document.getElementById('user-name').textContent = email.split('@')[0]; // Mostra la parte prima della @
+        document.getElementById('user-role').textContent = role;
+        document.getElementById('dropdown-email').textContent = email;
+        document.getElementById('dropdown-role').textContent = role;
+        
+        // Se è admin, mostriamo i bottoni di admin (se ci sono in dashboard)
+        if (role === 'Amministratore') {
+            document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+        }
+    } else {
+        // Se non c'è sessione, rimanda al login
+        window.location.href = 'login.html';
+    }
+
+    // 2. Gestione apertura/chiusura menu a tendina
+    const btnMenu = document.getElementById('btn-user-menu');
+    const dropdown = document.getElementById('user-dropdown');
+
+    btnMenu.addEventListener('click', (e) => {
+        e.stopPropagation(); // Evita che il click si propaghi
+        dropdown.classList.toggle('hidden');
+    });
+
+    // Chiudi il menu se clicchi fuori
+    document.addEventListener('click', (e) => {
+        if (!btnMenu.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    // 3. Gestione Logout
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        window.location.href = 'login.html';
+    });
+});
     </script>
 </body>
 </html>
