@@ -198,173 +198,181 @@
 
     <!-- Logica della Dashboard -->
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            // 1. Inizializza auth (nasconde i bottoni se non sei admin)
-            await initAuthUI();
-            
-            // 2. Carica i campionati (chiamando api.getChampionships)
-            loadChampionships();
-
-            // 3. Logica Modale
-            const btnNuovo = document.getElementById('btn-nuovo-campionato');
-            const modal = document.getElementById('modal-nuovo-campionato');
-            const btnAnnulla = document.getElementById('btn-annulla');
-            const btnSalva = document.getElementById('btn-salva');
-            const inputNome = document.getElementById('input-nome-campionato');
-
-            if(btnNuovo) {
-                btnNuovo.addEventListener('click', () => {
-                    modal.classList.remove('hidden');
-                    modal.classList.add('flex');
-                });
-            }
-
-            btnAnnulla.addEventListener('click', () => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            });
-
-            btnSalva.addEventListener('click', async () => {
-                const nome = inputNome.value.trim();
-                if(!nome) return alert('Inserisci un nome per il campionato');
-
-                btnSalva.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvataggio...';
-                btnSalva.disabled = true;
-
-                try {
-                    // QUI CHIAMIAMO IL BACKEND
-                    const res = await api.saveChampionship({ name: nome });
-                    if(res.success) {
-                        modal.classList.add('hidden');
-                        modal.classList.remove('flex');
-                        inputNome.value = '';
-                        loadChampionships(); // Ricarica la tabella
-                    } else {
-                        alert('Errore: ' + (res.error || 'Sconosciuto'));
-                    }
-                } catch(e) {
-                    alert('Errore di connessione. Controlla la console (F12).');
-                    console.error(e);
-                } finally {
-                    btnSalva.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salva';
-                    btnSalva.disabled = false;
-                }
-            });
-        });
-
-        async function loadChampionships() {
-            const tbody = document.getElementById('campionati-tbody');
-            try {
-                // Facciamo la chiamata alle API
-                const response = await api.getChampionships();
-                
-                if (!response.success || response.data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-500">Nessun campionato trovato. Clicca "Nuovo Campionato" per iniziare.</td></tr>`;
-                    return;
-                }
-
-                tbody.innerHTML = '';
-                response.data.forEach(champ => {
-                    const anno = new Date(champ.created_at).getFullYear();
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-slate-800/30 transition-colors group";
-                    tr.innerHTML = `
-                        <td class="px-6 py-4">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-8 rounded bg-slate-700 overflow-hidden flex items-center justify-center">
-                                    <i class="fa-solid fa-trophy text-slate-500"></i>
-                                </div>
-                                <div>
-                                    <div class="font-bold text-white text-base">${champ.name}</div>
-                                    <div class="text-xs text-slate-500">Creato il ${new Date(champ.created_at).toLocaleDateString('it-IT')}</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">${anno}</td>
-                        <td class="px-6 py-4 font-medium">- / -</td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center gap-3">
-                                <div class="w-full bg-slate-700 rounded-full h-1.5">
-                                    <div class="bg-vrg-accent h-1.5 rounded-full" style="width: 0%"></div>
-                                </div>
-                                <span class="text-xs font-bold text-white w-8">0%</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">-</td>
-                        <td class="px-6 py-4 flex items-center gap-2">
-                            <i class="fa-solid fa-users text-slate-500"></i> 0
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="bg-slate-700 text-slate-300 px-3 py-1 rounded-full text-xs font-medium border border-slate-600">In corso</span>
-                        </td>
-                        <td class="px-6 py-4 text-right">
-                            <button onclick="window.location.href='championship-detail.html?id=${champ.id}'" class="text-slate-500 hover:text-vrg-accent transition-colors">
-                                <i class="fa-solid fa-chevron-right"></i>
-                            </button>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            } catch (error) {
-                console.error("Errore:", error);
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-red-400">Errore nel caricamento dei dati. Backend offline o utente non autorizzato.</td></tr>`;
-            }
-        }
-        // --- GESTIONE UTENTE E LOGOUT ---
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Controlla se c'è una sessione attiva
+    // 1. Controllo Sessione e UI Utente (Autonomo)
     const { data: { session }, error } = await supabase.auth.getSession();
     
-    if (session) {
-        const user = session.user;
-        
-        // Prendi l'email (es. mario.rossi@email.com)
-        const email = user.email;
-        
-        // Calcola le iniziali (es. MR)
-        const initials = email.substring(0, 2).toUpperCase();
-        
-        // Prendi il ruolo dai metadati (se non c'è, metti 'Utente')
-        const role = user.app_metadata?.role === 'admin' ? 'Amministratore' : 'Utente';
-
-        // Aggiorna l'interfaccia
-        document.getElementById('user-avatar').textContent = initials;
-        document.getElementById('user-name').textContent = email.split('@')[0]; // Mostra la parte prima della @
-        document.getElementById('user-role').textContent = role;
-        document.getElementById('dropdown-email').textContent = email;
-        document.getElementById('dropdown-role').textContent = role;
-        
-        // Se è admin, mostriamo i bottoni di admin (se ci sono in dashboard)
-        if (role === 'Amministratore') {
-            document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
-        }
-    } else {
-        // Se non c'è sessione, rimanda al login
+    if (!session) {
         window.location.href = 'login.html';
+        return; // Ferma l'esecuzione
     }
 
-    // 2. Gestione apertura/chiusura menu a tendina
+    const user = session.user;
+    const email = user.email;
+    const initials = email.substring(0, 2).toUpperCase();
+    const role = user.app_metadata?.role === 'admin' ? 'Amministratore' : 'Utente';
+
+    // Aggiorna UI (con controlli null-safe per evitare crash se l'HTML non c'è)
+    const elAvatar = document.getElementById('user-avatar');
+    if (elAvatar) elAvatar.textContent = initials;
+    
+    const elName = document.getElementById('user-name');
+    if (elName) elName.textContent = email.split('@')[0];
+    
+    const elRole = document.getElementById('user-role');
+    if (elRole) elRole.textContent = role;
+    
+    const elDropEmail = document.getElementById('dropdown-email');
+    if (elDropEmail) elDropEmail.textContent = email;
+    
+    const elDropRole = document.getElementById('dropdown-role');
+    if (elDropRole) elDropRole.textContent = role;
+
+    // Mostra bottoni Admin
+    if (role === 'Amministratore') {
+        document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+    }
+
+    // 2. Menu a tendina
     const btnMenu = document.getElementById('btn-user-menu');
     const dropdown = document.getElementById('user-dropdown');
+    if (btnMenu && dropdown) {
+        btnMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!btnMenu.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+    }
 
-    btnMenu.addEventListener('click', (e) => {
-        e.stopPropagation(); // Evita che il click si propaghi
-        dropdown.classList.toggle('hidden');
-    });
+    // 3. Logout
+    const btnLogout = document.getElementById('btn-logout');
+    if (btnLogout) {
+        btnLogout.addEventListener('click', async () => {
+            await supabase.auth.signOut();
+            window.location.href = 'login.html';
+        });
+    }
 
-    // Chiudi il menu se clicchi fuori
-    document.addEventListener('click', (e) => {
-        if (!btnMenu.contains(e.target) && !dropdown.contains(e.target)) {
-            dropdown.classList.add('hidden');
-        }
-    });
+    // 4. Carica i Campionati
+    loadChampionships();
 
-    // 3. Gestione Logout
-    document.getElementById('btn-logout').addEventListener('click', async () => {
-        await supabase.auth.signOut();
-        window.location.href = 'login.html';
-    });
+    // 5. Logica Modale Nuovo Campionato
+    const btnNuovo = document.getElementById('btn-nuovo-campionato');
+    const modal = document.getElementById('modal-nuovo-campionato');
+    const btnAnnulla = document.getElementById('btn-annulla');
+    const btnSalva = document.getElementById('btn-salva');
+    const inputNome = document.getElementById('input-nome-campionato');
+
+    if (btnNuovo && modal) {
+        btnNuovo.addEventListener('click', () => {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        });
+    }
+
+    if (btnAnnulla && modal) {
+        btnAnnulla.addEventListener('click', () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        });
+    }
+
+    if (btnSalva && modal && inputNome) {
+        btnSalva.addEventListener('click', async () => {
+            const nome = inputNome.value.trim();
+            if (!nome) return alert('Inserisci un nome per il campionato');
+
+            btnSalva.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvataggio...';
+            btnSalva.disabled = true;
+
+            try {
+                const res = await api.saveChampionship({ name: nome });
+                if (res.success) {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                    inputNome.value = '';
+                    loadChampionships(); // Ricarica la tabella
+                } else {
+                    alert('Errore: ' + (res.error || 'Sconosciuto'));
+                }
+            } catch (e) {
+                alert('Errore di connessione. Controlla la console (F12).');
+                console.error(e);
+            } finally {
+                btnSalva.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salva';
+                btnSalva.disabled = false;
+            }
+        });
+    }
 });
-    </script>
+
+// Funzione per caricare la tabella
+async function loadChampionships() {
+    const tbody = document.getElementById('campionati-tbody');
+    if (!tbody) return;
+    
+    try {
+        // Mostra un indicatore di caricamento temporaneo
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Caricamento campionati...</td></tr>`;
+        
+        const response = await api.getChampionships();
+        
+        if (!response.success || response.data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-500">Nessun campionato trovato. Clicca "Nuovo Campionato" per iniziare.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = '';
+        response.data.forEach(champ => {
+            const anno = new Date(champ.created_at).getFullYear();
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-800/30 transition-colors group";
+            tr.innerHTML = `
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-8 rounded bg-slate-700 overflow-hidden flex items-center justify-center">
+                            <i class="fa-solid fa-trophy text-slate-500"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-white text-base">${champ.name}</div>
+                            <div class="text-xs text-slate-500">Creato il ${new Date(champ.created_at).toLocaleDateString('it-IT')}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4">${anno}</td>
+                <td class="px-6 py-4 font-medium">- / -</td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-full bg-slate-700 rounded-full h-1.5">
+                            <div class="bg-vrg-accent h-1.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <span class="text-xs font-bold text-white w-8">0%</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4">-</td>
+                <td class="px-6 py-4 flex items-center gap-2">
+                    <i class="fa-solid fa-users text-slate-500"></i> 0
+                </td>
+                <td class="px-6 py-4">
+                    <span class="bg-slate-700 text-slate-300 px-3 py-1 rounded-full text-xs font-medium border border-slate-600">In corso</span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <button onclick="window.location.href='championship-detail.html?id=${champ.id}'" class="text-slate-500 hover:text-vrg-accent transition-colors">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (error) {
+        console.error("Errore nel caricamento:", error);
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-red-400">Errore nel caricamento dei dati. Backend offline o problema di rete.</td></tr>`;
+    }
+}
+</script>
 </body>
 </html>
