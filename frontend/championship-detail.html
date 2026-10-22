@@ -483,13 +483,21 @@ async function handleOcrUpload(event) {
             // Svuota la tabella attuale
             document.getElementById('risultati-tbody').innerHTML = '';
             
-            // Inserisci i dati estratti dall'AI
+                        // Inserisci i dati estratti dall'AI
             if (data.parsed_data.length === 0) {
                 statusEl.textContent = "Nessun dato riconosciuto. Riprova con un'immagine più nitida.";
                 statusEl.className = "text-xs text-red-400";
                 addResultRow(); // Aggiungi riga vuota
             } else {
-                data.parsed_data.forEach(r => addResultRow(r));
+                data.parsed_data.forEach(r => {
+                    addResultRow({
+                        driver_name: r.driver,
+                        car_model: r.car,
+                        time_str: r.time,
+                        penalty: r.penalty,
+                        position: r.position
+                    });
+                });
                 statusEl.textContent = `Trovati ${data.parsed_data.length} piloti!`;
                 statusEl.className = "text-xs text-green-400";
             }
