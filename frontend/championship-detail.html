@@ -20,16 +20,30 @@
 </head>
 <body class="bg-vrg-bg text-vrg-text font-sans h-screen flex overflow-hidden">
 
-    <!-- SIDEBAR (Copia base) -->
-    <aside class="w-64 bg-vrg-sidebar border-r border-slate-800 flex flex-col justify-between hidden md:flex">
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-vrg-sidebar border-r border-slate-800 flex flex-col justify-between hidden md:flex shrink-0">
         <div>
             <div class="p-6 flex items-center gap-3">
                 <div class="text-vrg-accent text-2xl font-bold italic tracking-tighter">VRG</div>
             </div>
             <nav class="mt-4 px-3 space-y-1">
-                <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors text-slate-400 hover:text-white">
+                <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors text-slate-400 hover:text-white mb-6">
                     <i class="fa-solid fa-arrow-left w-5"></i> Torna ai Campionati
                 </a>
+                
+                <div class="px-4 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Filtri Vista</div>
+                <button onclick="setFilter('all')" class="filter-btn w-full flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg text-white bg-slate-800">
+                    <i class="fa-solid fa-layer-group w-5"></i> Tutti
+                </button>
+                <button onclick="setFilter('rally')" class="filter-btn w-full flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+                    <i class="fa-solid fa-flag-checkered w-5"></i> Solo Rally
+                </button>
+                <button onclick="setFilter('leg')" class="filter-btn w-full flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+                    <i class="fa-solid fa-road w-5"></i> Solo Leg
+                </button>
+                <button onclick="setFilter('stage')" class="filter-btn w-full flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+                    <i class="fa-solid fa-stopwatch w-5"></i> Solo Stage
+                </button>
             </nav>
         </div>
     </aside>
@@ -37,35 +51,31 @@
     <!-- MAIN -->
     <main class="flex-1 flex flex-col h-full overflow-hidden">
         
-        <header class="h-20 bg-vrg-bg border-b border-slate-800 flex items-center justify-between px-8">
+        <header class="h-20 bg-vrg-bg border-b border-slate-800 flex items-center justify-between px-8 shrink-0">
             <div class="flex items-center gap-4">
                 <h1 id="header-title" class="text-2xl font-bold text-white flex items-center gap-2">
                     <i class="fa-solid fa-spinner fa-spin text-vrg-accent"></i> Caricamento...
                 </h1>
             </div>
+            <div class="flex items-center gap-4">
+                <span id="user-email" class="text-sm text-slate-400 hidden md:block"></span>
+                <button id="btn-logout" class="text-slate-400 hover:text-red-400 transition-colors hidden" title="Logout">
+                    <i class="fa-solid fa-power-off text-lg"></i>
+                </button>
+            </div>
         </header>
 
         <div class="flex-1 overflow-y-auto p-8">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-bold text-white">Rally del Campionato</h2>
+                <h2 class="text-lg font-bold text-white">Struttura Campionato</h2>
                 <button id="btn-add-rally" class="admin-only bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg hidden">
                     <i class="fa-solid fa-plus"></i> Aggiungi Rally
                 </button>
             </div>
 
-            <div class="bg-vrg-card rounded-xl border border-slate-700 overflow-hidden">
-                <table class="w-full text-left text-sm text-slate-300">
-                    <thead class="text-xs uppercase bg-slate-800/50 text-slate-400 border-b border-slate-700">
-                        <tr>
-                            <th class="px-6 py-4 font-semibold">Nome Rally</th>
-                            <th class="px-6 py-4 font-semibold">Data Creazione</th>
-                            <th class="px-6 py-4 font-semibold text-right">Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody id="rally-tbody" class="divide-y divide-slate-700/50">
-                        <!-- Popolato via JS -->
-                    </tbody>
-                </table>
+            <!-- AREA ALBERO -->
+            <div id="tree-container" class="space-y-4">
+                <!-- Popolato via JS -->
             </div>
         </div>
     </main>
@@ -79,8 +89,44 @@
                 <input type="text" id="input-nome-rally" placeholder="Es. Rally di Montecarlo" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
             </div>
             <div class="flex justify-end gap-3 mt-8">
-                <button id="btn-annulla-rally" class="px-5 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700">Annulla</button>
+                <button onclick="closeModal('modal-rally')" class="px-5 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700">Annulla</button>
                 <button id="btn-salva-rally" class="bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold">Salva</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE AGGIUNGI LEG -->
+    <div id="modal-leg" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-vrg-card p-8 rounded-xl w-full max-w-md border border-slate-700 shadow-2xl">
+            <h2 class="text-xl font-bold text-white mb-4">Nuova Leg</h2>
+            <input type="hidden" id="input-leg-rally-id">
+            <div class="mb-4">
+                <label class="block text-sm text-slate-400 mb-2">Nome Leg</label>
+                <input type="text" id="input-nome-leg" placeholder="Es. Leg 1 - Montagna" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
+            </div>
+            <div class="flex justify-end gap-3 mt-8">
+                <button onclick="closeModal('modal-leg')" class="px-5 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700">Annulla</button>
+                <button id="btn-salva-leg" class="bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold">Salva</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE AGGIUNGI STAGE -->
+    <div id="modal-stage" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-vrg-card p-8 rounded-xl w-full max-w-md border border-slate-700 shadow-2xl">
+            <h2 class="text-xl font-bold text-white mb-4">Nuova Stage</h2>
+            <input type="hidden" id="input-stage-leg-id">
+            <div class="mb-4">
+                <label class="block text-sm text-slate-400 mb-2">Nome Stage</label>
+                <input type="text" id="input-nome-stage" placeholder="Es. Prova Speciale 1" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm text-slate-400 mb-2">Tracciato (Opzionale)</label>
+                <input type="text" id="input-track-stage" placeholder="Es. Montecarlo" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
+            </div>
+            <div class="flex justify-end gap-3 mt-8">
+                <button onclick="closeModal('modal-stage')" class="px-5 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700">Annulla</button>
+                <button id="btn-salva-stage" class="bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold">Salva</button>
             </div>
         </div>
     </div>
@@ -91,9 +137,10 @@
     <script src="js/api.js"></script>
 
     <script>
-        // Prende l'ID del campionato dall'URL (es. ?id=1)
         const urlParams = new URLSearchParams(window.location.search);
         const champId = urlParams.get('id');
+        let currentFilter = 'all'; // 'all', 'rally', 'leg', 'stage'
+        let treeData = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
             if (!champId) {
@@ -102,70 +149,220 @@
                 return;
             }
 
+            // Init Auth e UI
             await initAuthUI();
-            loadChampionshipInfo();
-            loadRallies();
+            setupLogout();
+            
+            // Carica i dati
+            await loadTree();
 
-            // Logica Modale
-            const modal = document.getElementById('modal-rally');
-            const btnAdd = document.getElementById('btn-add-rally');
-            const btnAnnulla = document.getElementById('btn-annulla-rally');
-            const btnSalva = document.getElementById('btn-salva-rally');
-
-            btnAdd.addEventListener('click', () => { modal.classList.replace('hidden', 'flex'); });
-            btnAnnulla.addEventListener('click', () => { modal.classList.replace('flex', 'hidden'); });
-
-            btnSalva.addEventListener('click', async () => {
+            // Logica Modali
+            document.getElementById('btn-add-rally').addEventListener('click', () => openModal('modal-rally'));
+            
+            document.getElementById('btn-salva-rally').addEventListener('click', async () => {
                 const nome = document.getElementById('input-nome-rally').value.trim();
                 if (!nome) return alert("Inserisci un nome");
-                
                 try {
-                    await apiCall('/create-rally', 'POST', { championship_id: champId, name: nome });
-                    modal.classList.replace('flex', 'hidden');
+                    await api.createRally({ championship_id: champId, name: nome });
+                    closeModal('modal-rally');
                     document.getElementById('input-nome-rally').value = '';
-                    loadRallies();
-                } catch (e) {
-                    alert("Errore: " + e.message);
-                }
+                    await loadTree();
+                } catch (e) { alert("Errore: " + e.message); }
+            });
+
+            document.getElementById('btn-salva-leg').addEventListener('click', async () => {
+                const rallyId = document.getElementById('input-leg-rally-id').value;
+                const nome = document.getElementById('input-nome-leg').value.trim();
+                if (!nome) return alert("Inserisci un nome");
+                try {
+                    await api.createLeg({ rally_id: rallyId, name: nome });
+                    closeModal('modal-leg');
+                    document.getElementById('input-nome-leg').value = '';
+                    await loadTree();
+                } catch (e) { alert("Errore: " + e.message); }
+            });
+
+            document.getElementById('btn-salva-stage').addEventListener('click', async () => {
+                const legId = document.getElementById('input-stage-leg-id').value;
+                const nome = document.getElementById('input-nome-stage').value.trim();
+                const track = document.getElementById('input-track-stage').value.trim();
+                if (!nome) return alert("Inserisci un nome");
+                try {
+                    await api.createStage({ leg_id: legId, name: nome, track_name: track });
+                    closeModal('modal-stage');
+                    document.getElementById('input-nome-stage').value = '';
+                    document.getElementById('input-track-stage').value = '';
+                    await loadTree();
+                } catch (e) { alert("Errore: " + e.message); }
             });
         });
 
-        async function loadChampionshipInfo() {
-            try {
-                const res = await apiCall(`/championship/${champId}`);
-                if (res.success) {
-                    document.getElementById('header-title').innerHTML = `<i class="fa-solid fa-trophy text-vrg-accent"></i> ${res.data.name}`;
+        // Gestione Logout
+        function setupLogout() {
+            const btnLogout = document.getElementById('btn-logout');
+            const userEmail = document.getElementById('user-email');
+            
+            // Se esiste una sessione, mostra il bottone
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                if (session) {
+                    btnLogout.classList.remove('hidden');
+                    userEmail.textContent = session.user.email;
+                    userEmail.classList.remove('hidden');
                 }
-            } catch (e) { console.error(e); }
+            });
+
+            btnLogout.addEventListener('click', async () => {
+                await supabase.auth.signOut();
+                window.location.href = 'dashboard.html';
+            });
         }
 
-        async function loadRallies() {
-            const tbody = document.getElementById('rally-tbody');
+        function openModal(id) {
+            const el = document.getElementById(id);
+            el.classList.replace('hidden', 'flex');
+        }
+        
+        function closeModal(id) {
+            const el = document.getElementById(id);
+            el.classList.replace('flex', 'hidden');
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            // Aggiorna classi bottoni
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-slate-800', 'text-white');
+                btn.classList.add('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
+            });
+            event.currentTarget.classList.remove('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
+            event.currentTarget.classList.add('bg-slate-800', 'text-white');
+            
+            renderTree();
+        }
+
+        async function loadTree() {
+            const container = document.getElementById('tree-container');
             try {
-                const res = await apiCall(`/rallies/${champId}`);
-                if (!res.success || res.data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-slate-500">Nessun rally. Aggiungine uno!</td></tr>`;
-                    return;
-                }
+                const res = await api.getTree(champId);
+                if (!res.success) throw new Error(res.error);
                 
-                tbody.innerHTML = '';
-                res.data.forEach(rally => {
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-slate-800/30 transition-colors";
-                    tr.innerHTML = `
-                        <td class="px-6 py-4 font-bold text-white">${rally.name}</td>
-                        <td class="px-6 py-4">${new Date(rally.created_at).toLocaleDateString('it-IT')}</td>
-                        <td class="px-6 py-4 text-right">
-                            <button class="text-slate-500 hover:text-white transition-colors" title="Gestisci Leg e Stage">
-                                <i class="fa-solid fa-chevron-right"></i>
-                            </button>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
+                treeData = res.data;
+                document.getElementById('header-title').innerHTML = `<i class="fa-solid fa-trophy text-vrg-accent"></i> ${treeData.championship.name}`;
+                renderTree();
             } catch (e) {
-                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-red-400">Errore di caricamento</td></tr>`;
+                container.innerHTML = `<div class="text-red-400 p-4 bg-red-900/20 rounded-lg">Errore di caricamento: ${e.message}</div>`;
             }
+        }
+
+        function renderTree() {
+            const container = document.getElementById('tree-container');
+            container.innerHTML = '';
+
+            if (!treeData || !treeData.rallies || treeData.rallies.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-slate-500 border border-slate-700 border-dashed rounded-xl">Nessun Rally presente. Aggiungine uno!</div>`;
+                return;
+            }
+
+            treeData.rallies.forEach(rally => {
+                // Se il filtro è "leg" o "stage", mostriamo solo i contenitori se hanno figli
+                if (currentFilter === 'leg' && (!rally.legs || rally.legs.length === 0)) return;
+                if (currentFilter === 'stage' && (!rally.legs || rally.legs.every(l => !l.stages || l.stages.length === 0))) return;
+
+                const rallyEl = document.createElement('div');
+                rallyEl.className = "bg-vrg-card border border-slate-700 rounded-xl overflow-hidden";
+                
+                // Header Rally
+                let rallyHeaderHtml = `
+                    <div class="flex items-center justify-between p-4 bg-slate-800/50 cursor-pointer" onclick="toggleVisibility('rally-body-${rally.id}')">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-chevron-down text-slate-400 transition-transform" id="icon-rally-${rally.id}"></i>
+                            <i class="fa-solid fa-flag-checkered text-vrg-accent"></i>
+                            <span class="font-bold text-white text-lg">${rally.name}</span>
+                        </div>
+                        <div>
+                            <button onclick="event.stopPropagation(); openAddLeg(${rally.id})" class="admin-only text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded transition-colors hidden">
+                                <i class="fa-solid fa-plus"></i> Leg
+                            </button>
+                        </div>
+                    </div>
+                    <div id="rally-body-${rally.id}" class="p-2 space-y-2 ${currentFilter === 'leg' || currentFilter === 'stage' ? '' : 'block'}">
+                `;
+
+                // Corpo Leg
+                if (!rally.legs || rally.legs.length === 0) {
+                    rallyHeaderHtml += `<div class="text-sm text-slate-500 p-2 pl-8">Nessuna Leg presente.</div>`;
+                } else {
+                    rally.legs.forEach(leg => {
+                        if (currentFilter === 'stage' && (!leg.stages || leg.stages.length === 0)) return;
+
+                        rallyHeaderHtml += `
+                            <div class="ml-4 border-l border-slate-700 pl-4">
+                                <div class="flex items-center justify-between py-2 cursor-pointer" onclick="toggleVisibility('leg-body-${leg.id}')">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fa-solid fa-chevron-down text-slate-500 text-xs transition-transform" id="icon-leg-${leg.id}"></i>
+                                        <i class="fa-solid fa-road text-slate-300"></i>
+                                        <span class="font-semibold text-slate-200">${leg.name}</span>
+                                    </div>
+                                    <div>
+                                        <button onclick="event.stopPropagation(); openAddStage(${leg.id})" class="admin-only text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded transition-colors hidden">
+                                            <i class="fa-solid fa-plus"></i> Stage
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="leg-body-${leg.id}" class="ml-6 space-y-1 pb-2">
+                        `;
+
+                        // Corpo Stage
+                        if (!leg.stages || leg.stages.length === 0) {
+                            rallyHeaderHtml += `<div class="text-xs text-slate-500 py-1">Nessuna Stage presente.</div>`;
+                        } else {
+                            leg.stages.forEach(stage => {
+                                rallyHeaderHtml += `
+                                    <div class="flex items-center justify-between py-1 px-2 hover:bg-slate-800/50 rounded transition-colors group">
+                                        <div class="flex items-center gap-3">
+                                            <i class="fa-solid fa-stopwatch text-slate-500 text-xs"></i>
+                                            <span class="text-sm text-slate-300">${stage.name}</span>
+                                            <span class="text-xs text-slate-500">(${stage.track_name || 'Tracciato'})</span>
+                                        </div>
+                                        <button class="text-slate-500 hover:text-vrg-accent opacity-0 group-hover:opacity-100 transition-all" title="Gestisci Risultati">
+                                            <i class="fa-solid fa-list-ol"></i>
+                                        </button>
+                                    </div>
+                                `;
+                            });
+                        }
+                        rallyHeaderHtml += `</div></div>`;
+                    });
+                }
+
+                rallyHeaderHtml += `</div>`;
+                rallyEl.innerHTML = rallyHeaderHtml;
+                container.appendChild(rallyEl);
+            });
+
+            // Riapplica logica admin (mostra bottoni solo se loggato come admin)
+            if (typeof applyAdminUI === 'function') applyAdminUI();
+        }
+
+        function toggleVisibility(id) {
+            const el = document.getElementById(id);
+            const isHidden = el.classList.contains('hidden');
+            if (isHidden) {
+                el.classList.remove('hidden');
+                // Ruota icona
+            } else {
+                el.classList.add('hidden');
+            }
+        }
+
+        function openAddLeg(rallyId) {
+            document.getElementById('input-leg-rally-id').value = rallyId;
+            openModal('modal-leg');
+        }
+
+        function openAddStage(legId) {
+            document.getElementById('input-stage-leg-id').value = legId;
+            openModal('modal-stage');
         }
     </script>
 </body>
