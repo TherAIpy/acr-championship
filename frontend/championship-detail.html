@@ -326,9 +326,7 @@
                 rallyEl.className = "bg-vrg-card border border-slate-700 rounded-xl overflow-hidden mb-4";
                 
                 // Bottoni admin e classifica per il Rally
-                const adminLegBtn = isAdmin 
-                    ? `<button onclick="event.stopPropagation(); openAddLeg(${rally.id})" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded mr-2 transition-colors"><i class="fa-solid fa-plus"></i> Leg</button>` 
-                    : '';
+                const legStandingsBtn = `<button onclick="event.stopPropagation(); viewStandings('leg', ${leg.id})" class="text-xs bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-stopwatch text-vrg-accent"></i> Tempi Leg</button>`;
                 
                 const rallyStandingsBtn = `<button onclick="event.stopPropagation(); viewStandings('rally', ${rally.id})" class="text-xs bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-ranking-star text-vrg-accent"></i> Classifica Rally</button>`;
 
@@ -360,7 +358,7 @@
                                         <i class="fa-solid fa-road text-slate-300"></i>
                                         <span class="font-semibold text-slate-200">${leg.name}</span>
                                     </div>
-                                    <div>${adminStageBtn}</div>
+                                    <div>${adminStageBtn} ${legStandingsBtn}</div>
                                 </div>
                                 <div id="leg-body-${leg.id}" class="ml-6 space-y-1 pb-2">
                         `;
@@ -617,9 +615,34 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
         async function viewStandings(type, id) {
-            document.getElementById('standings-title').textContent = type === 'rally' ? 'Classifica Rally' : 'Classifica Campionato';
+            const titleMap = {
+                'rally': 'Classifica Rally (Punti)',
+                'leg': 'Classifica Leg (Tempi)',
+                'championship': 'Classifica Campionato'
+            };
+            document.getElementById('standings-title').textContent = titleMap[type] || 'Classifica';
+            
             const tbody = document.getElementById('standings-tbody');
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin"></i> Calcolo in corso...</td></tr>`;
+            const thead = document.querySelector('#modal-standings thead tr');
+            
+            // Costruisci le colonne in base al tipo
+            if (type === 'rally') {
+                thead.innerHTML = `
+                    <th class="px-4 py-3 w-16">Pos</th>
+                    <th class="px-4 py-3">Pilota</th>
+                    <th class="px-4 py-3">Auto</th>
+                    <th class="px-4 py-3">Punti</th>
+                `;
+            } else {
+                thead.innerHTML = `
+                    <th class="px-4 py-3 w-16">Pos</th>
+                    <th class="px-4 py-3">Pilota</th>
+                    <th class="px-4 py-3">Auto</th>
+                    <th class="px-4 py-3">Tempo Totale</th>
+                `;
+            }
+
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin"></i> Calcolo in corso...</td></tr>`;
             openModal('modal-standings');
 
             try {
@@ -627,27 +650,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (res.success && res.data.length > 0) {
                     tbody.innerHTML = '';
                     res.data.forEach(r => {
+                        const statusColor = r.status !== 'completed' ? 'text-red-400' : 'text-slate-300';
+                        const statusBadge = r.status !== 'completed' ? `<span class="text-[10px] bg-red-900/50 text-red-400 px-2 py-0.5 rounded ml-2">${r.status.toUpperCase()}</span>` : '';
+                        
+                        let lastCol = '';
+                        if (type === 'rally') {
+                            lastCol = `<td class="px-4 py-2 font-bold text-vrg-accent">${r.points} pt</td>`;
+                        } else {
+                            lastCol = `<td class="px-4 py-2 font-mono text-vrg-accent">${r.total_str}</td>`;
+                        }
+
                         tbody.innerHTML += `
                             <tr class="border-b border-slate-700/50 hover:bg-slate-800/30">
                                 <td class="px-4 py-2 font-bold text-white">${r.position}°</td>
-                                <td class="px-4 py-2 font-medium">${r.driver}</td>
-                                <td class="px-4 py-2 text-slate-400">${r.car}</td>
-                                <td class="px-4 py-2 font-mono text-vrg-accent">${r.total_str}</td>
-                                <td class="px-4 py-2 font-bold">${r.points ? r.points : '-'}</td>
+                                <td class="px-4 py-2 font-medium ${statusColor}">${r.driver} ${statusBadge}</td>
+                                <td class="px-4 py-2 text-slate-500 text-xs">${r.car || '-'}</td>
+                                ${lastCol}
                             </tr>
                         `;
                     });
-                    // Aggiungi DNF in fondo
-                    if(res.dnf && res.dnf.length > 0) {
-                        res.dnf.forEach(d => {
-                            tbody.innerHTML += `<tr class="border-b border-slate-700/50 text-red-400"><td class="px-4 py-2">-</td><td class="px-4 py-2">${d.driver}</td><td colspan="3" class="px-4 py-2">${d.status.toUpperCase()}</td></tr>`;
-                        });
-                    }
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-500">Nessun dato disponibile.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-slate-500">Nessun dato disponibile.</td></tr>`;
                 }
             } catch (e) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-400">Errore: ${e.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-red-400">Errore: ${e.message}</td></tr>`;
             }
         }
     </script>

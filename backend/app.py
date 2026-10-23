@@ -430,70 +430,89 @@ def get_calendar():
 @app.route('/api/standings/<type>/<int:id>', methods=['GET'])
 def get_standings(type, id):
     supabase = get_supabase()
-    points_system = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1] # Configurabile
+    points_system = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1]
     
     try:
-        if type == 'rally':
-            # Prende tutti i risultati degli stage di questo rally
-            legs = supabase.table('leg').select('id').eq('rally_id', id).execute()
-            leg_ids = [l['id'] for l in legs.data]
-            stages = supabase.table('stage').select('id').in_('leg_id', leg_ids).execute()
-            stage_ids = [s['id'] for s in stages.data]
+        # Funzione di supporto per calcolare i tempi (con regola DNF)
+        def calculate_times(stage_ids):
+            results = supabase.table('stage_result').select('*').in_('stage_id', stage_ids).execute().data
+            if not results: return []
             
-            results = supabase.table('stage_result').select('*').in_('stage_id', stage_ids).execute()
+            driver_totals = {}
+            # 1. Trova l'ultimo tempo per ogni stage (per regola DNF)
+            stage_max_times = {}
+            for r in results:
+                if r['status'] == 'completed' and r['time_ms']:
+                    sid = r['stage_id']
+                    stage_max_times[sid] = max(stage_max_times.get(sid, 0), r['time_ms'])
             
-            driver_data = {}
-            for r in results.data:
+            # 2. Somma i tempi applicando la regola DNF (ultimo tempo * 2)
+            for r in results:
                 drv = r['driver_name']
-                if drv not in driver_data:
-                    driver_data[drv] = {'time_ms': 0, 'status': 'completed', 'car': r.get('car_model', '')}
+                if drv not in driver_totals:
+                    driver_totals[drv] = {'time_ms': 0, 'status': 'completed', 'car': r.get('car_model', '')}
                 
                 if r['status'] in ['dnf', 'dns', 'dsq']:
-                    driver_data[drv]['status'] = r['status']
+                    driver_totals[drv]['status'] = r['status']
+                    # Applica tempo fittizio: ultimo tempo dello stage * 2
+                    last_time = stage_max_times.get(r['stage_id'], 300000) # default 5 min se vuoto
+                    driver_totals[drv]['time_ms'] += (last_time * 2)
                 elif r['status'] == 'completed':
-                    driver_data[drv]['time_ms'] += (r['time_ms'] or 0)
+                    driver_totals[drv]['time_ms'] += (r['time_ms'] or 0)
             
-            # Filtriamo chi ha finito e chi no
-            finished = [{'driver': k, 'total_ms': v['time_ms'], 'car': v['car']} for k, v in driver_data.items() if v['status'] == 'completed' and v['time_ms'] > 0]
-            dnfs = [{'driver': k, 'status': v['status']} for k, v in driver_data.items() if v['status'] != 'completed']
+            # 3. Prepara la lista ordinata
+            standings = [{'driver': k, 'total_ms': v['time_ms'], 'car': v['car'], 'status': v['status']} for k, v in driver_totals.items()]
+            standings.sort(key=lambda x: x['total_ms'])
             
-            # Ordiniamo per tempo
-            finished.sort(key=lambda x: x['total_ms'])
-            
-            # Gestione Parità
+            # 4. Gestione Parità (stessa posizione per tempi uguali)
             prev_time = -1
             current_pos = 1
-            for i, item in enumerate(finished):
+            for i, item in enumerate(standings):
                 if item['total_ms'] == prev_time:
                     item['position'] = current_pos
                 else:
                     item['position'] = i + 1
                     current_pos = item['position']
                 prev_time = item['total_ms']
-                
                 item['total_str'] = ms_to_time_str(item['total_ms'])
-                item['points'] = points_system[item['position']-1] if item['position'] <= len(points_system) else 0
             
-            return jsonify({"success": True, "data": finished, "dnf": dnfs}), 200
+            return standings
 
-        elif type == 'championship':
-            # Recupera tutti i rally del campionato
-            rallys = supabase.table('rally').select('id').eq('championship_id', id).execute()
-            rally_ids = [r['id'] for r in rallys.data]
+        if type == 'stage':
+            # Logica per singolo stage
+            res = supabase.table('stage_result').select('*').eq('stage_id', id).order('position').execute()
+            return jsonify({"success": True, "data": res.data}), 200
+
+        elif type == 'leg':
+            # Logica per Leg: Somma tempi, senza punti
+            stages = supabase.table('stage').select('id').eq('leg_id', id).execute().data
+            stage_ids = [s['id'] for s in stages]
+            if not stage_ids: return jsonify({"success": True, "data": []}), 200
             
-            champ_points = {}
+            standings = calculate_times(stage_ids)
+            # Rimuoviamo i punti se presenti (non richiesti per le leg)
+            return jsonify({"success": True, "data": standings}), 200
+
+        elif type == 'rally':
+            # Logica per Rally: Calcola i tempi, assegna i punti, ma il frontend mostrerà solo i punti
+            legs = supabase.table('leg').select('id').eq('rally_id', id).execute().data
+            leg_ids = [l['id'] for l in legs]
+            stages = supabase.table('stage').select('id').in_('leg_id', leg_ids).execute().data
+            stage_ids = [s['id'] for s in stages]
+            if not stage_ids: return jsonify({"success": True, "data": []}), 200
             
-            # Simuliamo il calcolo per ogni rally
-            for r_id in rally_ids:
-                # (Qui andrebbe richiamata la stessa logica di sopra per ogni rally)
-                # Per non appesantire la risposta, facciamo un calcolo semplificato.
-                # In un'app reale si userebbe una vista materializzata o un cron job.
-                pass
+            standings = calculate_times(stage_ids)
             
-            # Placeholder per il campionato (da completare se hai molti rally)
-            return jsonify({"success": True, "data": [], "message": "Classifica campionato in arrivo"}), 200
+            # Assegna i punti in base alla posizione
+            for s in standings:
+                s['points'] = points_system[s['position']-1] if s['position'] <= len(points_system) else 0
+                
+            return jsonify({"success": True, "data": standings}), 200
             
+        return jsonify({"success": False, "error": "Tipo classifica non valido"}), 400
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/championship/<int:champ_id>', methods=['GET'])
