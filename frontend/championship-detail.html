@@ -312,7 +312,7 @@
             }
         }
 
-        function renderTree() {
+                function renderTree() {
             const container = document.getElementById('tree-container');
             container.innerHTML = '';
 
@@ -325,8 +325,10 @@
                 const rallyEl = document.createElement('div');
                 rallyEl.className = "bg-vrg-card border border-slate-700 rounded-xl overflow-hidden mb-4";
                 
-                // Bottoni admin e classifica per il Rally
-                const legStandingsBtn = `<button onclick="event.stopPropagation(); viewStandings('leg', ${leg.id})" class="text-xs bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-stopwatch text-vrg-accent"></i> Tempi Leg</button>`;
+                // 1. Bottoni del RALLY (fuori dal forEach delle leg)
+                const adminLegBtn = isAdmin 
+                    ? `<button onclick="event.stopPropagation(); openAddLeg(${rally.id})" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded mr-2 transition-colors"><i class="fa-solid fa-plus"></i> Leg</button>` 
+                    : '';
                 
                 const rallyStandingsBtn = `<button onclick="event.stopPropagation(); viewStandings('rally', ${rally.id})" class="text-xs bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-ranking-star text-vrg-accent"></i> Classifica Rally</button>`;
 
@@ -346,9 +348,11 @@
                     innerHtml += `<div class="text-sm text-slate-500 p-2 pl-8">Nessuna Leg presente.</div>`;
                 } else {
                     rally.legs.forEach(leg => {
+                        // 2. Bottoni della LEG (dentro il forEach delle leg, dove 'leg' esiste)
                         const adminStageBtn = isAdmin
-                            ? `<button onclick="event.stopPropagation(); openAddStage(${leg.id})" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-plus"></i> Stage</button>`
+                            ? `<button onclick="event.stopPropagation(); openAddStage(${leg.id})" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded mr-2 transition-colors"><i class="fa-solid fa-plus"></i> Stage</button>`
                             : '';
+                        const legStandingsBtn = `<button onclick="event.stopPropagation(); viewStandings('leg', ${leg.id})" class="text-xs bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-stopwatch text-vrg-accent"></i> Tempi Leg</button>`;
 
                         innerHtml += `
                             <div class="ml-4 border-l border-slate-700 pl-4">
@@ -367,7 +371,6 @@
                             innerHtml += `<div class="text-xs text-slate-500 py-1">Nessuna Stage presente.</div>`;
                         } else {
                             leg.stages.forEach(stage => {
-                                // Indicatore visivo verde se ha risultati
                                 const statusIcon = stage.has_results 
                                     ? `<i class="fa-solid fa-circle text-green-500 text-[8px] ml-1" title="Risultati caricati"></i>` 
                                     : `<i class="fa-regular fa-circle text-slate-600 text-[8px] ml-1" title="In attesa di risultati"></i>`;
@@ -380,7 +383,6 @@
                                             ${statusIcon}
                                             <span class="text-xs text-slate-500">(${stage.track_name || 'Tracciato'})</span>
                                         </div>
-                                        <!-- Bottone sempre visibile per i risultati -->
                                         <button onclick="event.stopPropagation(); openStageResults(${stage.id}, ${stage.has_results})" class="text-xs text-slate-400 hover:text-vrg-accent transition-colors px-2 py-1 bg-slate-800/50 rounded border border-slate-700 hover:border-vrg-accent" title="Visualizza/Gestisci Risultati">
                                             <i class="fa-solid fa-list-ol"></i> Risultati
                                         </button>
