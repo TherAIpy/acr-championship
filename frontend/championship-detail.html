@@ -129,7 +129,7 @@
             </h2>
             
             <!-- AREA UPLOAD OCR -->
-            <div class="flex items-center gap-3 bg-slate-800 p-2 rounded-lg border border-slate-700">
+            <div id="ocr-container" class="flex items-center gap-3 bg-slate-800 p-2 rounded-lg border border-slate-700">
                 <input type="file" id="ocr-file-input" accept="image/*" class="hidden" onchange="handleOcrUpload(event)">
                 <button onclick="document.getElementById('ocr-file-input').click()" id="btn-upload-ocr" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-sm font-bold flex items-center gap-2 transition-colors">
                     <i class="fa-solid fa-camera"></i> Carica Screenshot (OCR)
@@ -157,7 +157,7 @@
                     <!-- Righe aggiunte via JS -->
                 </tbody>
             </table>
-            <button onclick="addResultRow()" class="mt-4 text-sm text-vrg-accent hover:text-yellow-400 font-bold flex items-center gap-2 transition-colors">
+            <button id="btn-add-pilota" onclick="addResultRow()" class="mt-4 text-sm text-vrg-accent hover:text-yellow-400 font-bold flex items-center gap-2 transition-colors">
                 <i class="fa-solid fa-plus"></i> Aggiungi Pilota Manualmente
             </button>
         </div>
@@ -170,6 +170,31 @@
         </div>
     </div>
 </div>
+    <!-- MODALE CLASSIFICHE -->
+    <div id="modal-standings" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-vrg-card p-6 rounded-xl w-full max-w-2xl border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-ranking-star text-vrg-accent"></i> <span id="standings-title"></span>
+            </h2>
+            <div class="flex-1 overflow-y-auto">
+                <table class="w-full text-left text-sm text-slate-300">
+                    <thead class="text-xs uppercase bg-slate-800 text-slate-400 sticky top-0">
+                        <tr>
+                            <th class="px-4 py-3 w-16">Pos</th>
+                            <th class="px-4 py-3">Pilota</th>
+                            <th class="px-4 py-3">Auto</th>
+                            <th class="px-4 py-3">Tempo Totale</th>
+                            <th class="px-4 py-3">Punti</th>
+                        </tr>
+                    </thead>
+                    <tbody id="standings-tbody"></tbody>
+                </table>
+            </div>
+            <div class="flex justify-end mt-4 pt-4 border-t border-slate-700">
+                <button onclick="closeModal('modal-standings')" class="bg-slate-700 text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-600">Chiudi</button>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase.js"></script>
@@ -287,7 +312,7 @@
             }
         }
 
-                function renderTree() {
+        function renderTree() {
             const container = document.getElementById('tree-container');
             container.innerHTML = '';
 
@@ -296,18 +321,16 @@
                 return;
             }
 
-            // Genera l'HTML per l'albero
             treeData.rallies.forEach(rally => {
-                if (currentFilter === 'leg' && (!rally.legs || rally.legs.length === 0)) return;
-                if (currentFilter === 'stage' && (!rally.legs || rally.legs.every(l => !l.stages || l.stages.length === 0))) return;
-
                 const rallyEl = document.createElement('div');
                 rallyEl.className = "bg-vrg-card border border-slate-700 rounded-xl overflow-hidden mb-4";
                 
-                // Bottone + Leg (visibile solo se admin)
+                // Bottoni admin e classifica per il Rally
                 const adminLegBtn = isAdmin 
-                    ? `<button onclick="event.stopPropagation(); openAddLeg(${rally.id})" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-plus"></i> Leg</button>` 
+                    ? `<button onclick="event.stopPropagation(); openAddLeg(${rally.id})" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded mr-2 transition-colors"><i class="fa-solid fa-plus"></i> Leg</button>` 
                     : '';
+                
+                const rallyStandingsBtn = `<button onclick="event.stopPropagation(); viewStandings('rally', ${rally.id})" class="text-xs bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-ranking-star text-vrg-accent"></i> Classifica Rally</button>`;
 
                 let innerHtml = `
                     <div class="flex items-center justify-between p-4 bg-slate-800/50 cursor-pointer" onclick="toggleVisibility('rally-body-${rally.id}')">
@@ -316,7 +339,7 @@
                             <i class="fa-solid fa-flag-checkered text-vrg-accent"></i>
                             <span class="font-bold text-white text-lg">${rally.name}</span>
                         </div>
-                        <div>${adminLegBtn}</div>
+                        <div>${adminLegBtn} ${rallyStandingsBtn}</div>
                     </div>
                     <div id="rally-body-${rally.id}" class="p-2 space-y-2">
                 `;
@@ -325,8 +348,6 @@
                     innerHtml += `<div class="text-sm text-slate-500 p-2 pl-8">Nessuna Leg presente.</div>`;
                 } else {
                     rally.legs.forEach(leg => {
-                        if (currentFilter === 'stage' && (!leg.stages || leg.stages.length === 0)) return;
-
                         const adminStageBtn = isAdmin
                             ? `<button onclick="event.stopPropagation(); openAddStage(${leg.id})" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-plus"></i> Stage</button>`
                             : '';
@@ -348,16 +369,22 @@
                             innerHtml += `<div class="text-xs text-slate-500 py-1">Nessuna Stage presente.</div>`;
                         } else {
                             leg.stages.forEach(stage => {
+                                // Indicatore visivo verde se ha risultati
+                                const statusIcon = stage.has_results 
+                                    ? `<i class="fa-solid fa-circle text-green-500 text-[8px] ml-1" title="Risultati caricati"></i>` 
+                                    : `<i class="fa-regular fa-circle text-slate-600 text-[8px] ml-1" title="In attesa di risultati"></i>`;
+
                                 innerHtml += `
                                     <div class="flex items-center justify-between py-1 px-2 hover:bg-slate-800/50 rounded transition-colors group">
-                                        <div class="flex items-center gap-3">
+                                        <div class="flex items-center gap-3 cursor-pointer" onclick="openStageResults(${stage.id}, ${stage.has_results})">
                                             <i class="fa-solid fa-stopwatch text-slate-500 text-xs"></i>
-                                            <span class="text-sm text-slate-300">${stage.name}</span>
+                                            <span class="text-sm text-slate-300 font-medium hover:text-vrg-accent transition-colors">${stage.name}</span>
+                                            ${statusIcon}
                                             <span class="text-xs text-slate-500">(${stage.track_name || 'Tracciato'})</span>
                                         </div>
-                                        <!-- QUI C'È IL BOTTONE CORRETTO PER I RISULTATI -->
-                                        <button onclick="event.stopPropagation(); openStageResults(${stage.id})" class="text-slate-500 hover:text-vrg-accent opacity-0 group-hover:opacity-100 transition-all" title="Gestisci Risultati">
-                                            <i class="fa-solid fa-list-ol"></i>
+                                        <!-- Bottone sempre visibile per i risultati -->
+                                        <button onclick="event.stopPropagation(); openStageResults(${stage.id}, ${stage.has_results})" class="text-xs text-slate-400 hover:text-vrg-accent transition-colors px-2 py-1 bg-slate-800/50 rounded border border-slate-700 hover:border-vrg-accent" title="Visualizza/Gestisci Risultati">
+                                            <i class="fa-solid fa-list-ol"></i> Risultati
                                         </button>
                                     </div>
                                 `;
@@ -393,65 +420,73 @@
             document.getElementById('input-stage-leg-id').value = legId;
             openModal('modal-stage');
         }
-    async function openStageResults(stageId) {
-    // 1. Recuperiamo il nome dello stage dai dati già caricati in memoria
-    let stageName = 'Stage';
-    if (treeData && treeData.rallies) {
-        for (const rally of treeData.rallies) {
-            if (rally.legs) {
-                for (const leg of rally.legs) {
-                    if (leg.stages) {
-                        const s = leg.stages.find(st => st.id === stageId);
-                        if (s) { 
-                            stageName = s.name; 
-                            break; 
+        async function openStageResults(stageId, hasResults = false) {
+            let stageName = 'Stage';
+            if (treeData && treeData.rallies) {
+                for (const rally of treeData.rallies) {
+                    if (rally.legs) {
+                        for (const leg of rally.legs) {
+                            if (leg.stages) {
+                                const s = leg.stages.find(st => st.id === stageId);
+                                if (s) { stageName = s.name; break; }
+                            }
                         }
                     }
                 }
             }
+
+            document.getElementById('input-risultati-stage-id').value = stageId;
+            document.getElementById('modal-risultati-title').textContent = stageName;
+            document.getElementById('risultati-tbody').innerHTML = '';
+            
+            // Gestione UI Admin vs Utente
+            const adminControls = document.getElementById('ocr-container');
+            const btnSalva = document.getElementById('btn-salva-risultati');
+            const btnAddPilota = document.getElementById('btn-add-pilota');
+
+            if (isAdmin) {
+                adminControls.classList.remove('hidden');
+                btnSalva.classList.remove('hidden');
+                btnAddPilota.classList.remove('hidden');
+            } else {
+                adminControls.classList.add('hidden');
+                btnSalva.classList.add('hidden');
+                btnAddPilota.classList.add('hidden');
+            }
+
+            openModal('modal-risultati');
+
+            try {
+                const res = await apiCall(`/stage-results/${stageId}`);
+                if (res.success && res.data.length > 0) {
+                    res.data.forEach(r => addResultRow(r, !isAdmin)); // Passiamo !isAdmin come flag "readOnly"
+                } else {
+                    if (isAdmin) addResultRow(); // Riga vuota solo se admin
+                    else document.getElementById('risultati-tbody').innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-500">Nessun risultato caricato per questo stage.</td></tr>`;
+                }
+            } catch(e) { console.error(e); }
         }
-    }
 
-    // 2. Popoliamo la modale
-    document.getElementById('input-risultati-stage-id').value = stageId;
-    document.getElementById('modal-risultati-title').textContent = stageName;
-    document.getElementById('risultati-tbody').innerHTML = '';
-    
-    // Mostra la modale
-    openModal('modal-risultati');
-    
-    // 3. Carichiamo i risultati esistenti se ci sono
-    try {
-        const res = await apiCall(`/stage-results/${stageId}`);
-        if (res.success && res.data.length > 0) {
-            res.data.forEach(r => addResultRow(r));
-        } else {
-            addResultRow(); // Riga vuota se non ci sono risultati
+        function addResultRow(data = {}, readOnly = false) {
+            const tbody = document.getElementById('risultati-tbody');
+            const tr = document.createElement('tr');
+            tr.className = "border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors";
+            
+            const pos = tbody.children.length + 1;
+            const disableAttr = readOnly ? 'disabled' : '';
+
+            tr.innerHTML = `
+                <td class="px-2 py-2 text-center font-bold text-slate-400 pos-col">${data.position || pos}</td>
+                <td class="px-2 py-2"><input type="text" class="driver-input w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white focus:border-vrg-accent focus:outline-none ${readOnly ? 'opacity-70 cursor-not-allowed' : ''}" value="${data.driver_name || ''}" placeholder="Pilota" ${disableAttr}></td>
+                <td class="px-2 py-2"><input type="text" class="car-input w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white focus:border-vrg-accent focus:outline-none ${readOnly ? 'opacity-70 cursor-not-allowed' : ''}" value="${data.car_model || ''}" placeholder="Auto" ${disableAttr}></td>
+                <td class="px-2 py-2"><input type="text" class="time-input w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white font-mono focus:border-vrg-accent focus:outline-none ${readOnly ? 'opacity-70 cursor-not-allowed' : ''}" value="${data.time_str || ''}" placeholder="00:00.000" ${disableAttr}></td>
+                <td class="px-2 py-2"><input type="text" class="penalty-input w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white font-mono focus:border-vrg-accent focus:outline-none ${readOnly ? 'opacity-70 cursor-not-allowed' : ''}" value="${data.penalty || '-'}" placeholder="-" ${disableAttr}></td>
+                <td class="px-2 py-2 text-center">
+                    ${readOnly ? '' : `<button onclick="this.closest('tr').remove(); updateRowPositions();" class="text-red-400 hover:text-red-300 transition-colors"><i class="fa-solid fa-trash"></i></button>`}
+                </td>
+            `;
+            tbody.appendChild(tr);
         }
-    } catch(e) { 
-        console.error("Errore caricamento risultati:", e); 
-    }
-}
-
-function addResultRow(data = {}) {
-    const tbody = document.getElementById('risultati-tbody');
-    const tr = document.createElement('tr');
-    tr.className = "border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors";
-    
-    const pos = tbody.children.length + 1;
-
-    tr.innerHTML = `
-        <td class="px-2 py-2 text-center font-bold text-slate-400 pos-col">${data.position || pos}</td>
-        <td class="px-2 py-2"><input type="text" class="driver-input w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white focus:border-vrg-accent focus:outline-none" value="${data.driver_name || ''}" placeholder="Es. Mario Rossi"></td>
-        <td class="px-2 py-2"><input type="text" class="car-input w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white focus:border-vrg-accent focus:outline-none" value="${data.car_model || ''}" placeholder="Es. Subaru"></td>
-        <td class="px-2 py-2"><input type="text" class="time-input w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white font-mono focus:border-vrg-accent focus:outline-none" value="${data.time_str || ''}" placeholder="00:00.000"></td>
-        <td class="px-2 py-2"><input type="text" class="penalty-input w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white font-mono focus:border-vrg-accent focus:outline-none" value="${data.penalty || '-'}" placeholder="-"></td>
-        <td class="px-2 py-2 text-center">
-            <button onclick="this.closest('tr').remove(); updateRowPositions();" class="text-red-400 hover:text-red-300 transition-colors"><i class="fa-solid fa-trash"></i></button>
-        </td>
-    `;
-    tbody.appendChild(tr);
-}
 
 async function handleOcrUpload(event) {
     const file = event.target.files[0];
@@ -580,6 +615,41 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+        async function viewStandings(type, id) {
+            document.getElementById('standings-title').textContent = type === 'rally' ? 'Classifica Rally' : 'Classifica Campionato';
+            const tbody = document.getElementById('standings-tbody');
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin"></i> Calcolo in corso...</td></tr>`;
+            openModal('modal-standings');
+
+            try {
+                const res = await apiCall(`/standings/${type}/${id}`);
+                if (res.success && res.data.length > 0) {
+                    tbody.innerHTML = '';
+                    res.data.forEach(r => {
+                        tbody.innerHTML += `
+                            <tr class="border-b border-slate-700/50 hover:bg-slate-800/30">
+                                <td class="px-4 py-2 font-bold text-white">${r.position}°</td>
+                                <td class="px-4 py-2 font-medium">${r.driver}</td>
+                                <td class="px-4 py-2 text-slate-400">${r.car}</td>
+                                <td class="px-4 py-2 font-mono text-vrg-accent">${r.total_str}</td>
+                                <td class="px-4 py-2 font-bold">${r.points ? r.points : '-'}</td>
+                            </tr>
+                        `;
+                    });
+                    // Aggiungi DNF in fondo
+                    if(res.dnf && res.dnf.length > 0) {
+                        res.dnf.forEach(d => {
+                            tbody.innerHTML += `<tr class="border-b border-slate-700/50 text-red-400"><td class="px-4 py-2">-</td><td class="px-4 py-2">${d.driver}</td><td colspan="3" class="px-4 py-2">${d.status.toUpperCase()}</td></tr>`;
+                        });
+                    }
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-500">Nessun dato disponibile.</td></tr>`;
+                }
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-400">Errore: ${e.message}</td></tr>`;
+            }
+        }
     </script>
 </body>
 </html>
