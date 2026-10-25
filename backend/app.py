@@ -264,9 +264,34 @@ def get_stages(leg_id):
 
 @app.route('/api/stage-results/<int:stage_id>', methods=['GET'])
 def get_stage_results(stage_id):
+    """Risultati ufficiali (pubblici)."""
     try:
         supabase = get_supabase()
-        res = supabase.table('stage_result').select('*').eq('stage_id', stage_id).order('position').execute()
+        res = (
+            supabase.table('stage_result').select('*')
+            .eq('stage_id', stage_id)
+            .eq('is_official', True)
+            .order('position')
+            .execute()
+        )
+        return jsonify({"success": True, "data": res.data}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/stage-results/<int:stage_id>/draft', methods=['GET'])
+@admin_required
+def get_stage_results_draft(stage_id):
+    """Bozze (solo admin)."""
+    try:
+        supabase = get_supabase()
+        res = (
+            supabase.table('stage_result').select('*')
+            .eq('stage_id', stage_id)
+            .eq('is_official', False)
+            .order('position')
+            .execute()
+        )
         return jsonify({"success": True, "data": res.data}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -288,16 +313,23 @@ def get_tree(champ_id):
         leg_ids = [l['id'] for l in legs]
         stages = supabase.table('stage').select('*').in_('leg_id', leg_ids).order('id').execute().data if leg_ids else []
 
-        # Recuperiamo i risultati per capire quali stage sono stati compilati
+        # Recuperiamo i risultati separando bozze e ufficiali
         stage_ids = [s['id'] for s in stages]
-        results = supabase.table('stage_result').select('stage_id').in_('stage_id', stage_ids).execute().data if stage_ids else []
-        
-        # Creiamo un set di stage_id che hanno risultati
-        stages_with_results = set(r['stage_id'] for r in results)
+        results = (
+            supabase.table('stage_result')
+            .select('stage_id, is_official')
+            .in_('stage_id', stage_ids)
+            .execute().data
+        ) if stage_ids else []
+
+        stages_with_official = set(r['stage_id'] for r in results if r.get('is_official'))
+        stages_with_draft    = set(r['stage_id'] for r in results if not r.get('is_official'))
 
         stages_by_leg = {}
         for s in stages:
-            s['has_results'] = s['id'] in stages_with_results
+            s['has_official_results'] = s['id'] in stages_with_official
+            s['has_draft_results']    = s['id'] in stages_with_draft
+            s['has_results']          = s['id'] in stages_with_official  # retro-compat
             stages_by_leg.setdefault(s['leg_id'], []).append(s)
             
         legs_by_rally = {}
@@ -355,7 +387,7 @@ def save_stage():
                     "track_name": payload.track_name or 'Sconosciuto' # Evita NULL
                 }).eq('id', stage_id).execute()
                 
-            supabase.table('stage_result').delete().eq('stage_id', stage_id).execute()
+            supabase.table('stage_result').delete().eq('stage_id', stage_id).eq('is_official', False).execute()
         else:
             if not payload.leg_id:
                 return jsonify({"success": False, "error": "leg_id obbligatorio per la creazione"}), 400
@@ -398,7 +430,7 @@ def save_stage():
                     "time_ms": t_ms,
                     "penalty_sec": p_sec,
                     "status": "completed",
-                    "is_official": True,
+                    "is_official": False,
                     "version": 1
                 })
             supabase.table('stage_result').insert(insert_data).execute()
@@ -409,6 +441,35 @@ def save_stage():
         import traceback
         print("ERRORE SALVATAGGIO STAGE:")
         print(traceback.format_exc()) # Questo lo vedrai nei log di Render
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/publish-stage/<int:stage_id>', methods=['POST'])
+@admin_required
+def publish_stage(stage_id):
+    """Promuove le bozze correnti a ufficiali, sostituendo eventuali ufficiali precedenti."""
+    try:
+        supabase = get_supabase()
+
+        drafts = (
+            supabase.table('stage_result').select('id')
+            .eq('stage_id', stage_id)
+            .eq('is_official', False)
+            .execute()
+        )
+        if not drafts.data:
+            return jsonify({"success": False, "error": "Nessuna bozza da pubblicare per questo stage"}), 400
+
+        # Rimuove la versione ufficiale precedente
+        supabase.table('stage_result').delete() \
+            .eq('stage_id', stage_id).eq('is_official', True).execute()
+
+        # Promuove le bozze
+        supabase.table('stage_result').update({"is_official": True}) \
+            .eq('stage_id', stage_id).eq('is_official', False).execute()
+
+        return jsonify({"success": True, "published": len(drafts.data)})
+    except Exception as e:
+        import traceback; traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/championships', methods=['GET'])

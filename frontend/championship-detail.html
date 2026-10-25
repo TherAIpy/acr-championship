@@ -30,7 +30,7 @@
                 <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors text-slate-400 hover:text-white mb-6">
                     <i class="fa-solid fa-arrow-left w-5"></i> Torna ai Campionati
                 </a>
-                
+
                 <div class="px-4 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Filtri Vista</div>
                 <button onclick="setFilter('all')" id="btn-filter-all" class="filter-btn w-full flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg text-white bg-slate-800">
                     <i class="fa-solid fa-layer-group w-5"></i> Tutti
@@ -50,7 +50,7 @@
 
     <!-- MAIN -->
     <main class="flex-1 flex flex-col h-full overflow-hidden">
-        
+
         <header class="h-20 bg-vrg-bg border-b border-slate-800 flex items-center justify-between px-8 shrink-0">
             <div class="flex items-center gap-4">
                 <h1 id="header-title" class="text-2xl font-bold text-white flex items-center gap-2">
@@ -77,9 +77,6 @@
         </div>
     </main>
 
-    <!-- MODALI (Rally, Leg, Stage) -->
-    <!-- ... (Mantieni i modali che avevi già, sono corretti) ... -->
-    
     <!-- MODALE AGGIUNGI RALLY -->
     <div id="modal-rally" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
         <div class="bg-vrg-card p-8 rounded-xl w-full max-w-md border border-slate-700 shadow-2xl">
@@ -120,56 +117,62 @@
     </div>
 
     <!-- MODALE INSERIMENTO RISULTATI -->
-<div id="modal-risultati" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
-    <div class="bg-vrg-card p-6 rounded-xl w-full max-w-4xl border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
-        
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-bold text-white flex items-center gap-2">
-                <i class="fa-solid fa-list-ol text-vrg-accent"></i> Risultati: <span id="modal-risultati-title" class="text-vrg-accent"></span>
-            </h2>
-            
-            <!-- AREA UPLOAD OCR -->
-            <div id="ocr-container" class="flex items-center gap-3 bg-slate-800 p-2 rounded-lg border border-slate-700">
-                <input type="file" id="ocr-file-input" accept="image/*" class="hidden" onchange="handleOcrUpload(event)">
-                <button onclick="document.getElementById('ocr-file-input').click()" id="btn-upload-ocr" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-sm font-bold flex items-center gap-2 transition-colors">
-                    <i class="fa-solid fa-camera"></i> Carica Screenshot (OCR)
+    <div id="modal-risultati" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-vrg-card p-6 rounded-xl w-full max-w-4xl border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
+
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-list-ol text-vrg-accent"></i> Risultati: <span id="modal-risultati-title" class="text-vrg-accent"></span>
+                </h2>
+
+                <!-- AREA UPLOAD OCR -->
+                <div id="ocr-container" class="flex items-center gap-3 bg-slate-800 p-2 rounded-lg border border-slate-700">
+                    <input type="file" id="ocr-file-input" accept="image/*" class="hidden" onchange="handleOcrUpload(event)">
+                    <button onclick="document.getElementById('ocr-file-input').click()" id="btn-upload-ocr" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-sm font-bold flex items-center gap-2 transition-colors">
+                        <i class="fa-solid fa-camera"></i> Carica Screenshot (OCR)
+                    </button>
+                    <span id="ocr-status" class="text-xs text-slate-400"></span>
+                </div>
+            </div>
+
+            <input type="hidden" id="input-risultati-stage-id">
+
+            <!-- BANNER STATO BOZZA/UFFICIALE -->
+            <div id="results-status-banner" class="hidden mb-3 px-3 py-2 rounded text-sm"></div>
+
+            <div class="flex-1 overflow-y-auto pr-2">
+                <table class="w-full text-left text-sm text-slate-300">
+                    <thead class="text-xs uppercase bg-slate-800 text-slate-400 sticky top-0 z-10">
+                        <tr>
+                            <th class="px-2 py-2 w-12 text-center">Pos</th>
+                            <th class="px-2 py-2">Pilota</th>
+                            <th class="px-2 py-2">Auto</th>
+                            <th class="px-2 py-2 w-32">Tempo</th>
+                            <th class="px-2 py-2 w-24">Penalità</th>
+                            <th class="px-2 py-2 w-10 text-center">X</th>
+                        </tr>
+                    </thead>
+                    <tbody id="risultati-tbody">
+                        <!-- Righe aggiunte via JS -->
+                    </tbody>
+                </table>
+                <button id="btn-add-pilota" onclick="addResultRow()" class="mt-4 text-sm text-vrg-accent hover:text-yellow-400 font-bold flex items-center gap-2 transition-colors">
+                    <i class="fa-solid fa-plus"></i> Aggiungi Pilota Manualmente
                 </button>
-                <span id="ocr-status" class="text-xs text-slate-400"></span>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-700">
+                <button onclick="closeModal('modal-risultati')" class="px-5 py-2 rounded-lg text-sm text-slate-300 hover:text-white transition-colors">Annulla</button>
+                <button id="btn-save-draft" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors hidden">
+                    <i class="fa-solid fa-floppy-disk"></i> Salva bozza
+                </button>
+                <button id="btn-publish" class="bg-green-600 hover:bg-green-500 text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors hidden">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Pubblica
+                </button>
             </div>
         </div>
-
-        <input type="hidden" id="input-risultati-stage-id">
-        
-        <div class="flex-1 overflow-y-auto pr-2">
-            <!-- tabella risultati... (lascia quella che ti ho dato prima) -->
-            <table class="w-full text-left text-sm text-slate-300">
-                <thead class="text-xs uppercase bg-slate-800 text-slate-400 sticky top-0 z-10">
-                    <tr>
-                        <th class="px-2 py-2 w-12 text-center">Pos</th>
-                        <th class="px-2 py-2">Pilota</th>
-                        <th class="px-2 py-2">Auto</th>
-                        <th class="px-2 py-2 w-32">Tempo</th>
-                        <th class="px-2 py-2 w-24">Penalità</th>
-                        <th class="px-2 py-2 w-10 text-center">X</th>
-                    </tr>
-                </thead>
-                <tbody id="risultati-tbody">
-                    <!-- Righe aggiunte via JS -->
-                </tbody>
-            </table>
-            <button id="btn-add-pilota" onclick="addResultRow()" class="mt-4 text-sm text-vrg-accent hover:text-yellow-400 font-bold flex items-center gap-2 transition-colors">
-                <i class="fa-solid fa-plus"></i> Aggiungi Pilota Manualmente
-            </button>
-        </div>
-
-        <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-700">
-            <button onclick="closeModal('modal-risultati')" class="px-5 py-2 rounded-lg text-sm text-slate-300 hover:text-white transition-colors">Annulla</button>
-            <button id="btn-salva-risultati" class="bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors">
-                <i class="fa-solid fa-floppy-disk"></i> Approva e Salva
-            </button>
-        </div>
     </div>
-</div>
+
     <!-- MODALE CLASSIFICHE -->
     <div id="modal-standings" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
         <div class="bg-vrg-card p-6 rounded-xl w-full max-w-2xl border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
@@ -199,14 +202,13 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase.js"></script>
     <script src="js/api.js"></script>
-    <!-- Nota: non carichiamo auth.js qui per evitare conflitti, gestiamo tutto internamente -->
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const champId = urlParams.get('id');
         let currentFilter = 'all';
         let treeData = null;
-        let isAdmin = false; // Variabile globale per l'admin
+        let isAdmin = false;
 
         document.addEventListener('DOMContentLoaded', async () => {
             if (!champId) {
@@ -215,12 +217,11 @@
                 return;
             }
 
-            // 1. Controllo Sessione e Admin (Autonomo)
+            // 1. Sessione e Admin
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
                 isAdmin = session.user.app_metadata?.role === 'admin';
-                
-                // Aggiorna header
+
                 document.getElementById('user-controls').innerHTML = `
                     <span class="text-sm text-slate-400 hidden md:block">${session.user.email}</span>
                     <button onclick="supabase.auth.signOut().then(()=>window.location.href='dashboard.html')" class="text-slate-400 hover:text-red-400 transition-colors" title="Logout">
@@ -233,10 +234,10 @@
                 `;
             }
 
-            // 2. Carica i dati
+            // 2. Carica albero
             await loadTree();
 
-            // 3. Setup eventi modali
+            // 3. Eventi modali creazione
             document.getElementById('btn-salva-rally').onclick = async () => {
                 const nome = document.getElementById('input-nome-rally').value.trim();
                 if (!nome) return alert("Inserisci un nome");
@@ -280,11 +281,9 @@
 
         function setFilter(filter) {
             currentFilter = filter;
-            // Reset bottoni
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.className = "filter-btn w-full flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors";
             });
-            // Attiva bottone cliccato
             const activeBtn = document.getElementById(`btn-filter-${filter}`);
             if (activeBtn) {
                 activeBtn.className = "filter-btn w-full flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg text-white bg-slate-800";
@@ -297,11 +296,10 @@
             try {
                 const res = await api.getTree(champId);
                 if (!res.success) throw new Error(res.error);
-                
+
                 treeData = res.data;
                 document.getElementById('header-title').innerHTML = `<i class="fa-solid fa-trophy text-vrg-accent"></i> ${treeData.championship.name}`;
-                
-                // Mostra bottone aggiungi rally se admin
+
                 const btnAddRally = document.getElementById('btn-add-rally');
                 if (isAdmin) btnAddRally.classList.remove('hidden');
                 else btnAddRally.classList.add('hidden');
@@ -312,7 +310,7 @@
             }
         }
 
-                function renderTree() {
+        function renderTree() {
             const container = document.getElementById('tree-container');
             container.innerHTML = '';
 
@@ -324,12 +322,11 @@
             treeData.rallies.forEach(rally => {
                 const rallyEl = document.createElement('div');
                 rallyEl.className = "bg-vrg-card border border-slate-700 rounded-xl overflow-hidden mb-4";
-                
-                // 1. Bottoni del RALLY (fuori dal forEach delle leg)
-                const adminLegBtn = isAdmin 
-                    ? `<button onclick="event.stopPropagation(); openAddLeg(${rally.id})" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded mr-2 transition-colors"><i class="fa-solid fa-plus"></i> Leg</button>` 
+
+                const adminLegBtn = isAdmin
+                    ? `<button onclick="event.stopPropagation(); openAddLeg(${rally.id})" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded mr-2 transition-colors"><i class="fa-solid fa-plus"></i> Leg</button>`
                     : '';
-                
+
                 const rallyStandingsBtn = `<button onclick="event.stopPropagation(); viewStandings('rally', ${rally.id})" class="text-xs bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-ranking-star text-vrg-accent"></i> Classifica Rally</button>`;
 
                 let innerHtml = `
@@ -348,7 +345,6 @@
                     innerHtml += `<div class="text-sm text-slate-500 p-2 pl-8">Nessuna Leg presente.</div>`;
                 } else {
                     rally.legs.forEach(leg => {
-                        // 2. Bottoni della LEG (dentro il forEach delle leg, dove 'leg' esiste)
                         const adminStageBtn = isAdmin
                             ? `<button onclick="event.stopPropagation(); openAddStage(${leg.id})" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded mr-2 transition-colors"><i class="fa-solid fa-plus"></i> Stage</button>`
                             : '';
@@ -371,19 +367,29 @@
                             innerHtml += `<div class="text-xs text-slate-500 py-1">Nessuna Stage presente.</div>`;
                         } else {
                             leg.stages.forEach(stage => {
-                                const statusIcon = stage.has_results 
-                                    ? `<i class="fa-solid fa-circle text-green-500 text-[8px] ml-1" title="Risultati caricati"></i>` 
-                                    : `<i class="fa-regular fa-circle text-slate-600 text-[8px] ml-1" title="In attesa di risultati"></i>`;
+                                // Pallino a tre stati: verde = ufficiale, giallo = bozza (solo admin), grigio = vuoto
+                                // Fallback su has_results per retro-compatibilità
+                                const hasOfficial = stage.has_official_results === true || stage.has_results === true;
+                                const hasDraft = stage.has_draft_results === true;
+
+                                let statusIcon;
+                                if (hasOfficial) {
+                                    statusIcon = `<i class="fa-solid fa-circle text-green-500 text-[8px] ml-1" title="Risultati ufficiali"></i>`;
+                                } else if (hasDraft && isAdmin) {
+                                    statusIcon = `<i class="fa-solid fa-circle text-yellow-400 text-[8px] ml-1" title="Bozza in attesa di pubblicazione"></i>`;
+                                } else {
+                                    statusIcon = `<i class="fa-regular fa-circle text-slate-600 text-[8px] ml-1" title="In attesa di risultati"></i>`;
+                                }
 
                                 innerHtml += `
                                     <div class="flex items-center justify-between py-1 px-2 hover:bg-slate-800/50 rounded transition-colors group">
-                                        <div class="flex items-center gap-3 cursor-pointer" onclick="openStageResults(${stage.id}, ${stage.has_results})">
+                                        <div class="flex items-center gap-3 cursor-pointer" onclick="openStageResults(${stage.id})">
                                             <i class="fa-solid fa-stopwatch text-slate-500 text-xs"></i>
                                             <span class="text-sm text-slate-300 font-medium hover:text-vrg-accent transition-colors">${stage.name}</span>
                                             ${statusIcon}
                                             <span class="text-xs text-slate-500">(${stage.track_name || 'Tracciato'})</span>
                                         </div>
-                                        <button onclick="event.stopPropagation(); openStageResults(${stage.id}, ${stage.has_results})" class="text-xs text-slate-400 hover:text-vrg-accent transition-colors px-2 py-1 bg-slate-800/50 rounded border border-slate-700 hover:border-vrg-accent" title="Visualizza/Gestisci Risultati">
+                                        <button onclick="event.stopPropagation(); openStageResults(${stage.id})" class="text-xs text-slate-400 hover:text-vrg-accent transition-colors px-2 py-1 bg-slate-800/50 rounded border border-slate-700 hover:border-vrg-accent" title="Visualizza/Gestisci Risultati">
                                             <i class="fa-solid fa-list-ol"></i> Risultati
                                         </button>
                                     </div>
@@ -420,7 +426,8 @@
             document.getElementById('input-stage-leg-id').value = legId;
             openModal('modal-stage');
         }
-        async function openStageResults(stageId, hasResults = false) {
+
+        async function openStageResults(stageId) {
             let stageName = 'Stage';
             if (treeData && treeData.rallies) {
                 for (const rally of treeData.rallies) {
@@ -438,40 +445,92 @@
             document.getElementById('input-risultati-stage-id').value = stageId;
             document.getElementById('modal-risultati-title').textContent = stageName;
             document.getElementById('risultati-tbody').innerHTML = '';
-            
-            // Gestione UI Admin vs Utente
+
+            // Controlli admin
             const adminControls = document.getElementById('ocr-container');
-            const btnSalva = document.getElementById('btn-salva-risultati');
+            const btnSaveDraft = document.getElementById('btn-save-draft');
+            const btnPublish = document.getElementById('btn-publish');
             const btnAddPilota = document.getElementById('btn-add-pilota');
 
             if (isAdmin) {
                 adminControls.classList.remove('hidden');
-                btnSalva.classList.remove('hidden');
+                btnSaveDraft.classList.remove('hidden');
+                btnPublish.classList.remove('hidden');
                 btnAddPilota.classList.remove('hidden');
             } else {
                 adminControls.classList.add('hidden');
-                btnSalva.classList.add('hidden');
+                btnSaveDraft.classList.add('hidden');
+                btnPublish.classList.add('hidden');
                 btnAddPilota.classList.add('hidden');
             }
 
             openModal('modal-risultati');
 
+            // Caricamento dati (bozza per admin, ufficiale per tutti)
+            let data = [];
+            let mode = 'empty';
             try {
-                const res = await apiCall(`/stage-results/${stageId}`);
-                if (res.success && res.data.length > 0) {
-                    res.data.forEach(r => addResultRow(r, !isAdmin)); // Passiamo !isAdmin come flag "readOnly"
+                if (isAdmin) {
+                    const draftRes = await apiCall(`/stage-results/${stageId}/draft`);
+                    if (draftRes.success && draftRes.data.length > 0) {
+                        data = draftRes.data; mode = 'draft';
+                    } else {
+                        const offRes = await apiCall(`/stage-results/${stageId}`);
+                        if (offRes.success && offRes.data.length > 0) {
+                            data = offRes.data; mode = 'official';
+                        }
+                    }
                 } else {
-                    if (isAdmin) addResultRow(); // Riga vuota solo se admin
-                    else document.getElementById('risultati-tbody').innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-500">Nessun risultato caricato per questo stage.</td></tr>`;
+                    const offRes = await apiCall(`/stage-results/${stageId}`);
+                    if (offRes.success && offRes.data.length > 0) {
+                        data = offRes.data; mode = 'official';
+                    }
                 }
-            } catch(e) { console.error(e); }
+            } catch (e) {
+                console.error(e);
+            }
+
+            // Popola tabella
+            if (data.length > 0) {
+                data.forEach(r => addResultRow(r, !isAdmin));
+            } else if (isAdmin) {
+                addResultRow();
+            } else {
+                document.getElementById('risultati-tbody').innerHTML =
+                    `<tr><td colspan="6" class="text-center py-6 text-slate-500">Nessun risultato pubblicato per questo stage.</td></tr>`;
+            }
+
+            // Banner stato
+            const banner = document.getElementById('results-status-banner');
+            banner.classList.remove('hidden');
+            if (mode === 'draft') {
+                banner.className = "mb-3 px-3 py-2 rounded text-sm bg-yellow-900/40 text-yellow-300 border border-yellow-700";
+                banner.textContent = "BOZZA — non visibile al pubblico finché non premi Pubblica.";
+            } else if (mode === 'official') {
+                banner.className = "mb-3 px-3 py-2 rounded text-sm bg-green-900/40 text-green-300 border border-green-700";
+                banner.textContent = "Risultati ufficiali pubblicati.";
+            } else {
+                banner.className = "mb-3 px-3 py-2 rounded text-sm bg-slate-800 text-slate-400 border border-slate-700";
+                banner.textContent = "Nessun risultato.";
+            }
+
+            // Abilita Pubblica solo se c'è una bozza
+            if (isAdmin) {
+                if (mode === 'draft') {
+                    btnPublish.disabled = false;
+                    btnPublish.classList.remove('opacity-50', 'cursor-not-allowed');
+                } else {
+                    btnPublish.disabled = true;
+                    btnPublish.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            }
         }
 
         function addResultRow(data = {}, readOnly = false) {
             const tbody = document.getElementById('risultati-tbody');
             const tr = document.createElement('tr');
             tr.className = "border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors";
-            
+
             const pos = tbody.children.length + 1;
             const disableAttr = readOnly ? 'disabled' : '';
 
@@ -488,133 +547,142 @@
             tbody.appendChild(tr);
         }
 
-async function handleOcrUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+        async function handleOcrUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
 
-    const statusEl = document.getElementById('ocr-status');
-    const btnUpload = document.getElementById('btn-upload-ocr');
-    
-    // UI Loading
-    btnUpload.disabled = true;
-    btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Analisi in corso...';
-    statusEl.textContent = "L'AI sta leggendo lo screen...";
-    statusEl.className = "text-xs text-vrg-accent animate-pulse";
+            const statusEl = document.getElementById('ocr-status');
+            const btnUpload = document.getElementById('btn-upload-ocr');
 
-    const formData = new FormData();
-    formData.append('screenshot', file);
+            btnUpload.disabled = true;
+            btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Analisi in corso...';
+            statusEl.textContent = "L'AI sta leggendo lo screen...";
+            statusEl.className = "text-xs text-vrg-accent animate-pulse";
 
-    try {
-        // ATTENZIONE: Usiamo fetch diretto, NON apiCall (che invia JSON)
-        const response = await fetch('https://acr-backend-wv98.onrender.com/api/upload', {
-            method: 'POST',
-            body: formData
-            // Nota: Non aggiungiamo l'header Authorization perché nel tuo app.py originale la rotta /api/upload non ha @admin_required
-        });
-
-        const data = await response.json();
-
-        if (data.success && data.parsed_data) {
-            // Svuota la tabella attuale
-            document.getElementById('risultati-tbody').innerHTML = '';
-            
-                        // Inserisci i dati estratti dall'AI
-            if (data.parsed_data.length === 0) {
-                statusEl.textContent = "Nessun dato riconosciuto. Riprova con un'immagine più nitida.";
-                statusEl.className = "text-xs text-red-400";
-                addResultRow(); // Aggiungi riga vuota
-            } else {
-                data.parsed_data.forEach(r => {
-                    addResultRow({
-                        driver_name: r.driver,
-                        car_model: r.car,
-                        time_str: r.time,
-                        penalty: r.penalty,
-                        position: r.position
-                    });
-                });
-                statusEl.textContent = `Trovati ${data.parsed_data.length} piloti!`;
-                statusEl.className = "text-xs text-green-400";
-            }
-            
-            // (Opzionale) Se l'AI estrae il nome del tracciato, potresti aggiornare il nome dello stage qui
-        } else {
-            statusEl.textContent = "Errore AI: " + (data.error || "Sconosciuto");
-            statusEl.className = "text-xs text-red-400";
-        }
-    } catch (error) {
-        console.error(error);
-        statusEl.textContent = "Errore di connessione al server.";
-        statusEl.className = "text-xs text-red-400";
-    } finally {
-        btnUpload.disabled = false;
-        btnUpload.innerHTML = '<i class="fa-solid fa-camera"></i> Carica Screenshot (OCR)';
-        event.target.value = ''; // Resetta l'input file
-    }
-}
-
-function updateRowPositions() {
-    const rows = document.querySelectorAll('#risultati-tbody tr');
-    rows.forEach((tr, index) => {
-        tr.querySelector('.pos-col').textContent = index + 1;
-    });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const btnSalvaRisultati = document.getElementById('btn-salva-risultati');
-    if(btnSalvaRisultati) {
-        btnSalvaRisultati.addEventListener('click', async () => {
-            const stageId = parseInt(document.getElementById('input-risultati-stage-id').value);
-            const tbody = document.getElementById('risultati-tbody');
-            const rows = tbody.querySelectorAll('tr');
-            
-            const results = [];
-            rows.forEach((tr, index) => {
-                const driver = tr.querySelector('.driver-input').value.trim();
-                const car = tr.querySelector('.car-input').value.trim();
-                const time = tr.querySelector('.time-input').value.trim();
-                const penalty = tr.querySelector('.penalty-input').value.trim();
-                
-                if(driver && time) {
-                    results.push({
-                        position: index + 1,
-                        driver: driver,
-                        car: car,
-                        time: time,
-                        penalty: penalty
-                    });
-                }
-            });
-
-            if(results.length === 0) return alert("Inserisci almeno un pilota con il tempo.");
-            
-            btnSalvaRisultati.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvataggio...';
-            btnSalvaRisultati.disabled = true;
+            const formData = new FormData();
+            formData.append('screenshot', file);
 
             try {
-                const res = await apiCall('/save-stage', 'POST', {
-                    stage_id: stageId,
-                    stage_name: "Update",
-                    results: results
+                const response = await fetch('https://acr-backend-wv98.onrender.com/api/upload', {
+                    method: 'POST',
+                    body: formData
                 });
-                if(res.success) {
-                    closeModal('modal-risultati');
-                    // Notifica di successo con un mini toast (o alert classico)
-                    alert("Risultati salvati con successo!");
+
+                const data = await response.json();
+
+                if (data.success && data.parsed_data) {
+                    document.getElementById('risultati-tbody').innerHTML = '';
+
+                    if (data.parsed_data.length === 0) {
+                        statusEl.textContent = "Nessun dato riconosciuto. Riprova con un'immagine più nitida.";
+                        statusEl.className = "text-xs text-red-400";
+                        addResultRow();
+                    } else {
+                        data.parsed_data.forEach(r => {
+                            addResultRow({
+                                driver_name: r.driver,
+                                car_model: r.car,
+                                time_str: r.time,
+                                penalty: r.penalty,
+                                position: r.position
+                            });
+                        });
+                        statusEl.textContent = `Trovati ${data.parsed_data.length} piloti!`;
+                        statusEl.className = "text-xs text-green-400";
+                    }
                 } else {
-                    alert("Errore: " + res.error);
-                }            
-            } catch(e) {
-                // Sostituisci "Errore di connessione. Vedi console." con questo:
-                alert("Errore durante il salvataggio: " + e.message);
-                console.error("Dettaglio errore:", e);
+                    statusEl.textContent = "Errore AI: " + (data.error || "Sconosciuto");
+                    statusEl.className = "text-xs text-red-400";
+                }
+            } catch (error) {
+                console.error(error);
+                statusEl.textContent = "Errore di connessione al server.";
+                statusEl.className = "text-xs text-red-400";
             } finally {
-                btnSalvaRisultati.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salva Risultati';
-                btnSalvaRisultati.disabled = false;
+                btnUpload.disabled = false;
+                btnUpload.innerHTML = '<i class="fa-solid fa-camera"></i> Carica Screenshot (OCR)';
+                event.target.value = '';
+            }
+        }
+
+        function updateRowPositions() {
+            const rows = document.querySelectorAll('#risultati-tbody tr');
+            rows.forEach((tr, index) => {
+                tr.querySelector('.pos-col').textContent = index + 1;
+            });
+        }
+
+        // Handler pulsanti Salva bozza / Pubblica
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnSaveDraft = document.getElementById('btn-save-draft');
+            const btnPublish = document.getElementById('btn-publish');
+
+            if (btnSaveDraft) {
+                btnSaveDraft.addEventListener('click', async () => {
+                    const stageId = parseInt(document.getElementById('input-risultati-stage-id').value);
+                    const rows = document.querySelectorAll('#risultati-tbody tr');
+                    const results = [];
+                    rows.forEach((tr, index) => {
+                        const driver = tr.querySelector('.driver-input')?.value.trim();
+                        const car = tr.querySelector('.car-input')?.value.trim();
+                        const time = tr.querySelector('.time-input')?.value.trim();
+                        const penalty = tr.querySelector('.penalty-input')?.value.trim();
+                        if (driver && time) {
+                            results.push({ position: index + 1, driver, car, time, penalty });
+                        }
+                    });
+
+                    if (results.length === 0) return alert("Inserisci almeno un pilota con il tempo.");
+
+                    btnSaveDraft.disabled = true;
+                    btnSaveDraft.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvataggio...';
+                    try {
+                        const res = await apiCall('/save-stage', 'POST', {
+                            stage_id: stageId,
+                            stage_name: "Update",
+                            results: results
+                        });
+                        if (res.success) {
+                            await loadTree();
+                            await openStageResults(stageId);
+                        } else {
+                            alert("Errore: " + res.error);
+                        }
+                    } catch (e) {
+                        alert("Errore durante il salvataggio: " + e.message);
+                        console.error("Dettaglio errore:", e);
+                    } finally {
+                        btnSaveDraft.disabled = false;
+                        btnSaveDraft.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salva bozza';
+                    }
+                });
+            }
+
+            if (btnPublish) {
+                btnPublish.addEventListener('click', async () => {
+                    const stageId = parseInt(document.getElementById('input-risultati-stage-id').value);
+                    if (!confirm("Pubblicare i risultati? Diventeranno visibili a tutti e sostituiranno gli eventuali ufficiali precedenti.")) return;
+
+                    btnPublish.disabled = true;
+                    btnPublish.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Pubblicazione...';
+                    try {
+                        const res = await apiCall(`/publish-stage/${stageId}`, 'POST', {});
+                        if (res.success) {
+                            await loadTree();
+                            await openStageResults(stageId);
+                        } else {
+                            alert("Errore: " + res.error);
+                        }
+                    } catch (e) {
+                        alert("Errore durante la pubblicazione: " + e.message);
+                        console.error("Dettaglio errore:", e);
+                    } finally {
+                        btnPublish.disabled = false;
+                        btnPublish.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Pubblica';
+                    }
+                });
             }
         });
-    }
-});
 
         async function viewStandings(type, id) {
             const titleMap = {
@@ -623,11 +691,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 'championship': 'Classifica Campionato'
             };
             document.getElementById('standings-title').textContent = titleMap[type] || 'Classifica';
-            
+
             const tbody = document.getElementById('standings-tbody');
             const thead = document.querySelector('#modal-standings thead tr');
-            
-            // Costruisci le colonne in base al tipo
+
             if (type === 'rally') {
                 thead.innerHTML = `
                     <th class="px-4 py-3 w-16">Pos</th>
@@ -654,7 +721,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     res.data.forEach(r => {
                         const statusColor = r.status !== 'completed' ? 'text-red-400' : 'text-slate-300';
                         const statusBadge = r.status !== 'completed' ? `<span class="text-[10px] bg-red-900/50 text-red-400 px-2 py-0.5 rounded ml-2">${r.status.toUpperCase()}</span>` : '';
-                        
+
                         let lastCol = '';
                         if (type === 'rally') {
                             lastCol = `<td class="px-4 py-2 font-bold text-vrg-accent">${r.points} pt</td>`;
