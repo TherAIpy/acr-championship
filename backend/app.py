@@ -386,6 +386,16 @@ def save_stage():
                     "name": payload.stage_name,
                     "track_name": payload.track_name or 'Sconosciuto' # Evita NULL
                 }).eq('id', stage_id).execute()
+
+            # Prossima version = max esistente + 1 (contando sia ufficiali che bozze correnti)
+            ver_res = (
+                    supabase.table('stage_result').select('version')
+                    .eq('stage_id', stage_id)
+                    .order('version', desc=True)
+                    .limit(1)
+                    .execute()
+                    )
+            next_version = (ver_res.data[0]['version'] + 1) if ver_res.data else 1
                 
             supabase.table('stage_result').delete().eq('stage_id', stage_id).eq('is_official', False).execute()
         else:
@@ -397,6 +407,7 @@ def save_stage():
                 "track_name": payload.track_name or 'Sconosciuto'
             }).execute()
             stage_id = stage_res.data[0]['id']
+            next_version = 1
 
         # 3. Inserimento Risultati
         if payload.results:
@@ -431,7 +442,7 @@ def save_stage():
                     "penalty_sec": p_sec,
                     "status": "completed",
                     "is_official": False,
-                    "version": 1
+                    "version": next_version
                 })
             supabase.table('stage_result').insert(insert_data).execute()
 
@@ -496,7 +507,12 @@ def get_standings(type, id):
     try:
         # Funzione di supporto per calcolare i tempi (con regola DNF)
         def calculate_times(stage_ids):
-            results = supabase.table('stage_result').select('*').in_('stage_id', stage_ids).execute().data
+            results = (
+                        supabase.table('stage_result').select('*')
+                        .in_('stage_id', stage_ids)
+                        .eq('is_official', True)
+                        .execute().data
+                    )
             if not results: return []
             
             driver_totals = {}
@@ -541,7 +557,13 @@ def get_standings(type, id):
 
         if type == 'stage':
             # Logica per singolo stage
-            res = supabase.table('stage_result').select('*').eq('stage_id', id).order('position').execute()
+            res = (
+                    supabase.table('stage_result').select('*')
+                    .eq('stage_id', id)
+                    .eq('is_official', True)
+                    .order('position')
+                    .execute()
+                )
             return jsonify({"success": True, "data": res.data}), 200
 
         elif type == 'leg':
