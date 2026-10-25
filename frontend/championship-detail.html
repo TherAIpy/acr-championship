@@ -56,6 +56,11 @@
                 <h1 id="header-title" class="text-2xl font-bold text-white flex items-center gap-2">
                     <i class="fa-solid fa-spinner fa-spin text-vrg-accent"></i> Caricamento...
                 </h1>
+                <button id="btn-discord-championship"
+            class="hidden text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-colors"
+            title="Pubblica la classifica campionato su Discord">
+            <i class="fa-brands fa-discord"></i> Pubblica classifica
+                </button>
             </div>
             <div id="user-controls" class="flex items-center gap-4">
                 <!-- Popolato da JS -->
@@ -199,6 +204,41 @@
         </div>
     </div>
 
+    <!-- MODALE PUBBLICAZIONE DISCORD -->
+    <div id="modal-discord" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-vrg-card p-6 rounded-xl w-full max-w-lg border border-slate-700 shadow-2xl flex flex-col">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fa-brands fa-discord text-indigo-400"></i>
+                <span id="discord-modal-title">Pubblica su Discord</span>
+            </h2>
+
+            <div id="discord-modal-banner" class="hidden mb-3 px-3 py-2 rounded text-sm"></div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs uppercase tracking-wider text-slate-500 mb-1 block">Webhook URL</label>
+                    <input id="discord-webhook-input" type="text" placeholder="https://discord.com/api/webhooks/..."
+                        class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-vrg-accent">
+                    <p id="discord-webhook-hint" class="text-xs text-slate-500 mt-1">Precompilato dal rally se configurato. Modificabile.</p>
+                </div>
+
+                <div>
+                    <label class="text-xs uppercase tracking-wider text-slate-500 mb-1 block">Thread ID (opzionale)</label>
+                    <input id="discord-thread-input" type="text" placeholder="Lasciare vuoto per pubblicare nel canale principale"
+                        class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-vrg-accent">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-700">
+                <button onclick="closeModal('modal-discord')" class="px-5 py-2 rounded-lg text-sm text-slate-300 hover:text-white transition-colors">Annulla</button>
+                <button id="btn-discord-confirm"
+                    class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors">
+                        <i class="fa-brands fa-discord"></i> Pubblica
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase.js"></script>
     <script src="js/api.js"></script>
@@ -304,6 +344,16 @@
                 if (isAdmin) btnAddRally.classList.remove('hidden');
                 else btnAddRally.classList.add('hidden');
 
+                const btnDiscordChamp = document.getElementById('btn-discord-championship');
+                if (btnDiscordChamp) {
+                if (isAdmin) {
+                    btnDiscordChamp.classList.remove('hidden');
+                    btnDiscordChamp.onclick = () => openDiscordPublish('championship', parseInt(champId), treeData?.championship?.name || 'Campionato');
+                } else {
+                    btnDiscordChamp.classList.add('hidden');
+            }
+        }
+
                 renderTree();
             } catch (e) {
                 container.innerHTML = `<div class="text-red-400 p-4 bg-red-900/20 rounded-lg">Errore: ${e.message}</div>`;
@@ -328,6 +378,9 @@
                     : '';
 
                 const rallyStandingsBtn = `<button onclick="event.stopPropagation(); viewStandings('rally', ${rally.id})" class="text-xs bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-ranking-star text-vrg-accent"></i> Classifica Rally</button>`;
+                const rallyDiscordBtn = isAdmin
+                ? `<button onclick="event.stopPropagation(); openDiscordPublish('rally', ${rally.id}, ${JSON.stringify(rally.name)})" class="text-xs bg-indigo-900/40 border border-indigo-700 hover:bg-indigo-800 text-indigo-300 px-2 py-1 rounded ml-1 transition-colors" title="Pubblica classifica su Discord"><i class="fa-brands fa-discord"></i></button>`
+                : '';
 
                 let innerHtml = `
                     <div class="flex items-center justify-between p-4 bg-slate-800/50 cursor-pointer" onclick="toggleVisibility('rally-body-${rally.id}')">
@@ -336,7 +389,7 @@
                             <i class="fa-solid fa-flag-checkered text-vrg-accent"></i>
                             <span class="font-bold text-white text-lg">${rally.name}</span>
                         </div>
-                        <div>${adminLegBtn} ${rallyStandingsBtn}</div>
+                        <div>${adminLegBtn} ${rallyStandingsBtn} ${rallyDiscordBtn}</div>
                     </div>
                     <div id="rally-body-${rally.id}" class="p-2 space-y-2">
                 `;
@@ -349,6 +402,9 @@
                             ? `<button onclick="event.stopPropagation(); openAddStage(${leg.id})" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded mr-2 transition-colors"><i class="fa-solid fa-plus"></i> Stage</button>`
                             : '';
                         const legStandingsBtn = `<button onclick="event.stopPropagation(); viewStandings('leg', ${leg.id})" class="text-xs bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-stopwatch text-vrg-accent"></i> Tempi Leg</button>`;
+                        const legDiscordBtn = isAdmin
+                        ? `<button onclick="event.stopPropagation(); openDiscordPublish('leg', ${leg.id}, ${JSON.stringify(leg.name)})" class="text-xs bg-indigo-900/40 border border-indigo-700 hover:bg-indigo-800 text-indigo-300 px-2 py-1 rounded ml-1 transition-colors" title="Pubblica classifica leg su Discord"><i class="fa-brands fa-discord"></i></button>`
+                        : '';
 
                         innerHtml += `
                             <div class="ml-4 border-l border-slate-700 pl-4">
@@ -358,7 +414,7 @@
                                         <i class="fa-solid fa-road text-slate-300"></i>
                                         <span class="font-semibold text-slate-200">${leg.name}</span>
                                     </div>
-                                    <div>${adminStageBtn} ${legStandingsBtn}</div>
+                                    <div>${adminStageBtn} ${legStandingsBtn} ${legDiscordBtn}</div>
                                 </div>
                                 <div id="leg-body-${leg.id}" class="ml-6 space-y-1 pb-2">
                         `;
@@ -389,9 +445,14 @@
                                             ${statusIcon}
                                             <span class="text-xs text-slate-500">(${stage.track_name || 'Tracciato'})</span>
                                         </div>
-                                        <button onclick="event.stopPropagation(); openStageResults(${stage.id})" class="text-xs text-slate-400 hover:text-vrg-accent transition-colors px-2 py-1 bg-slate-800/50 rounded border border-slate-700 hover:border-vrg-accent" title="Visualizza/Gestisci Risultati">
-                                            <i class="fa-solid fa-list-ol"></i> Risultati
-                                        </button>
+                                        <div class="flex items-center gap-1">
+                                            <button onclick="event.stopPropagation(); openStageResults(${stage.id})" class="text-xs text-slate-400 hover:text-vrg-accent transition-colors px-2 py-1 bg-slate-800/50 rounded border border-slate-700 hover:border-vrg-accent" title="Visualizza/Gestisci Risultati">
+                                                <i class="fa-solid fa-list-ol"></i> Risultati
+                                            </button>
+                                            ${isAdmin && hasOfficial
+                                            ? `<button onclick="event.stopPropagation(); openDiscordPublish('stage', ${stage.id}, ${JSON.stringify(stage.name)})" class="text-xs bg-indigo-900/40 border border-indigo-700 hover:bg-indigo-800 text-indigo-300 px-2 py-1 rounded transition-colors" title="Pubblica risultati stage su Discord"><i class="fa-brands fa-discord"></i></button>`
+                                            : ''}
+                                        </div>
                                     </div>
                                 `;
                             });
@@ -679,6 +740,125 @@
                     } finally {
                         btnPublish.disabled = false;
                         btnPublish.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Pubblica';
+                    }
+                });
+            }
+        });
+
+        // =========================================================
+        // DISCORD PUBLISH
+        // =========================================================
+        let discordCurrent = { entityType: null, entityId: null, entityName: null, published: false };
+
+        async function openDiscordPublish(entityType, entityId, entityName) {
+            discordCurrent = { entityType, entityId, entityName, published: false };
+
+            const titleMap = {
+                'stage': 'Pubblica stage su Discord',
+                'leg': 'Pubblica classifica leg su Discord',
+                'rally': 'Pubblica classifica rally su Discord',
+                'championship': 'Pubblica classifica campionato su Discord'
+            };
+            document.getElementById('discord-modal-title').textContent = titleMap[entityType] || 'Pubblica su Discord';
+
+            const webhookInput = document.getElementById('discord-webhook-input');
+            const threadInput = document.getElementById('discord-thread-input');
+            const banner = document.getElementById('discord-modal-banner');
+            const confirmBtn = document.getElementById('btn-discord-confirm');
+
+            webhookInput.value = '';
+            threadInput.value = '';
+            banner.classList.add('hidden');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Caricamento...';
+
+            openModal('modal-discord');
+
+            try {
+                const status = await apiCall(`/discord/status/${entityType}/${entityId}`);
+
+             if (status.success) {
+                    if (status.suggested_webhook) {
+                        webhookInput.value = status.suggested_webhook;
+                    }
+
+                    discordCurrent.published = status.published === true;
+
+                    if (status.published) {
+                        banner.classList.remove('hidden');
+                        banner.className = "mb-3 px-3 py-2 rounded text-sm bg-yellow-900/40 text-yellow-300 border border-yellow-700";
+                        banner.textContent = "Già pubblicato su questo webhook. Il messaggio esistente verrà aggiornato (non duplicato).";
+                        confirmBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> Aggiorna su Discord';
+                    } else if (status.reason === 'no_webhook') {
+                        banner.classList.remove('hidden');
+                        banner.className = "mb-3 px-3 py-2 rounded text-sm bg-slate-800 text-slate-400 border border-slate-700";
+                        banner.textContent = "Nessun webhook configurato sul rally. Incolla un webhook per pubblicare.";
+                        confirmBtn.innerHTML = '<i class="fa-brands fa-discord"></i> Pubblica';
+                    } else {
+                        confirmBtn.innerHTML = '<i class="fa-brands fa-discord"></i> Pubblica';
+                    }
+                }
+            } catch (e) {
+                banner.classList.remove('hidden');
+                banner.className = "mb-3 px-3 py-2 rounded text-sm bg-red-900/40 text-red-300 border border-red-700";
+                banner.textContent = "Errore nel caricamento stato: " + e.message;
+            } finally {
+                confirmBtn.disabled = false;
+                updateDiscordConfirmState();
+            }
+        }
+
+        function updateDiscordConfirmState() {
+            const webhookInput = document.getElementById('discord-webhook-input');
+            const confirmBtn = document.getElementById('btn-discord-confirm');
+            confirmBtn.disabled = !webhookInput.value.trim();
+        }
+
+        // Abilita/disabilita il pulsante in base al contenuto del webhook
+        document.addEventListener('DOMContentLoaded', () => {
+            const webhookInput = document.getElementById('discord-webhook-input');
+            if (webhookInput) {
+                webhookInput.addEventListener('input', updateDiscordConfirmState);
+            }
+
+            const confirmBtn = document.getElementById('btn-discord-confirm');
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', async () => {
+                    const webhook_url = document.getElementById('discord-webhook-input').value.trim();
+                    const thread_id = document.getElementById('discord-thread-input').value.trim();
+                    if (!webhook_url) return alert("Inserisci un webhook URL.");
+
+                    const labelPubblicazione = discordCurrent.published ? "aggiornato" : "pubblicato";
+                    const { entityType, entityId } = discordCurrent;
+
+                    confirmBtn.disabled = true;
+                    confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Invio...';
+
+                    try {
+                        const body = { webhook_url };
+                        if (thread_id) body.thread_id = thread_id;
+
+                        const res = await apiCall(`/discord/publish/${entityType}/${entityId}`, 'POST', body);
+                        if (res.success) {
+                            const action = res.action;
+                            if (action === 'recreated') {
+                                alert("Il messaggio originale non esisteva più su Discord. Ne è stato creato uno nuovo.");
+                            } else {
+                                alert(`Messaggio ${labelPubblicazione} su Discord.`);
+                            }
+                            closeModal('modal-discord');
+                        } else {
+                            alert("Errore: " + (res.error || "sconosciuto"));
+                        }
+                    } catch (e) {
+                        alert("Errore durante l'invio: " + e.message);
+                        console.error(e);
+                    } finally {
+                        confirmBtn.disabled = false;
+                        confirmBtn.innerHTML = discordCurrent.published
+                            ? '<i class="fa-solid fa-rotate"></i> Aggiorna su Discord'
+                            : '<i class="fa-brands fa-discord"></i> Pubblica';
+                        updateDiscordConfirmState();
                     }
                 });
             }

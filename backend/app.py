@@ -53,6 +53,128 @@ def ms_to_time_str(ms):
     milliseconds = ms % 1000
     return f"{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
 
+import requests
+from urllib.parse import urlparse
+
+# =============================================================================
+# DISCORD HELPERS
+# =============================================================================
+DISCORD_API_BASE = "https://discord.com/api/v10"
+
+def _parse_webhook_id(webhook_url: str) -> str:
+    """Estrae l'ID del webhook dall'URL Discord.
+    Es: https://discord.com/api/webhooks/1234567890/abcdef → '1234567890'"""
+    if not webhook_url:
+        return ""
+    try:
+        m = re.search(r'/webhooks/(\d+)/', webhook_url)
+        return m.group(1) if m else ""
+    except Exception:
+        return ""
+
+def _send_discord_message(webhook_url: str, embed: dict, thread_id: str = None) -> dict:
+    """Invia un nuovo messaggio via webhook.
+    Restituisce {'ok': True, 'message_id': str} oppure {'ok': False, 'error': str}."""
+    if not webhook_url:
+        return {"ok": False, "error": "webhook_url vuoto"}
+
+    url = webhook_url
+    params = {"wait": "true"}          # fondamentale: senza wait, Discord non restituisce l'ID
+    if thread_id:
+        params["thread_id"] = thread_id
+
+    payload = {"embeds": [embed]}
+
+    try:
+        r = requests.post(url, params=params, json=payload, timeout=10)
+        if r.status_code in (200, 204):
+            data = r.json() if r.text else {}
+            return {"ok": True, "message_id": str(data.get("id", ""))}
+        return {"ok": False, "error": f"HTTP {r.status_code}: {r.text[:200]}"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+def _edit_discord_message(webhook_url: str, message_id: str, embed: dict, thread_id: str = None) -> dict:
+    """Modifica un messaggio esistente inviato dallo stesso webhook."""
+    if not webhook_url or not message_id:
+        return {"ok": False, "error": "webhook_url o message_id mancante"}
+
+    url = f"{webhook_url.rstrip('/')}/messages/{message_id}"
+    params = {}
+    if thread_id:
+        params["thread_id"] = thread_id
+
+    payload = {"embeds": [embed]}
+
+    try:
+        r = requests.patch(url, params=params or None, json=payload, timeout=10)
+        if r.status_code in (200, 204):
+            return {"ok": True}
+        # Se il messaggio è stato cancellato a mano su Discord, lo trattiamo come "da ricreare"
+        if r.status_code == 404:
+            return {"ok": False, "error": "message_not_found", "code": 404}
+        return {"ok": False, "error": f"HTTP {r.status_code}: {r.text[:200]}"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+def _upsert_discord_message(entity_type: str, entity_id: int, webhook_url: str,
+                            embed: dict, thread_id: str = None) -> dict:
+    """Logica POST vs PATCH:
+       - se esiste già un record (entity_type, entity_id, webhook_id): PATCH
+       - altrimenti: POST e salva il message_id
+       - se il PATCH fallisce con 404 (messaggio cancellato): ricrea con POST
+    Restituisce {'ok': bool, 'action': 'created'|'updated'|'recreated', 'message_id': str}."""
+    webhook_id = _parse_webhook_id(webhook_url)
+    if not webhook_id:
+        return {"ok": False, "error": "webhook_url non valido"}
+
+    supabase = get_supabase()
+
+    existing = (
+        supabase.table('discord_publish_log')
+        .select('id, message_id')
+        .eq('entity_type', entity_type)
+        .eq('entity_id', entity_id)
+        .eq('webhook_id', webhook_id)
+        .execute()
+    ).data
+
+    if existing:
+        message_id = existing[0]['message_id']
+        edit = _edit_discord_message(webhook_url, message_id, embed, thread_id)
+        if edit['ok']:
+            supabase.table('discord_publish_log').update({
+                "updated_at": datetime.utcnow().isoformat()
+            }).eq('id', existing[0]['id']).execute()
+            return {"ok": True, "action": "updated", "message_id": message_id}
+
+        if edit.get('code') == 404:
+            # Il messaggio non esiste più su Discord: lo ricreiamo
+            sent = _send_discord_message(webhook_url, embed, thread_id)
+            if not sent['ok']:
+                return {"ok": False, "error": sent['error']}
+            supabase.table('discord_publish_log').update({
+                "message_id": sent['message_id'],
+                "updated_at": datetime.utcnow().isoformat()
+            }).eq('id', existing[0]['id']).execute()
+            return {"ok": True, "action": "recreated", "message_id": sent['message_id']}
+
+        return {"ok": False, "error": edit['error']}
+
+    # Primo invio
+    sent = _send_discord_message(webhook_url, embed, thread_id)
+    if not sent['ok']:
+        return {"ok": False, "error": sent['error']}
+
+    supabase.table('discord_publish_log').insert({
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "webhook_id": webhook_id,
+        "message_id": sent['message_id']
+    }).execute()
+
+    return {"ok": True, "action": "created", "message_id": sent['message_id']}
+
 # =============================================================================
 # PARSER OCR
 # =============================================================================
@@ -482,6 +604,316 @@ def publish_stage(stage_id):
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
+
+# =============================================================================
+# DISCORD — COSTRUZIONE CONTENUTI
+# =============================================================================
+def _get_rally_for_entity(entity_type, entity_id):
+    """Risale al rally a partire da stage/leg/rally/championship.
+    Ritorna (rally, leg, stage) con i campi utili, o None in caso di errore."""
+    supabase = get_supabase()
+
+    if entity_type == 'championship':
+        return {"rally": None, "leg": None, "stage": None, "championship_id": entity_id}
+
+    if entity_type == 'rally':
+        rally = supabase.table('rally').select('*').eq('id', entity_id).execute().data
+        if not rally:
+            return None
+        return {"rally": rally[0], "leg": None, "stage": None}
+
+    if entity_type == 'leg':
+        leg = supabase.table('leg').select('*').eq('id', entity_id).execute().data
+        if not leg:
+            return None
+        rally = supabase.table('rally').select('*').eq('id', leg[0]['rally_id']).execute().data
+        return {"rally": rally[0] if rally else None, "leg": leg[0], "stage": None}
+
+    if entity_type == 'stage':
+        stage = supabase.table('stage').select('*').eq('id', entity_id).execute().data
+        if not stage:
+            return None
+        leg = supabase.table('leg').select('*').eq('id', stage[0]['leg_id']).execute().data
+        rally = supabase.table('rally').select('*').eq('id', leg[0]['rally_id']).execute().data if leg else []
+        return {"rally": rally[0] if rally else None, "leg": leg[0] if leg else None, "stage": stage[0]}
+
+    return None
+
+
+def _format_ms(ms):
+    if not ms:
+        return "-"
+    minutes = ms // 60000
+    seconds = (ms % 60000) // 1000
+    millis = ms % 1000
+    return f"{minutes}:{seconds:02d}.{millis:03d}"
+
+
+def _embed_stage(ctx, frontend_base="https://acr-championship.pages.dev"):
+    supabase = get_supabase()
+    stage = ctx['stage']
+    leg = ctx['leg']
+    rally = ctx['rally']
+
+    results = (
+        supabase.table('stage_result').select('*')
+        .eq('stage_id', stage['id']).eq('is_official', True)
+        .order('position').execute().data
+    ) or []
+
+    if not results:
+        return None  # niente da pubblicare
+
+    lines = []
+    for r in results[:15]:  # cap a 15 per non sforare il limite embed (4096 char)
+        t = r.get('time_str') or _format_ms(r.get('time_ms'))
+        pen = r.get('penalty') or ''
+        pen_str = f" ({pen})" if pen and pen != '-' else ''
+        lines.append(f"**{r['position']}.** {r['driver_name']} — `{t}`{pen_str}")
+
+    if len(results) > 15:
+        lines.append(f"... e altri {len(results) - 15} piloti")
+
+    title_parts = [p for p in [rally['name'] if rally else None, leg['name'] if leg else None, stage['name']] if p]
+    title = "🏁 " + " — ".join(title_parts)
+
+    url = f"{frontend_base}/championship-detail.html?id={rally['championship_id']}" if rally else frontend_base
+
+    return {
+        "title": title[:256],
+        "description": "\n".join(lines)[:4000],
+        "color": 0xEAB308,
+        "url": url,
+        "footer": {"text": f"ACR Championship — {stage.get('track_name') or 'Stage'}"}
+    }
+
+
+def _compute_standings_for_stages(stage_ids):
+    """Restituisce la classifica (somma tempi, regola DNF) come lista ordinata.
+    Riusa la stessa logica di /api/standings ma filtrata su is_official=True."""
+    supabase = get_supabase()
+    if not stage_ids:
+        return []
+
+    results = (
+        supabase.table('stage_result').select('*')
+        .in_('stage_id', stage_ids).eq('is_official', True)
+        .execute().data
+    ) or []
+
+    if not results:
+        return []
+
+    stage_max = {}
+    for r in results:
+        if r['status'] == 'completed' and r['time_ms']:
+            sid = r['stage_id']
+            stage_max[sid] = max(stage_max.get(sid, 0), r['time_ms'])
+
+    totals = {}
+    for r in results:
+        drv = r['driver_name']
+        if drv not in totals:
+            totals[drv] = {'time_ms': 0, 'status': 'completed', 'car': r.get('car_model', '')}
+        if r['status'] in ('dnf', 'dns', 'dsq'):
+            totals[drv]['status'] = r['status']
+            last = stage_max.get(r['stage_id'], 300000)
+            totals[drv]['time_ms'] += last * 2
+        elif r['status'] == 'completed':
+            totals[drv]['time_ms'] += (r['time_ms'] or 0)
+
+    standings = [{'driver': k, 'total_ms': v['time_ms'], 'car': v['car'], 'status': v['status']} for k, v in totals.items()]
+    standings.sort(key=lambda x: x['total_ms'])
+
+    prev, pos = -1, 1
+    for i, item in enumerate(standings):
+        if item['total_ms'] == prev:
+            item['position'] = pos
+        else:
+            item['position'] = i + 1
+            pos = item['position']
+        prev = item['total_ms']
+        item['total_str'] = _format_ms(item['total_ms'])
+
+    return standings
+
+
+def _compute_standings_for_leg(leg_id):
+    supabase = get_supabase()
+    stages = supabase.table('stage').select('id').eq('leg_id', leg_id).execute().data or []
+    return _compute_standings_for_stages([s['id'] for s in stages])
+
+
+def _compute_points_for_rally(rally_id, points_system=None):
+    if points_system is None:
+        points_system = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1]
+
+    supabase = get_supabase()
+    legs = supabase.table('leg').select('id').eq('rally_id', rally_id).execute().data or []
+    stage_ids = []
+    for leg in legs:
+        stages = supabase.table('stage').select('id').eq('leg_id', leg['id']).execute().data or []
+        stage_ids.extend([s['id'] for s in stages])
+
+    standings = _compute_standings_for_stages(stage_ids)
+    for s in standings:
+        s['points'] = points_system[s['position'] - 1] if s['position'] <= len(points_system) else 0
+    return standings
+
+
+def _compute_points_for_championship(champ_id, points_system=None):
+    """Somma i punti rally di tutti i rally del campionato, per pilota."""
+    if points_system is None:
+        points_system = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1]
+
+    supabase = get_supabase()
+    rallies = supabase.table('rally').select('id').eq('championship_id', champ_id).execute().data or []
+
+    driver_points = {}
+    for rally in rallies:
+        rally_standings = _compute_points_for_rally(rally['id'], points_system)
+        for s in rally_standings:
+            drv = s['driver']
+            if drv not in driver_points:
+                driver_points[drv] = {'points': 0, 'car': s.get('car', ''), 'races': 0}
+            driver_points[drv]['points'] += s['points']
+            driver_points[drv]['races'] += 1
+
+    out = [{'driver': k, 'points': v['points'], 'car': v['car'], 'races': v['races']} for k, v in driver_points.items()]
+    out.sort(key=lambda x: (-x['points'], x['driver']))
+    for i, item in enumerate(out):
+        item['position'] = i + 1
+    return out
+
+
+def _embed_leg(ctx, frontend_base="https://acr-championship.pages.dev"):
+    standings = _compute_standings_for_leg(ctx['leg']['id'])
+    if not standings:
+        return None
+
+    lines = []
+    for s in standings[:15]:
+        badge = ''
+        if s['status'] != 'completed':
+            badge = f" `{s['status'].upper()}`"
+        lines.append(f"**{s['position']}.** {s['driver']} — `{s['total_str']}`{badge}")
+    if len(standings) > 15:
+        lines.append(f"... e altri {len(standings) - 15} piloti")
+
+    rally = ctx['rally']
+    leg = ctx['leg']
+    title = "⏱️ Classifica Leg — " + (f"{rally['name']} — " if rally else "") + leg['name']
+    url = f"{frontend_base}/championship-detail.html?id={rally['championship_id']}" if rally else frontend_base
+
+    return {
+        "title": title[:256],
+        "description": "\n".join(lines)[:4000],
+        "color": 0x3B82F6,
+        "url": url,
+        "footer": {"text": f"ACR Championship — aggiornato"}
+    }
+
+
+def _embed_rally(ctx, frontend_base="https://acr-championship.pages.dev"):
+    standings = _compute_points_for_rally(ctx['rally']['id'])
+    if not standings:
+        return None
+
+    lines = []
+    for s in standings[:15]:
+        lines.append(f"**{s['position']}.** {s['driver']} — `{s['points']} pt`")
+    if len(standings) > 15:
+        lines.append(f"... e altri {len(standings) - 15} piloti")
+
+    rally = ctx['rally']
+    title = "🏆 Classifica Rally — " + rally['name']
+    url = f"{frontend_base}/championship-detail.html?id={rally['championship_id']}"
+
+    return {
+        "title": title[:256],
+        "description": "\n".join(lines)[:4000],
+        "color": 0x22C55E,
+        "url": url,
+        "footer": {"text": "ACR Championship — aggiornato"}
+    }
+
+
+def _embed_championship(ctx, frontend_base="https://acr-championship.pages.dev"):
+    champ_id = ctx['championship_id']
+    supabase = get_supabase()
+    champ = supabase.table('championship').select('name').eq('id', champ_id).execute().data
+    champ_name = champ[0]['name'] if champ else f"Campionato #{champ_id}"
+
+    standings = _compute_points_for_championship(champ_id)
+    if not standings:
+        return None
+
+    lines = []
+    for s in standings[:20]:
+        lines.append(f"**{s['position']}.** {s['driver']} — `{s['points']} pt` ({s['races']} rally)")
+    if len(standings) > 20:
+        lines.append(f"... e altri {len(standings) - 20} piloti")
+
+    return {
+        "title": f"👑 Classifica Campionato — {champ_name}"[:256],
+        "description": "\n".join(lines)[:4000],
+        "color": 0xF59E0B,
+        "url": f"{frontend_base}/championship-detail.html?id={champ_id}",
+        "footer": {"text": "ACR Championship — aggiornato"}
+    }
+
+# =============================================================================
+# DISCORD — ROTTA PUBBLICAZIONE
+# =============================================================================
+@app.route('/api/discord/publish/<entity_type>/<int:entity_id>', methods=['POST'])
+@admin_required
+def discord_publish(entity_type, entity_id):
+    if entity_type not in ('stage', 'leg', 'rally', 'championship'):
+        return jsonify({"success": False, "error": "entity_type non valido"}), 400
+
+    body = request.json or {}
+    webhook_url = (body.get('webhook_url') or '').strip()
+    thread_id = (body.get('thread_id') or '').strip() or None
+
+    ctx = _get_rally_for_entity(entity_type, entity_id)
+    if ctx is None:
+        return jsonify({"success": False, "error": "Entità non trovata"}), 404
+
+    # Fallback webhook: se non passato, usa quello del rally
+    if not webhook_url and ctx.get('rally'):
+        webhook_url = (ctx['rally'].get('discord_webhook_url') or '').strip()
+
+    if not webhook_url:
+        return jsonify({
+            "success": False,
+            "error": "webhook_url mancante e nessun webhook configurato sul rally"
+        }), 400
+
+    # Costruzione embed
+    try:
+        if entity_type == 'stage':
+            embed = _embed_stage(ctx)
+        elif entity_type == 'leg':
+            embed = _embed_leg(ctx)
+        elif entity_type == 'rally':
+            embed = _embed_rally(ctx)
+        else:  # championship
+            embed = _embed_championship(ctx)
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Errore costruzione embed: {e}"}), 500
+
+    if embed is None:
+        return jsonify({"success": False, "error": "Nessun dato ufficiale da pubblicare"}), 400
+
+    result = _upsert_discord_message(entity_type, entity_id, webhook_url, embed, thread_id)
+    if not result['ok']:
+        return jsonify({"success": False, "error": result.get('error')}), 502
+
+    return jsonify({
+        "success": True,
+        "action": result.get('action'),
+        "message_id": result.get('message_id')
+    })
 
 @app.route('/api/championships', methods=['GET'])
 def get_championships():
