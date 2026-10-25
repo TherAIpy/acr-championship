@@ -75,9 +75,9 @@
                 </button>
             </div>
 
-        <a href="standings.html?id=${champId}" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors">
-    <i class="fa-solid fa-ranking-star text-vrg-accent"></i> Classifiche
-</a>
+        <a id="btn-public-standings" href="/" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors">
+            <i class="fa-solid fa-ranking-star text-vrg-accent"></i> Classifiche
+        </a>
 
             <!-- AREA ALBERO -->
             <div id="tree-container" class="space-y-4">
@@ -255,30 +255,35 @@
         let isAdmin = false;
 
         document.addEventListener('DOMContentLoaded', async () => {
+            // 1. Controllo Sessione e Admin IN PRIMIS (Prima di fare qualsiasi altra cosa)
+            const { data: { session } } = await supabase.auth.getSession();
+            isAdmin = session?.user?.app_metadata?.role === 'admin';
+
+            // Se non è admin, lo caccio via immediatamente
+            if (!isAdmin) {
+                window.location.href = '/'; // Lo mando alle classifiche pubbliche
+                return; // Fermo l'esecuzione
+            }
+
+            // 2. Ora che so che è admin, controllo se c'è l'ID
             if (!champId) {
                 alert("ID Campionato mancante");
                 window.location.href = 'dashboard.html';
                 return;
             }
 
-            // 1. Sessione e Admin
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                isAdmin = session.user.app_metadata?.role === 'admin';
+            // Imposta il link alle classifiche con l'ID del campionato corretto
+            document.getElementById('btn-public-standings').href = '/?champ=' + champId;
 
-                document.getElementById('user-controls').innerHTML = `
-                    <span class="text-sm text-slate-400 hidden md:block">${session.user.email}</span>
-                    <button onclick="supabase.auth.signOut().then(()=>window.location.href='dashboard.html')" class="text-slate-400 hover:text-red-400 transition-colors" title="Logout">
-                        <i class="fa-solid fa-power-off text-lg"></i>
-                    </button>
-                `;
-            } else {
-                document.getElementById('user-controls').innerHTML = `
-                    <a href="login.html" class="text-sm text-vrg-accent hover:text-white font-bold">Accedi</a>
-                `;
-            }
+            // 3. Aggiorno l'header (Siccome siamo sicuri che è admin, mostro la roba da admin)
+            document.getElementById('user-controls').innerHTML = `
+                <span class="text-sm text-slate-400 hidden md:block">${session.user.email}</span>
+                <button onclick="supabase.auth.signOut().then(()=>window.location.href='dashboard.html')" class="text-slate-400 hover:text-red-400 transition-colors" title="Logout">
+                    <i class="fa-solid fa-power-off text-lg"></i>
+                </button>
+            `;
 
-            // 2. Carica albero
+            // 4. Ora è sicuro caricare i dati
             await loadTree();
 
             // 3. Eventi modali creazione

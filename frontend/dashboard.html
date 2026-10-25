@@ -62,9 +62,9 @@
                     <input type="text" placeholder="Cerca un campionato..." class="bg-vrg-card text-sm text-white pl-10 pr-4 py-2 rounded-lg border border-slate-700 focus:outline-none focus:border-vrg-accent w-64 transition-colors">
                 </div>
 
-            <a href="standings.html" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors">
-            <i class="fa-solid fa-ranking-star"></i> Classifiche
-                </a>
+            <a href="/" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors">
+                <i class="fa-solid fa-ranking-star"></i> Classifiche
+            </a>
                 
                 <!-- Profilo Utente -->
                 <div class="relative" id="user-profile-container">
@@ -157,48 +157,53 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            // 1. Controllo Sessione e UI Utente
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (!session) {
-                window.location.href = 'login.html';
-                return;
+    // 1. Recupero la sessione
+    const { data: { session } } = await supabase.auth.getSession();
+
+    // 2. Se non c'è sessione, vai alle classifiche pubbliche (gli utenti non devono loggare)
+    if (!session) {
+        window.location.href = '/';
+        return;
+    }
+
+    // 3. Se c'è sessione ma non è admin, vai alle classifiche
+    const isAdmin = session.user.app_metadata?.role === 'admin';
+    if (!isAdmin) {
+        window.location.href = '/'; 
+        return;
+    }
+
+    // --- Da qui in poi solo gli admin possono passare ---
+
+    const user = session.user;
+    const email = user.email;
+    const initials = email.substring(0, 2).toUpperCase();
+    const role = 'Amministratore'; // Se siamo qui, è per forza admin
+
+    // Aggiorna UI
+    if (document.getElementById('user-avatar')) document.getElementById('user-avatar').textContent = initials;
+    if (document.getElementById('user-name')) document.getElementById('user-name').textContent = email.split('@')[0];
+    if (document.getElementById('user-role')) document.getElementById('user-role').textContent = role;
+    if (document.getElementById('dropdown-email')) document.getElementById('dropdown-email').textContent = email;
+    if (document.getElementById('dropdown-role')) document.getElementById('dropdown-role').textContent = role;
+
+    // 2. Menu a tendina
+    const btnMenu = document.getElementById('btn-user-menu');
+    const dropdown = document.getElementById('user-dropdown');
+    if (btnMenu && dropdown) {
+        btnMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!btnMenu.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.add('hidden');
             }
+        });
+    }
 
-            const user = session.user;
-            const email = user.email;
-            const initials = email.substring(0, 2).toUpperCase();
-            const role = user.app_metadata?.role === 'admin' ? 'Amministratore' : 'Utente';
-
-            // Aggiorna UI
-            if (document.getElementById('user-avatar')) document.getElementById('user-avatar').textContent = initials;
-            if (document.getElementById('user-name')) document.getElementById('user-name').textContent = email.split('@')[0];
-            if (document.getElementById('user-role')) document.getElementById('user-role').textContent = role;
-            if (document.getElementById('dropdown-email')) document.getElementById('dropdown-email').textContent = email;
-            if (document.getElementById('dropdown-role')) document.getElementById('dropdown-role').textContent = role;
-
-            // Mostra bottoni Admin
-            if (role === 'Amministratore') {
-                document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
-            }
-
-            // 2. Menu a tendina
-            const btnMenu = document.getElementById('btn-user-menu');
-            const dropdown = document.getElementById('user-dropdown');
-            if (btnMenu && dropdown) {
-                btnMenu.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    dropdown.classList.toggle('hidden');
-                });
-                document.addEventListener('click', (e) => {
-                    if (!btnMenu.contains(e.target) && !dropdown.contains(e.target)) {
-                        dropdown.classList.add('hidden');
-                    }
-                });
-            }
-
-            // 3. Logout
-            const btnLogout = document.getElementById('btn-logout');
+    // 3. Logout
+    const btnLogout = document.getElementById('btn-logout');
             if (btnLogout) {
                 btnLogout.addEventListener('click', () => {
                     supabase.auth.signOut().catch(console.error);
