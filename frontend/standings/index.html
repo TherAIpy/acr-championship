@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classifiche - ACR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        vrg: { bg: '#0B1120', sidebar: '#0F172A', card: '#1E293B', accent: '#EAB308', text: '#94A3B8', textlight: '#F1F5F9' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Transizioni fluide per il cambio tab */
+        .tab-btn { transition: all 0.2s ease; }
+        .tab-btn.active { background-color: #EAB308; color: #000; font-weight: bold; }
+        .tab-btn:not(.active) { color: #94A3B8; }
+        .tab-btn:not(.active):hover { background-color: #1E293B; color: #fff; }
+        
+        /* Card hover */
+        .champ-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .champ-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
+    </style>
+</head>
+<body class="bg-vrg-bg text-vrg-text font-sans min-h-screen flex flex-col">
+
+    <!-- HEADER GLOBALE -->
+    <header class="bg-vrg-sidebar border-b border-slate-800 px-6 py-4 flex items-center justify-between shrink-0 sticky top-0 z-50">
+        <div class="flex items-center gap-4">
+            <a href="../dashboard.html" class="text-slate-400 hover:text-white transition-colors" title="Torna alla Dashboard">
+                <i class="fa-solid fa-arrow-left text-xl"></i>
+            </a>
+            <div class="flex items-center gap-2">
+                <div class="text-vrg-accent text-2xl font-bold italic tracking-tighter">VRG</div>
+                <span class="text-slate-600">|</span>
+                <h1 class="text-xl font-bold text-white tracking-wide">Classifiche</h1>
+            </div>
+        </div>
+        <div id="user-controls" class="flex items-center gap-4">
+            <!-- Popolato da JS -->
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8">
+        
+        <!-- VISTA 1: SELEZIONE CAMPIONATO -->
+        <div id="view-championships" class="animate-fade-in">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-white mb-2">Scegli un Campionato</h2>
+                <p class="text-slate-400">Seleziona un campionato per visualizzare le classifiche generali, dei rally, delle leg e delle singole stage.</p>
+            </div>
+            
+            <div id="champ-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Le card vengono generate via JS -->
+                <div class="text-center py-12 text-slate-500 col-span-full">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i>
+                    <p>Caricamento campionati...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA 2: DETTAGLIO CAMPIONATO -->
+        <div id="view-detail" class="hidden animate-fade-in">
+            
+            <!-- Header Dettaglio -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div>
+                    <button onclick="goBackToChampionships()" class="text-sm text-vrg-accent hover:text-yellow-400 font-bold flex items-center gap-1 mb-2 transition-colors">
+                        <i class="fa-solid fa-chevron-left"></i> Torna ai Campionati
+                    </button>
+                    <h2 id="detail-title" class="text-3xl font-bold text-white">Nome Campionato</h2>
+                </div>
+                
+                <!-- Selettori dinamici -->
+                <div id="dynamic-selectors" class="flex flex-wrap gap-3 items-center bg-vrg-card p-3 rounded-xl border border-slate-700">
+                    <!-- Popolati via JS in base alla tab -->
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex gap-2 border-b border-slate-700 mb-6 overflow-x-auto pb-px">
+                <button onclick="switchTab('championship')" id="tab-championship" class="tab-btn px-6 py-3 rounded-t-lg text-sm font-semibold flex items-center gap-2">
+                    <i class="fa-solid fa-trophy"></i> Generale
+                </button>
+                <button onclick="switchTab('rally')" id="tab-rally" class="tab-btn px-6 py-3 rounded-t-lg text-sm font-semibold flex items-center gap-2">
+                    <i class="fa-solid fa-flag-checkered"></i> Rally
+                </button>
+                <button onclick="switchTab('leg')" id="tab-leg" class="tab-btn px-6 py-3 rounded-t-lg text-sm font-semibold flex items-center gap-2">
+                    <i class="fa-solid fa-road"></i> Leg
+                </button>
+                <button onclick="switchTab('stage')" id="tab-stage" class="tab-btn px-6 py-3 rounded-t-lg text-sm font-semibold flex items-center gap-2">
+                    <i class="fa-solid fa-stopwatch"></i> Stage
+                </button>
+            </div>
+
+            <!-- Contenuto Tabella -->
+            <div id="standings-content" class="bg-vrg-card border border-slate-700 rounded-xl overflow-hidden min-h-[400px]">
+                <!-- Popolato via JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/supabase.js"></script>
+    <script src="../js/api.js"></script>
+
+    <script>
+        // =========================================================
+        // STATO GLOBALE
+        // =========================================================
+        const state = {
+            championships: [],
+            currentChamp: null,    // Oggetto campionato selezionato
+            tree: null,            // Gerarchia (rally, leg, stage) del campionato corrente
+            currentTab: 'championship', // 'championship' | 'rally' | 'leg' | 'stage'
+            selectedRally: null,
+            selectedLeg: null,
+            selectedStage: null
+        };
+
+        // =========================================================
+        // INIZIO
+        // =========================================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Auth UI
+            const { data: { session } } = await supabase.auth.getSession();
+            const uc = document.getElementById('user-controls');
+            if (session) {
+                uc.innerHTML = `
+                    <span class="text-xs text-slate-400 hidden md:block">${session.user.email}</span>
+                    <button onclick="supabase.auth.signOut().then(()=>window.location.reload())" class="text-slate-400 hover:text-red-400 transition-colors" title="Logout">
+                        <i class="fa-solid fa-power-out"></i>
+                    </button>
+                `;
+            } else {
+                uc.innerHTML = `<a href="../login.html" class="text-sm text-vrg-accent hover:text-white font-bold">Accedi</a>`;
+            }
+
+            // Carica campionati
+            await loadChampionships();
+        });
+
+        // =========================================================
+        // VISTA 1: CARICA E RENDERIZZA CAMPIONATI
+        // =========================================================
+        async function loadChampionships() {
+            try {
+                const res = await apiCall('/championships');
+                state.championships = res.data || [];
+                renderChampionships();
+
+                // Deep linking: se c'è ?champ=ID nell'URL, apri automaticamente
+                const urlParams = new URLSearchParams(window.location.search);
+                const champId = urlParams.get('champ');
+                if (champId) {
+                    const champ = state.championships.find(c => c.id == champId);
+                    if (champ) openChampionship(champ);
+                }
+            } catch (e) {
+                document.getElementById('champ-grid').innerHTML = `
+                    <div class="col-span-full text-center py-12 text-red-400 bg-red-900/20 rounded-xl border border-red-900/50">
+                        <i class="fa-solid fa-triangle-exclamation text-3xl mb-3"></i>
+                        <p>Errore nel caricamento: ${e.message}</p>
+                    </div>`;
+            }
+        }
+
+        function renderChampionships() {
+            const grid = document.getElementById('champ-grid');
+            if (state.championships.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500">Nessun campionato trovato.</div>`;
+                return;
+            }
+
+            grid.innerHTML = state.championships.map(c => {
+                // Determina stato (euristica basata sull'ID o sul nome, per ora mettiamo "In Corso" se recente)
+                // Se hai un campo 'status' nel DB, usalo qui.
+                const isCompleted = false; // Da implementare se c'è un flag nel DB
+                const badge = isCompleted 
+                    ? `<span class="bg-slate-700 text-slate-300 text-[10px] uppercase font-bold px-2 py-1 rounded">Completato</span>`
+                    : `<span class="bg-green-900/50 text-green-400 border border-green-700 text-[10px] uppercase font-bold px-2 py-1 rounded">In Corso</span>`;
+
+                return `
+                    <div onclick='openChampionship(${JSON.stringify(c)})' class="champ-card bg-vrg-card border border-slate-700 rounded-xl p-6 cursor-pointer relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <i class="fa-solid fa-trophy text-6xl text-vrg-accent"></i>
+                        </div>
+                        <div class="flex justify-between items-start mb-4 relative z-10">
+                            ${badge}
+                            <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-vrg-accent transition-colors"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-1 relative z-10">${c.name}</h3>
+                        <p class="text-sm text-slate-400 relative z-10">Clicca per vedere le classifiche</p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // =========================================================
+        // VISTA 2: GESTIONE DETTAGLIO
+        // =========================================================
+        async function openChampionship(champ) {
+            state.currentChamp = champ;
+            document.getElementById('view-championships').classList.add('hidden');
+            document.getElementById('view-detail').classList.remove('hidden');
+            document.getElementById('detail-title').textContent = champ.name;
+            
+            // Aggiorna URL
+            window.history.pushState({}, '', `?champ=${champ.id}`);
+
+            // Carica albero
+            const content = document.getElementById('standings-content');
+            content.innerHTML = `<div class="flex items-center justify-center h-64 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>`;
+
+            try {
+                const res = await api.getTree(champ.id);
+                if (res.success) {
+                    state.tree = res.data;
+                    switchTab('championship'); // Default tab
+                } else {
+                    throw new Error(res.error);
+                }
+            } catch (e) {
+                content.innerHTML = `<div class="p-8 text-center text-red-400">Errore nel recupero dati: ${e.message}</div>`;
+            }
+        }
+
+        function goBackToChampionships() {
+            state.currentChamp = null;
+            state.tree = null;
+            document.getElementById('view-detail').classList.add('hidden');
+            document.getElementById('view-championships').classList.remove('hidden');
+            window.history.pushState({}, '', window.location.pathname); // Pulisce URL
+        }
+
+        // =========================================================
+        // GESTIONE TAB E SELETTORI
+        // =========================================================
+        function switchTab(tab) {
+            state.currentTab = tab;
+            
+            // Aggiorna classi bottoni
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+
+            // Costruisci i selettori in base al tab
+            buildSelectors();
+
+            // Carica i dati
+            loadStandingsData();
+        }
+
+        function buildSelectors() {
+            const container = document.getElementById('dynamic-selectors');
+            container.innerHTML = '';
+            
+            if (!state.tree) return;
+
+            // Se il tab è 'championship', non servono selettori
+            if (state.currentTab === 'championship') {
+                container.innerHTML = `<span class="text-sm text-slate-400 px-2"><i class="fa-solid fa-circle-info mr-1"></i> Classifica assoluta del campionato</span>`;
+                return;
+            }
+
+            // Selettore Rally
+            if (['rally', 'leg', 'stage'].includes(state.currentTab)) {
+                // Se non selezionato, seleziona il primo
+                if (!state.selectedRally && state.tree.rallies.length > 0) {
+                    state.selectedRally = state.tree.rallies[0];
+                }
+                
+                const rallyOpts = state.tree.rallies.map(r => 
+                    `<option value="${r.id}" ${state.selectedRally?.id == r.id ? 'selected' : ''}>${r.name}</option>`
+                ).join('');
+                
+                container.innerHTML += `
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500 uppercase font-bold">Rally</span>
+                        <select onchange="onRallyChange(this.value)" class="bg-slate-800 text-white text-sm rounded border border-slate-600 px-3 py-1.5 focus:outline-none focus:border-vrg-accent">
+                            ${rallyOpts}
+                        </select>
+                    </div>
+                `;
+            }
+
+            // Selettore Leg
+            if (['leg', 'stage'].includes(state.currentTab)) {
+                if (!state.selectedRally || !state.selectedRally.legs) {
+                    container.innerHTML += `<span class="text-sm text-red-400">Nessuna leg disponibile</span>`;
+                    return;
+                }
+                
+                if (!state.selectedLeg && state.selectedRally.legs.length > 0) {
+                    state.selectedLeg = state.selectedRally.legs[0];
+                }
+                
+                const legOpts = state.selectedRally.legs.map(l => 
+                    `<option value="${l.id}" ${state.selectedLeg?.id == l.id ? 'selected' : ''}>${l.name}</option>`
+                ).join('');
+                
+                container.innerHTML += `
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500 uppercase font-bold">Leg</span>
+                        <select onchange="onLegChange(this.value)" class="bg-slate-800 text-white text-sm rounded border border-slate-600 px-3 py-1.5 focus:outline-none focus:border-vrg-accent">
+                            ${legOpts}
+                        </select>
+                    </div>
+                `;
+            }
+
+            // Selettore Stage
+            if (state.currentTab === 'stage') {
+                if (!state.selectedLeg || !state.selectedLeg.stages) {
+                    container.innerHTML += `<span class="text-sm text-red-400">Nessuna stage disponibile</span>`;
+                    return;
+                }
+
+                if (!state.selectedStage && state.selectedLeg.stages.length > 0) {
+                    state.selectedStage = state.selectedLeg.stages[0];
+                }
+
+                const stageOpts = state.selectedLeg.stages.map(s => 
+                    `<option value="${s.id}" ${state.selectedStage?.id == s.id ? 'selected' : ''}>${s.name}</option>`
+                ).join('');
+
+                container.innerHTML += `
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500 uppercase font-bold">Stage</span>
+                        <select onchange="onStageChange(this.value)" class="bg-slate-800 text-white text-sm rounded border border-slate-600 px-3 py-1.5 focus:outline-none focus:border-vrg-accent">
+                            ${stageOpts}
+                        </select>
+                    </div>
+                `;
+            }
+        }
+
+        // Handler per i cambi dei dropdown
+        function onRallyChange(id) {
+            state.selectedRally = state.tree.rallies.find(r => r.id == id);
+            state.selectedLeg = null;
+            state.selectedStage = null;
+            switchTab(state.currentTab); // Ricarica cascata
+        }
+
+        function onLegChange(id) {
+            state.selectedLeg = state.selectedRally.legs.find(l => l.id == id);
+            state.selectedStage = null;
+            switchTab(state.currentTab);
+        }
+
+        function onStageChange(id) {
+            state.selectedStage = state.selectedLeg.stages.find(s => s.id == id);
+            switchTab(state.currentTab);
+        }
+
+        // =========================================================
+        // RECUPERO E RENDER DATI
+        // =========================================================
+        async function loadStandingsData() {
+            const content = document.getElementById('standings-content');
+            content.innerHTML = `<div class="flex items-center justify-center h-64 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>`;
+
+            let endpoint = '';
+            if (state.currentTab === 'championship') {
+                endpoint = `/standings/championship/${state.currentChamp.id}`;
+            } else if (state.currentTab === 'rally' && state.selectedRally) {
+                endpoint = `/standings/rally/${state.selectedRally.id}`;
+            } else if (state.currentTab === 'leg' && state.selectedLeg) {
+                endpoint = `/standings/leg/${state.selectedLeg.id}`;
+            } else if (state.currentTab === 'stage' && state.selectedStage) {
+                endpoint = `/standings/stage/${state.selectedStage.id}`;
+            }
+
+            if (!endpoint) return;
+
+            try {
+                const res = await apiCall(endpoint);
+                if (!res.success) throw new Error(res.error || 'Errore sconosciuto');
+                renderTable(state.currentTab, res.data || []);
+            } catch (e) {
+                content.innerHTML = `
+                    <div class="p-8 text-center text-red-400">
+                        <i class="fa-solid fa-triangle-exclamation text-3xl mb-3"></i>
+                        <p>Errore nel recupero dati: ${e.message}</p>
+                        <p class="text-xs text-slate-500 mt-2">Verifica che il backend sia aggiornato e che la rotta esista.</p>
+                    </div>`;
+            }
+        }
+
+        function renderTable(type, data) {
+            const content = document.getElementById('standings-content');
+
+            if (!data || data.length === 0) {
+                const messages = {
+                    'championship': 'Nessun risultato ufficiale in questo campionato.',
+                    'rally': 'Nessun risultato ufficiale per questo rally.',
+                    'leg': 'Nessun risultato ufficiale per questa leg.',
+                    'stage': 'Nessun risultato ufficiale per questa stage.'
+                };
+                content.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-64 text-slate-500">
+                        <i class="fa-solid fa-inbox text-4xl mb-4 opacity-30"></i>
+                        <p>${messages[type] || 'Nessun dato disponibile.'}</p>
+                    </div>`;
+                return;
+            }
+
+            // Configurazione colonne
+            const config = {
+                'championship': [
+                    { key: 'position', label: 'Pos', cls: 'w-16 text-center font-bold text-white' },
+                    { key: 'driver', label: 'Pilota', cls: 'font-medium' },
+                    { key: 'car', label: 'Auto', cls: 'text-slate-500 text-xs hidden sm:table-cell' },
+                    { key: 'races', label: 'Rally', cls: 'text-center text-slate-400 hidden md:table-cell' },
+                    { key: 'points', label: 'Punti', cls: 'font-bold text-vrg-accent text-right pr-6' }
+                ],
+                'rally': [
+                    { key: 'position', label: 'Pos', cls: 'w-16 text-center font-bold text-white' },
+                    { key: 'driver', label: 'Pilota', cls: 'font-medium' },
+                    { key: 'car', label: 'Auto', cls: 'text-slate-500 text-xs hidden sm:table-cell' },
+                    { key: 'points', label: 'Punti', cls: 'font-bold text-green-400 text-right pr-6' }
+                ],
+                'leg': [
+                    { key: 'position', label: 'Pos', cls: 'w-16 text-center font-bold text-white' },
+                    { key: 'driver', label: 'Pilota', cls: 'font-medium' },
+                    { key: 'car', label: 'Auto', cls: 'text-slate-500 text-xs hidden sm:table-cell' },
+                    { key: 'total_str', label: 'Tempo Totale', cls: 'font-mono text-blue-400 text-right pr-6' }
+                ],
+                'stage': [
+                    { key: 'position', label: 'Pos', cls: 'w-16 text-center font-bold text-white' },
+                    { key: 'driver_name', label: 'Pilota', cls: 'font-medium' },
+                    { key: 'car_model', label: 'Auto', cls: 'text-slate-500 text-xs hidden sm:table-cell' },
+                    { key: 'time_str', label: 'Tempo', cls: 'font-mono text-vrg-accent text-right' },
+                    { key: 'penalty', label: 'Pen.', cls: 'font-mono text-red-400 text-right text-xs hidden md:table-cell pr-6' }
+                ]
+            };
+
+            const cols = config[type];
+            let html = `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="text-xs uppercase bg-slate-800 text-slate-400 border-b border-slate-700">
+                            <tr>
+            `;
+
+            cols.forEach(col => {
+                const align = col.cls.includes('text-center') ? 'text-center' : col.cls.includes('text-right') ? 'text-right' : '';
+                html += `<th class="px-4 py-4 ${align}">${col.label}</th>`;
+            });
+
+            html += `</tr></thead><tbody>`;
+
+            data.forEach((row, i) => {
+                const rowCls = i === 0 ? 'bg-vrg-accent/5' : (i % 2 === 1 ? 'bg-slate-900/30' : '');
+                const status = row.status && row.status !== 'completed';
+                const badge = status ? `<span class="text-[10px] bg-red-900/50 text-red-400 px-1.5 py-0.5 rounded ml-2">${row.status.toUpperCase()}</span>` : '';
+
+                html += `<tr class="border-b border-slate-700/50 hover:bg-slate-800/40 transition-colors ${rowCls}">`;
+                cols.forEach(col => {
+                    let val = row[col.key];
+                    if (col.key === 'driver' || col.key === 'driver_name') val = (val || '-') + badge;
+                    if (val === null || val === undefined || val === '') val = '-';
+                    
+                    const align = col.cls.includes('text-center') ? 'text-center' : col.cls.includes('text-right') ? 'text-right' : '';
+                    html += `<td class="px-4 py-3 ${col.cls}">${val}</td>`;
+                });
+                html += `</tr>`;
+            });
+
+            html += `</tbody></table></div>`;
+            content.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

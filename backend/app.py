@@ -989,20 +989,98 @@ def get_calendar():
 
 @app.route('/api/standings/championship/<int:champ_id>', methods=['GET'])
 def get_standings_championship(champ_id):
-    """Classifica generale del campionato: somma dei punti ottenuti in tutti i rally.
-    Solo risultati ufficiali. Nessuno scarto per ora (verrà in B3)."""
     try:
         supabase = get_supabase()
         champ = supabase.table('championship').select('*').eq('id', champ_id).execute()
         if not champ.data:
             return jsonify({"success": False, "error": "Campionato non trovato"}), 404
 
-        standings = _compute_points_for_championship(champ_id)
+        points_system = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1]
+
+        # 1. Trova tutti i rally del campionato
+        rallies = supabase.table('rally').select('id').eq('championship_id', champ_id).execute().data or []
+        rally_ids = [r['id'] for r in rallies]
+
+        # 2. Trova tutte le leg di questi rally
+        legs = supabase.table('leg').select('id', 'rally_id').in_('rally_id', rally_ids).execute().data or []
+        leg_ids = [l['id'] for l in legs]
+        leg_to_rally = {l['id']: l['rally_id'] for l in legs}
+
+        # 3. Trova tutte le stage di queste leg
+        stages = supabase.table('stage').select('id', 'leg_id').in_('leg_id', leg_ids).execute().data or []
+        stage_ids = [s['id'] for s in stages]
+        stage_to_leg = {s['id']: s['leg_id'] for s in stages}
+
+        # 4. Trova tutti i risultati ufficiali per queste stage
+        results = (
+            supabase.table('stage_result').select('*')
+            .in_('stage_id', stage_ids).eq('is_official', True)
+            .execute().data
+        ) or []
+
+        # Raggruppa i risultati per rally
+        results_by_rally = {}
+        for r in results:
+            sid = r['stage_id']
+            lid = stage_to_leg.get(sid)
+            rid = leg_to_rally.get(lid)
+            if rid:
+                if rid not in results_by_rally:
+                    results_by_rally[rid] = []
+                results_by_rally[rid].append(r)
+
+        driver_points = {}
+
+        # Calcola i punti per ogni rally
+        for rid, rally_results in results_by_rally.items():
+            # Applica la regola DNF e somma i tempi
+            stage_max = {}
+            for r in rally_results:
+                if r['status'] == 'completed' and r['time_ms']:
+                    sid = r['stage_id']
+                    stage_max[sid] = max(stage_max.get(sid, 0), r['time_ms'])
+
+            totals = {}
+            for r in rally_results:
+                drv = r['driver_name']
+                if drv not in totals:
+                    totals[drv] = {'time_ms': 0, 'status': 'completed', 'car': r.get('car_model', '')}
+                
+                if r['status'] in ('dnf', 'dns', 'dsq'):
+                    totals[drv]['status'] = r['status']
+                    last = stage_max.get(r['stage_id'], 300000)
+                    totals[drv]['time_ms'] += last * 2
+                elif r['status'] == 'completed':
+                    totals[drv]['time_ms'] += (r['time_ms'] or 0)
+
+            # Ordina e assegna i punti per questo rally
+            standings = [{'driver': k, 'total_ms': v['time_ms'], 'status': v['status'], 'car': v['car']} for k, v in totals.items()]
+            standings.sort(key=lambda x: x['total_ms'])
+            for i, item in enumerate(standings):
+                item['position'] = i + 1
+
+            # Accumula i punti nel totale del campionato
+            for s in standings:
+                drv = s['driver']
+                if drv not in driver_points:
+                    driver_points[drv] = {'points': 0, 'car': s.get('car', ''), 'races': 0}
+                
+                pts = points_system[s['position'] - 1] if s['position'] <= len(points_system) else 0
+                driver_points[drv]['points'] += pts
+                driver_points[drv]['races'] += 1
+
+        # Prepara la classifica finale
+        out = [{'driver': k, 'points': v['points'], 'car': v['car'], 'races': v['races']} for k, v in driver_points.items()]
+        out.sort(key=lambda x: (-x['points'], x['driver']))
+        for i, item in enumerate(out):
+            item['position'] = i + 1
+
         return jsonify({
             "success": True,
             "championship": champ.data[0],
-            "data": standings
+            "data": out
         }), 200
+        
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
