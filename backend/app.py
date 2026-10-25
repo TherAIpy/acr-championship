@@ -865,6 +865,62 @@ def _embed_championship(ctx, frontend_base="https://acr-championship.pages.dev")
 # =============================================================================
 # DISCORD — ROTTA PUBBLICAZIONE
 # =============================================================================
+@app.route('/api/discord/status/<entity_type>/<int:entity_id>', methods=['GET'])
+@admin_required
+def discord_status(entity_type, entity_id):
+    """Restituisce lo stato di pubblicazione su Discord per un'entità.
+    Se webhook_url è passato come query param, controlla quello specifico;
+    altrimenti usa il webhook del rally (se presente)."""
+    if entity_type not in ('stage', 'leg', 'rally', 'championship'):
+        return jsonify({"success": False, "error": "entity_type non valido"}), 400
+
+    webhook_url = (request.args.get('webhook_url') or '').strip()
+
+    ctx = _get_rally_for_entity(entity_type, entity_id)
+    if ctx is None:
+        return jsonify({"success": False, "error": "Entità non trovata"}), 404
+
+    rally_webhook = (ctx.get('rally') or {}).get('discord_webhook_url') or ''
+    if not webhook_url:
+        webhook_url = rally_webhook
+
+    webhook_id = _parse_webhook_id(webhook_url)
+    if not webhook_id:
+        return jsonify({
+            "success": True,
+            "published": False,
+            "reason": "no_webhook",
+            "has_rally_webhook": bool(rally_webhook),
+            "suggested_webhook": rally_webhook
+        })
+
+    supabase = get_supabase()
+    rows = (
+        supabase.table('discord_publish_log')
+        .select('message_id, updated_at')
+        .eq('entity_type', entity_type)
+        .eq('entity_id', entity_id)
+        .eq('webhook_id', webhook_id)
+        .execute().data
+    )
+
+    if rows:
+        return jsonify({
+            "success": True,
+            "published": True,
+            "message_id": rows[0]['message_id'],
+            "last_update": rows[0].get('updated_at'),
+            "has_rally_webhook": bool(rally_webhook),
+            "suggested_webhook": rally_webhook
+        })
+
+    return jsonify({
+        "success": True,
+        "published": False,
+        "has_rally_webhook": bool(rally_webhook),
+        "suggested_webhook": rally_webhook
+    })
+
 @app.route('/api/discord/publish/<entity_type>/<int:entity_id>', methods=['POST'])
 @admin_required
 def discord_publish(entity_type, entity_id):
@@ -930,6 +986,26 @@ def get_calendar():
     supabase = get_supabase()
     rallys = supabase.table('rally').select('id, name, created_at').order('created_at', desc=True).execute()
     return jsonify(rallys.data)
+
+@app.route('/api/standings/championship/<int:champ_id>', methods=['GET'])
+def get_standings_championship(champ_id):
+    """Classifica generale del campionato: somma dei punti ottenuti in tutti i rally.
+    Solo risultati ufficiali. Nessuno scarto per ora (verrà in B3)."""
+    try:
+        supabase = get_supabase()
+        champ = supabase.table('championship').select('*').eq('id', champ_id).execute()
+        if not champ.data:
+            return jsonify({"success": False, "error": "Campionato non trovato"}), 404
+
+        standings = _compute_points_for_championship(champ_id)
+        return jsonify({
+            "success": True,
+            "championship": champ.data[0],
+            "data": standings
+        }), 200
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/standings/<type>/<int:id>', methods=['GET'])
 def get_standings(type, id):
