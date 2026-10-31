@@ -91,3 +91,14 @@ async function apiJson(path, options = {}) {
 
 window.apiCall = apiCall;
 window.apiJson = apiJson;
+// Alias retro-compatibile per le vecchie chiamate (dashboard e detail)
+window.api = {
+  getChampionships: () => apiJson('/championships'),
+  saveChampionship: (data) => apiJson('/create-championship', { method: 'POST', body: JSON.stringify(data) }),
+  createRally: (data) => apiJson('/create-rally', { method: 'POST', body: JSON.stringify(data) }),
+  createLeg: (data) => apiJson('/create-leg', { method: 'POST', body: JSON.stringify(data) }),
+  createStage: (data) => apiJson('/create-stage', { method: 'POST', body: JSON.stringify(data) }),
+  saveStage: (data) => apiJson('/save-stage', { method: 'POST', body: JSON.stringify(data) }),
+  publishStage: (id) => apiJson(`/publish-stage/${id}`, { method: 'POST' }),
+  getTree: (id) => apiJson(`/tree/${id}`)
+};
