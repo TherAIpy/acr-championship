@@ -707,7 +707,7 @@
                     btnSaveDraft.disabled = true;
                     btnSaveDraft.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvataggio...';
                     try {
-                        const res = await apiCall('/save-stage', 'POST', {
+                        const res = await apiJson('/save-stage', 'POST', {
                             stage_id: stageId,
                             stage_name: "Update",
                             results: results
@@ -736,7 +736,7 @@
                     btnPublish.disabled = true;
                     btnPublish.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Pubblicazione...';
                     try {
-                        const res = await apiCall(`/publish-stage/${stageId}`, 'POST', {});
+                        const res = await apiJson(`/publish-stage/${stageId}`, 'POST', {});
                         if (res.success) {
                             await loadTree();
                             await openStageResults(stageId);
@@ -847,7 +847,7 @@
                         const body = { webhook_url };
                         if (thread_id) body.thread_id = thread_id;
 
-                        const res = await apiCall(`/discord/publish/${entityType}/${entityId}`, 'POST', body);
+                        const res = await apiJson(`/discord/publish/${entityType}/${entityId}`, 'POST', body);
                         if (res.success) {
                             const action = res.action;
                             if (action === 'recreated') {
@@ -904,7 +904,7 @@
             openModal('modal-standings');
 
             try {
-                const res = await apiCall(`/standings/${type}/${id}`);
+                const res = await apiJson(`/standings/${type}/${id}`);
                 if (res.success && res.data.length > 0) {
                     tbody.innerHTML = '';
                     res.data.forEach(r => {
