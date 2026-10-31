@@ -606,8 +606,11 @@ def publish_stage(stage_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 # =============================================================================
-# DISCORD — COSTRUZIONE CONTENUTI
+# DISCORD — COSTRUZIONE CONTENUTI (C1: Compatti + Webhook Globale)
 # =============================================================================
+# Recupera il webhook globale dalle variabili d'ambiente di Render
+GLOBAL_DISCORD_WEBHOOK = os.environ.get("DISCORD_WEBHOOK_URL", "")
+
 def _get_rally_for_entity(entity_type, entity_id):
     """Risale al rally a partire da stage/leg/rally/championship.
     Ritorna (rally, leg, stage) con i campi utili, o None in caso di errore."""
@@ -658,33 +661,30 @@ def _embed_stage(ctx, frontend_base="https://acr-championship.pages.dev"):
     results = (
         supabase.table('stage_result').select('*')
         .eq('stage_id', stage['id']).eq('is_official', True)
-        .order('position').execute().data
+        .order('position').limit(3).execute().data # C1: Solo Top 3
     ) or []
 
     if not results:
-        return None  # niente da pubblicare
+        return None
 
     lines = []
-    for r in results[:15]:  # cap a 15 per non sforare il limite embed (4096 char)
+    for r in results:
         t = r.get('time_str') or _format_ms(r.get('time_ms'))
         pen = r.get('penalty') or ''
         pen_str = f" ({pen})" if pen and pen != '-' else ''
-        lines.append(f"**{r['position']}.** {r['driver_name']} — `{t}`{pen_str}")
-
-    if len(results) > 15:
-        lines.append(f"... e altri {len(results) - 15} piloti")
+        medal = ["🥇", "🥈", "🥉"][r['position']-1]
+        lines.append(f"{medal} **{r['driver_name']}** — `{t}`{pen_str}")
 
     title_parts = [p for p in [rally['name'] if rally else None, leg['name'] if leg else None, stage['name']] if p]
     title = "🏁 " + " — ".join(title_parts)
-
     url = f"{frontend_base}/championship-detail.html?id={rally['championship_id']}" if rally else frontend_base
 
     return {
         "title": title[:256],
-        "description": "\n".join(lines)[:4000],
+        "description": "**Podio Stage:**\n" + "\n".join(lines) + f"\n\n[👉 Vedi classifica completa]({url})",
         "color": 0xEAB308,
         "url": url,
-        "footer": {"text": f"ACR Championship — {stage.get('track_name') or 'Stage'}"}
+        "footer": {"text": f"ACR Championship • {stage.get('track_name') or 'Stage'}"}
     }
 
 
@@ -792,13 +792,10 @@ def _embed_leg(ctx, frontend_base="https://acr-championship.pages.dev"):
         return None
 
     lines = []
-    for s in standings[:15]:
-        badge = ''
-        if s['status'] != 'completed':
-            badge = f" `{s['status'].upper()}`"
-        lines.append(f"**{s['position']}.** {s['driver']} — `{s['total_str']}`{badge}")
-    if len(standings) > 15:
-        lines.append(f"... e altri {len(standings) - 15} piloti")
+    for s in standings[:3]: # C1: Solo Top 3
+        medal = ["🥇", "🥈", "🥉"][s['position']-1]
+        badge = f" `{s['status'].upper()}`" if s['status'] != 'completed' else ''
+        lines.append(f"{medal} **{s['driver']}** — `{s['total_str']}`{badge}")
 
     rally = ctx['rally']
     leg = ctx['leg']
@@ -807,10 +804,10 @@ def _embed_leg(ctx, frontend_base="https://acr-championship.pages.dev"):
 
     return {
         "title": title[:256],
-        "description": "\n".join(lines)[:4000],
+        "description": "**Podio Leg:**\n" + "\n".join(lines) + f"\n\n[👉 Vedi classifica completa]({url})",
         "color": 0x3B82F6,
         "url": url,
-        "footer": {"text": f"ACR Championship — aggiornato"}
+        "footer": {"text": "ACR Championship • Aggiornato"}
     }
 
 
@@ -820,10 +817,9 @@ def _embed_rally(ctx, frontend_base="https://acr-championship.pages.dev"):
         return None
 
     lines = []
-    for s in standings[:15]:
-        lines.append(f"**{s['position']}.** {s['driver']} — `{s['points']} pt`")
-    if len(standings) > 15:
-        lines.append(f"... e altri {len(standings) - 15} piloti")
+    for s in standings[:3]: # C1: Solo Top 3
+        medal = ["🥇", "🥈", "🥉"][s['position']-1]
+        lines.append(f"{medal} **{s['driver']}** — `{s['points']} pt`")
 
     rally = ctx['rally']
     title = "🏆 Classifica Rally — " + rally['name']
@@ -831,10 +827,10 @@ def _embed_rally(ctx, frontend_base="https://acr-championship.pages.dev"):
 
     return {
         "title": title[:256],
-        "description": "\n".join(lines)[:4000],
+        "description": "**Podio Rally:**\n" + "\n".join(lines) + f"\n\n[👉 Vedi classifica completa]({url})",
         "color": 0x22C55E,
         "url": url,
-        "footer": {"text": "ACR Championship — aggiornato"}
+        "footer": {"text": "ACR Championship • Aggiornato"}
     }
 
 
@@ -849,32 +845,28 @@ def _embed_championship(ctx, frontend_base="https://acr-championship.pages.dev")
         return None
 
     lines = []
-    for s in standings[:20]:
-        lines.append(f"**{s['position']}.** {s['driver']} — `{s['points']} pt` ({s['races']} rally)")
-    if len(standings) > 20:
-        lines.append(f"... e altri {len(standings) - 20} piloti")
+    for s in standings[:3]: # C1: Solo Top 3
+        medal = ["🥇", "🥈", "🥉"][s['position']-1]
+        lines.append(f"{medal} **{s['driver']}** — `{s['points']} pt` ({s['races']} rally)")
 
     return {
         "title": f"👑 Classifica Campionato — {champ_name}"[:256],
-        "description": "\n".join(lines)[:4000],
+        "description": "**Podio Assoluto:**\n" + "\n".join(lines) + f"\n\n[👉 Vedi classifica completa]({frontend_base}/championship-detail.html?id={champ_id})",
         "color": 0xF59E0B,
         "url": f"{frontend_base}/championship-detail.html?id={champ_id}",
-        "footer": {"text": "ACR Championship — aggiornato"}
+        "footer": {"text": "ACR Championship • Aggiornato"}
     }
 
 # =============================================================================
-# DISCORD — ROTTA PUBBLICAZIONE
+# DISCORD — ROTTA PUBBLICAZIONE (Aggiornata per Webhook Globale)
 # =============================================================================
 @app.route('/api/discord/status/<entity_type>/<int:entity_id>', methods=['GET'])
 @admin_required
 def discord_status(entity_type, entity_id):
-    """Restituisce lo stato di pubblicazione su Discord per un'entità.
-    Se webhook_url è passato come query param, controlla quello specifico;
-    altrimenti usa il webhook del rally (se presente)."""
     if entity_type not in ('stage', 'leg', 'rally', 'championship'):
         return jsonify({"success": False, "error": "entity_type non valido"}), 400
 
-    webhook_url = (request.args.get('webhook_url') or '').strip()
+    webhook_url = (request.args.get('webhook_url') or '').strip() or GLOBAL_DISCORD_WEBHOOK
 
     ctx = _get_rally_for_entity(entity_type, entity_id)
     if ctx is None:
@@ -889,9 +881,7 @@ def discord_status(entity_type, entity_id):
         return jsonify({
             "success": True,
             "published": False,
-            "reason": "no_webhook",
-            "has_rally_webhook": bool(rally_webhook),
-            "suggested_webhook": rally_webhook
+            "reason": "no_webhook"
         })
 
     supabase = get_supabase()
@@ -909,16 +899,12 @@ def discord_status(entity_type, entity_id):
             "success": True,
             "published": True,
             "message_id": rows[0]['message_id'],
-            "last_update": rows[0].get('updated_at'),
-            "has_rally_webhook": bool(rally_webhook),
-            "suggested_webhook": rally_webhook
+            "last_update": rows[0].get('updated_at')
         })
 
     return jsonify({
         "success": True,
-        "published": False,
-        "has_rally_webhook": bool(rally_webhook),
-        "suggested_webhook": rally_webhook
+        "published": False
     })
 
 @app.route('/api/discord/publish/<entity_type>/<int:entity_id>', methods=['POST'])
@@ -928,21 +914,22 @@ def discord_publish(entity_type, entity_id):
         return jsonify({"success": False, "error": "entity_type non valido"}), 400
 
     body = request.json or {}
-    webhook_url = (body.get('webhook_url') or '').strip()
+    # C1: Usa il webhook passato dal frontend, altrimenti usa quello GLOBALE
+    webhook_url = (body.get('webhook_url') or '').strip() or GLOBAL_DISCORD_WEBHOOK
     thread_id = (body.get('thread_id') or '').strip() or None
 
     ctx = _get_rally_for_entity(entity_type, entity_id)
     if ctx is None:
         return jsonify({"success": False, "error": "Entità non trovata"}), 404
 
-    # Fallback webhook: se non passato, usa quello del rally
+    # Fallback ulteriore: se non c'è il globale, cerca quello del rally (retrocompatibilità)
     if not webhook_url and ctx.get('rally'):
         webhook_url = (ctx['rally'].get('discord_webhook_url') or '').strip()
 
     if not webhook_url:
         return jsonify({
             "success": False,
-            "error": "webhook_url mancante e nessun webhook configurato sul rally"
+            "error": "Nessun webhook configurato (manca la variabile GLOBAL_DISCORD_WEBHOOK o il webhook del rally)"
         }), 400
 
     # Costruzione embed
@@ -953,7 +940,7 @@ def discord_publish(entity_type, entity_id):
             embed = _embed_leg(ctx)
         elif entity_type == 'rally':
             embed = _embed_rally(ctx)
-        else:  # championship
+        else:
             embed = _embed_championship(ctx)
     except Exception as e:
         return jsonify({"success": False, "error": f"Errore costruzione embed: {e}"}), 500

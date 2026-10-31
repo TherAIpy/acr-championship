@@ -1,43 +1,93 @@
-// frontend/js/api.js
+// js/api.js — versione corretta (C0)
+const API_BASE = 'https://acr-backend-wv98.onrender.com/api';
 
-const API_BASE_URL = 'https://acr-backend-wv98.onrender.com/api';
+// evita refresh concorrenti
+let _refreshPromise = null;
 
-async function apiCall(endpoint, method = 'GET', body = null) {
-    const token = await getAuthToken();
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+async function _getValidSession() {
+  try {
+    const sb = window.supabaseClient;
+    if (!sb) return null;
 
-    const config = { method: method, headers: headers };
-    if (body) config.body = JSON.stringify(body);
+    const { data: { session }, error } = await sb.auth.getSession();
+    if (error || !session) return null;
 
-    try {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-        
-        if (response.status === 401 || response.status === 403) {
-            console.error("Accesso negato o sessione scaduta.");
-        }
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Errore API');
-        return data;
-    } catch (error) {
-        console.error(`Errore chiamata ${endpoint}:`, error);
-        throw error;
+    // refresh proattivo se scade entro 60s
+    const expiresAt = (session.expires_at || 0) * 1000;
+    if (expiresAt && Date.now() > expiresAt - 60_000) {
+      if (!_refreshPromise) {
+        _refreshPromise = sb.auth.refreshSession().finally(() => { _refreshPromise = null; });
+      }
+      const { data: refreshed } = await _refreshPromise;
+      return refreshed?.session || null;
     }
+    return session;
+  } catch {
+    return null;
+  }
 }
 
-const api = {
-    getChampionships: () => apiCall('/championships'),
-    getChampionshipDetail: (champ_id) => apiCall(`/championship/${champ_id}`),
-    getRallies: (champ_id) => apiCall(`/rallies/${champ_id}`),
-    saveChampionship: (data) => apiCall('/create-championship', 'POST', data),
-    createRally: (data) => apiCall('/create-rally', 'POST', data),
-    saveStage: (data) => apiCall('/save-stage', 'POST', data),
+async function apiCall(path, options = {}) {
+  const url = `${API_BASE}${path}`;
 
-    // BLOCCO 1 — Leg & Stage
-    createLeg: (data) => apiCall('/create-leg', 'POST', data),
-    getLegs: (rally_id) => apiCall(`/legs/${rally_id}`),
-    createStage: (data) => apiCall('/create-stage', 'POST', data),
-    getStages: (leg_id) => apiCall(`/stages/${leg_id}`),
-    getTree: (champ_id) => apiCall(`/tree/${champ_id}`)
-};
+  const headers = {
+    Accept: 'application/json',
+    ...(options.headers || {}),
+  };
+  // content-type solo se c'è body e non è già impostato
+  if (options.body && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  // Auth SOLO se esiste davvero un access_token valido
+  const session = await _getValidSession();
+  const token = session?.access_token;
+  if (token && token !== 'null' && token !== 'undefined') {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const baseOpts = {
+    ...options,
+    headers,
+    credentials: 'omit', // niente cookie cross-origin
+    cache: 'no-store',
+  };
+
+  let res = await fetch(url, baseOpts);
+
+  // Un solo retry dopo refresh se il token era presente ma è stato rifiutato
+  if (res.status === 401 && token) {
+    try {
+      const sb = window.supabaseClient;
+      if (sb) {
+        const { data } = await sb.auth.refreshSession();
+        const newToken = data?.session?.access_token;
+        if (newToken) {
+          res = await fetch(url, {
+            ...baseOpts,
+            headers: { ...headers, Authorization: `Bearer ${newToken}` },
+          });
+        }
+      }
+    } catch { /* fallback anonimo: lascia il 401 originale */ }
+  }
+
+  return res;
+}
+
+async function apiJson(path, options = {}) {
+  const res = await apiCall(path, options);
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!res.ok) {
+    const err = new Error((data && data.error) || `HTTP ${res.status}`);
+    err.status = res.status;
+    err.body = data;
+    throw err;
+  }
+  return data;
+}
+
+window.apiCall = apiCall;
+window.apiJson = apiJson;
