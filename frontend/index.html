@@ -188,7 +188,7 @@
 
         // Deep linking: se c'è ?champ=ID nell'URL, apri automaticamente
                 const urlParams = new URLSearchParams(window.location.search);
-                const champId = urlParams.get('champ');
+                const champId = urlParams.get('id');
                 if (champId) {
                     const champ = state.championships.find(c => c.id == champId);
                     if (champ) openChampionship(champ);
