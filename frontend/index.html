@@ -111,8 +111,8 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../js/supabase.js"></script>
-    <script src="../js/api.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
 
     <script>
         // =========================================================
@@ -250,7 +250,7 @@
             content.innerHTML = `<div class="flex items-center justify-center h-64 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>`;
 
             try {
-                const res = await api.getTree(champ.id);
+                const res = await apiJson(champ.id);
                 if (res.success) {
                     state.tree = res.data;
                     switchTab('championship'); // Default tab
@@ -411,7 +411,7 @@
             if (!endpoint) return;
 
             try {
-                const res = await apiCall(endpoint);
+                const res = await apiJson(endpoint); // <--- Cambia apiCall in apiJson
                 if (!res.success) throw new Error(res.error || 'Errore sconosciuto');
                 renderTable(state.currentTab, res.data || []);
             } catch (e) {
