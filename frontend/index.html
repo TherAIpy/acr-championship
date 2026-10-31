@@ -241,7 +241,7 @@
             document.getElementById('view-championships').classList.add('hidden');
             document.getElementById('view-detail').classList.remove('hidden');
             document.getElementById('detail-title').textContent = champ.name;
-            
+    
             // Aggiorna URL
             window.history.pushState({}, '', `?champ=${champ.id}`);
 
@@ -250,7 +250,8 @@
             content.innerHTML = `<div class="flex items-center justify-center h-64 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>`;
 
             try {
-                const res = await apiJson(champ.id);
+                // QUI C'ERA L'ERRORE: Assicurati che ci sia /tree/ e non solo l'ID
+                const res = await apiJson(`/tree/${champ.id}`); 
                 if (res.success) {
                     state.tree = res.data;
                     switchTab('championship'); // Default tab
@@ -260,14 +261,6 @@
             } catch (e) {
                 content.innerHTML = `<div class="p-8 text-center text-red-400">Errore nel recupero dati: ${e.message}</div>`;
             }
-        }
-
-        function goBackToChampionships() {
-            state.currentChamp = null;
-            state.tree = null;
-            document.getElementById('view-detail').classList.add('hidden');
-            document.getElementById('view-championships').classList.remove('hidden');
-            window.history.pushState({}, '', window.location.pathname); // Pulisce URL
         }
 
         // =========================================================
@@ -411,7 +404,8 @@
             if (!endpoint) return;
 
             try {
-                const res = await apiJson(endpoint); // <--- Cambia apiCall in apiJson
+                // QUI C'ERA L'ERRORE: Deve usare "endpoint" e non altro
+                const res = await apiJson(endpoint); 
                 if (!res.success) throw new Error(res.error || 'Errore sconosciuto');
                 renderTable(state.currentTab, res.data || []);
             } catch (e) {
@@ -419,7 +413,6 @@
                     <div class="p-8 text-center text-red-400">
                         <i class="fa-solid fa-triangle-exclamation text-3xl mb-3"></i>
                         <p>Errore nel recupero dati: ${e.message}</p>
-                        <p class="text-xs text-slate-500 mt-2">Verifica che il backend sia aggiornato e che la rotta esista.</p>
                     </div>`;
             }
         }

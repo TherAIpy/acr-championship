@@ -28,8 +28,8 @@ async function _getValidSession() {
 }
 
 async function apiCall(path, options = {}) {
-  const url = `${API_BASE}${path}`;
-
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const url = `${API_BASE}${cleanPath}`;
   const headers = {
     Accept: 'application/json',
     ...(options.headers || {}),
