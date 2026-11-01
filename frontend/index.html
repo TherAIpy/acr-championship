@@ -238,18 +238,16 @@
                         <i class="fa-solid fa-chevron-down text-slate-500 transition-transform" id="chevron-rally-${r.id}"></i>
                     </div>
                     
-                    <!-- CORPO RALLY (Nascosto finché non cliccato) -->
+                    <!-- CORPO RALLY -->
                     <div id="rally-body-${r.id}" class="hidden border-t border-slate-700 bg-slate-900/80 p-3">
-                        <!-- Contenitore Classifica Punti Rally -->
                         <div id="rally-points-${r.id}"></div>
                         
-                        <!-- Lista Leg -->
                         <h4 class="text-[10px] uppercase text-slate-500 font-bold mt-4 mb-2">Elenco Leg</h4>
                         <div class="flex flex-col gap-2">
                             ${r.legs && r.legs.length > 0 ? r.legs.map(l => `
                                 <div class="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
-                                    <!-- BADGE LEG -->
-                                    <div onclick="toggleLeg(${r.id}, ${l.id})" id="leg-header-${l.id}" class="p-3 cursor-pointer flex justify-between items-center hover:bg-slate-700 transition-colors">
+                                    <!-- BADGE LEG: Aggiunto event.stopPropagation() -->
+                                    <div onclick="event.stopPropagation(); toggleLeg(${r.id}, ${l.id})" id="leg-header-${l.id}" class="p-3 cursor-pointer flex justify-between items-center hover:bg-slate-700 transition-colors">
                                         <div>
                                             <h4 class="font-semibold text-slate-200 text-sm">${l.name}</h4>
                                             <div class="text-[10px] text-slate-500 mt-0.5 flex gap-2">
@@ -259,7 +257,7 @@
                                         <i class="fa-solid fa-chevron-down text-slate-500 transition-transform" id="chevron-leg-${l.id}"></i>
                                     </div>
                                     
-                                    <!-- CORPO LEG (Sommatoria Tempi) -->
+                                    <!-- CORPO LEG -->
                                     <div id="leg-body-${l.id}" class="hidden border-t border-slate-700 p-2 bg-slate-900">
                                         <div id="leg-standings-${l.id}"></div>
                                     </div>
@@ -483,7 +481,11 @@
         // Tabella per i Punti del Rally
         function renderRallyPointsHTML(data) {
             if (!data || data.length === 0) return `<div class="text-xs text-slate-500 p-2">Nessun punteggio.</div>`;
-            let html = `<div class="border border-slate-700 rounded overflow-hidden mb-3"><table class="w-full text-xs text-left"><tbody>`;
+            
+            // Aggiunto max-h-64 (circa 8 righe) e overflow-y-auto per lo scroll
+            let html = `<div class="border border-slate-700 rounded overflow-hidden mb-3 max-h-64 overflow-y-auto custom-scrollbar">
+                        <table class="w-full text-xs text-left"><tbody>`;
+            
             data.forEach((s, idx) => {
                 html += `<tr class="border-b border-slate-800 bg-slate-900 ${idx===0 ? 'text-vrg-accent font-bold' : 'text-slate-300'}">
                     <td class="px-2 py-1.5 w-8 text-center border-r border-slate-700">${s.position}</td>
