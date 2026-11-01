@@ -362,49 +362,7 @@
         // =========================================================
         // COMPONENTE TABELLA RISULTATI (Per le Stage)
         // =========================================================
-        function renderTableHTML(data) {
-            if (!data || data.length === 0) {
-                return `<div class="text-slate-500 text-sm py-4">Nessun risultato ufficiale.</div>`;
-            }
-
-            let html = `<div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead class="text-[10px] uppercase bg-slate-800 text-slate-400"><tr><th class="px-2 py-2 text-center w-8">Pos</th><th class="px-2 py-2">Pilota</th><th class="px-2 py-2 hidden sm:table-cell">Auto</th><th class="px-2 py-2 text-right">Tempo</th></tr></thead><tbody>`;
-            data.forEach((row, i) => {
-                const rowCls = i === 0 ? 'bg-vrg-accent/10' : (i % 2 === 1 ? 'bg-slate-900/30' : '');
-                html += `<tr class="border-b border-slate-700/50 ${rowCls}">
-                    <td class="px-2 py-2 text-center font-bold text-white">${row.position}</td>
-                    <td class="px-2 py-2 font-medium text-slate-200">${row.driver_name}</td>
-                    <td class="px-2 py-2 text-slate-500 hidden sm:table-cell">${row.car_model}</td>
-                    <td class="px-2 py-2 text-right font-mono text-vrg-accent">${row.time_str}</td>
-                </tr>`;
-            });
-            html += `</tbody></table></div>`;
-            return html;
-        }
-
-        // =========================================================
-        // RESET / NAVIGAZIONE INDIETRO
-        // =========================================================
-        function resetToChamp() {
-            document.querySelectorAll('.champ-card').forEach(el => {
-                el.classList.remove('dimmed', 'active-item');
-            });
-            setLayoutState('home');
-            window.history.pushState({}, '', window.location.pathname);
-        }
-
-        function resetToRally() {
-            setLayoutState('champ');
-            document.querySelectorAll('[id^="leg-item-"]').forEach(el => {
-                el.classList.remove('opacity-50', 'bg-slate-800', 'border-l-4', 'border-vrg-accent');
-            });
-        }
-
-        window.addEventListener('popstate', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (!urlParams.has('id')) resetToChamp();
-        });
-
-        function renderMatrixHTML(data, type) {
+                function renderMatrixHTML(data, type) {
             if (!data.drivers || data.drivers.length === 0) return '<div class="text-slate-500 text-xs text-center py-2">Nessun punteggio.</div>';
 
             const cols = type === 'championship' ? data.rallies : data.legs;
@@ -418,7 +376,7 @@
             
             // Colonne dinamiche (Rally o Leg)
             cols.forEach((c, index) => {
-                html += `<th class="px-2 py-2 text-center">R${index + 1}</th>`; // Usa R1, R2 per risparmiare spazio
+                html += `<th class="px-2 py-2 text-center">R${index + 1}</th>`;
             });
             
             html += `<th class="px-2 py-2 text-right bg-slate-800 font-bold text-vrg-accent sticky right-0 z-10 w-16">Tot</th>
@@ -434,7 +392,11 @@
                 // Punti per ogni colonna
                 cols.forEach(c => {
                     const key = type === 'championship' ? 'rallies' : 'legs';
-                    const pts = d[key][str(c.id)] || 0;
+                    
+                    // FIX: In JS le chiavi degli oggetti sono stringhe, quindi se c.id è un numero (es. 1) 
+                    // e l'oggetto ha la chiave "1", l'accesso con c.id funziona automaticamente.
+                    const pts = d[key][c.id] || 0; 
+                    
                     html += `<td class="px-2 py-2 text-center ${pts > 0 ? 'text-slate-200' : 'text-slate-600'}">${pts > 0 ? pts : '-'}</td>`;
                 });
                 
