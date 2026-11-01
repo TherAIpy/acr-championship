@@ -110,22 +110,22 @@
             const col2 = document.getElementById('col-rallies');
             const col3 = document.getElementById('col-stages');
 
-            // Aggiungiamo h-[calc(100vh-100px)] per far apparire lo scroll interno alle colonne se sono lunghe
+            // h-[calc(100vh-80px)] calcola l'altezza dello schermo meno l'header. 
+            // Il trucco è overflow-y-auto applicato alle singole colonne.
             if (stateName === 'home') {
-                col1.className = 'col-transition w-full max-w-4xl flex flex-col gap-4 overflow-y-auto pr-2 h-[calc(100vh-100px)]';
-                col2.className = 'col-transition w-0 opacity-0 overflow-hidden flex flex-col gap-4 h-[calc(100vh-100px)]';
-                col3.className = 'col-transition w-0 opacity-0 overflow-hidden flex flex-col gap-4 h-[calc(100vh-100px)]';
+                col1.className = 'col-transition w-full max-w-4xl flex flex-col gap-4 overflow-y-auto pr-2 h-[calc(100vh-80px)]';
+                col2.className = 'col-transition w-0 opacity-0 overflow-hidden flex flex-col h-[calc(100vh-80px)]';
+                col3.className = 'col-transition w-0 opacity-0 overflow-hidden flex flex-col h-[calc(100vh-80px)]';
             } 
             else if (stateName === 'champ') {
-                col1.className = 'col-transition w-1/3 flex flex-col gap-4 overflow-y-auto pr-2 h-[calc(100vh-100px)]';
-                col2.className = 'col-transition w-2/3 flex flex-col gap-4 opacity-100 fade-in h-[calc(100vh-100px)]';
-                col3.className = 'col-transition w-0 opacity-0 overflow-hidden flex flex-col gap-4 h-[calc(100vh-100px)]';
+                col1.className = 'col-transition w-1/3 flex flex-col gap-4 overflow-y-auto pr-2 h-[calc(100vh-80px)]';
+                col2.className = 'col-transition w-2/3 flex flex-col gap-4 opacity-100 fade-in h-[calc(100vh-80px)] overflow-y-auto pr-2';
+                col3.className = 'col-transition w-0 opacity-0 overflow-hidden flex flex-col h-[calc(100vh-80px)]';
             } 
             else if (stateName === 'leg') {
-                // NOTA: Rimosso opacity-50 da col2. Non si grigia!
-                col1.className = 'col-transition w-1/4 flex flex-col gap-4 overflow-y-auto pr-2 h-[calc(100vh-100px)]';
-                col2.className = 'col-transition w-1/3 flex flex-col gap-4 opacity-100 h-[calc(100vh-100px)] overflow-y-auto pr-2';
-                col3.className = 'col-transition w-5/12 flex flex-col gap-4 opacity-100 fade-in h-[calc(100vh-100px)]';
+                col1.className = 'col-transition w-1/4 flex flex-col gap-4 overflow-y-auto pr-2 h-[calc(100vh-80px)]';
+                col2.className = 'col-transition w-1/3 flex flex-col gap-4 opacity-100 h-[calc(100vh-80px)] overflow-y-auto pr-2';
+                col3.className = 'col-transition w-5/12 flex flex-col gap-4 opacity-100 fade-in h-[calc(100vh-80px)] overflow-y-auto pr-2';
             }
         }
 
@@ -214,9 +214,6 @@
         }
 
         // =========================================================
-        // COLONNA 2: RALLY E LEG (Accordion)
-        // =========================================================
-                // =========================================================
         // COLONNA 2: RALLY E LEG
         // =========================================================
         function renderRallies(rallies) {
@@ -227,14 +224,18 @@
             }
 
             list.innerHTML = rallies.map(r => `
-                <div class="bg-vrg-card border border-slate-700 rounded-xl overflow-hidden mb-3">
+                <!-- BORDO BLU PER IL RALLY -->
+                <div class="bg-vrg-card border border-slate-700 border-l-4 border-l-blue-500 rounded-xl overflow-hidden mb-3">
                     <div onclick="toggleRally(${r.id})" class="p-4 cursor-pointer flex justify-between items-center hover:bg-slate-800 transition-colors">
                         <div>
                             <h3 class="font-bold text-lg text-white">${r.name}</h3>
-                            <div class="text-[11px] text-slate-400 mt-1 flex gap-3">
+                            <div class="text-[11px] text-slate-400 mt-1 flex gap-3 items-center">
                                 <span><i class="fa-solid fa-road"></i> ${r.total_legs} Leg</span>
                                 <span><i class="fa-solid fa-stopwatch"></i> ${r.total_stages} Stage</span>
                                 <span><i class="fa-solid fa-ruler-horizontal"></i> ${r.total_km} km</span>
+                                ${r.is_completed 
+                                    ? `<span class="bg-green-900/50 text-green-400 border border-green-700 text-[9px] px-1.5 py-0.5 rounded uppercase font-bold">Concluso</span>` 
+                                    : `<span class="bg-yellow-900/50 text-yellow-400 border border-yellow-700 text-[9px] px-1.5 py-0.5 rounded uppercase font-bold">In Corso</span>`}
                             </div>
                         </div>
                         <i class="fa-solid fa-chevron-down text-slate-500 transition-transform" id="chevron-rally-${r.id}"></i>
@@ -246,13 +247,16 @@
                         <h4 class="text-[10px] uppercase text-slate-500 font-bold mt-4 mb-2">Elenco Leg</h4>
                         <div class="flex flex-col gap-2">
                             ${r.legs && r.legs.length > 0 ? r.legs.map(l => `
-                                <div class="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
-                                    <!-- NOTA: Chiama toggleLeg -->
+                                <!-- BORDO VERDE PER LA LEG -->
+                                <div class="bg-slate-800 border border-slate-700 border-l-4 border-l-emerald-500 rounded-lg overflow-hidden">
                                     <div onclick="event.stopPropagation(); toggleLeg(${r.id}, ${l.id})" id="leg-header-${l.id}" class="p-3 cursor-pointer flex justify-between items-center hover:bg-slate-700 transition-colors">
                                         <div>
                                             <h4 class="font-semibold text-slate-200 text-sm">${l.name}</h4>
-                                            <div class="text-[10px] text-slate-500 mt-0.5 flex gap-2">
+                                            <div class="text-[10px] text-slate-500 mt-0.5 flex gap-2 items-center">
                                                 <span>${l.total_stages} Stage</span> &bull; <span>${l.total_km} km</span>
+                                                ${l.is_completed 
+                                                    ? `<span class="bg-green-900/50 text-green-400 border border-green-700 text-[8px] px-1 py-0.5 rounded uppercase font-bold">Concluso</span>` 
+                                                    : `<span class="bg-yellow-900/50 text-yellow-400 border border-yellow-700 text-[8px] px-1 py-0.5 rounded uppercase font-bold">In Corso</span>`}
                                             </div>
                                         </div>
                                         <i class="fa-solid fa-chevron-down text-slate-500 transition-transform" id="chevron-leg-${l.id}"></i>
@@ -280,21 +284,27 @@
                 currentBody.classList.remove('hidden');
                 document.getElementById(`chevron-rally-${id}`).classList.add('rotate-180');
 
+                const rallyData = state.currentTree.rallies.find(r => r.id == id);
                 const pointsContainer = document.getElementById(`rally-points-${id}`);
-                if (!pointsContainer.dataset.loaded) {
-                    pointsContainer.innerHTML = `<div class="text-xs text-slate-500 animate-pulse"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Caricamento punti...</div>`;
-                    try {
-                        const res = await apiJson(`/standings/rally/${id}`);
-                        pointsContainer.innerHTML = `<h4 class="text-[10px] uppercase text-vrg-accent font-bold mb-1">Classifica Punti Rally</h4>` + renderRallyPointsHTML(res.data);
-                        pointsContainer.dataset.loaded = true;
-                    } catch (e) {
-                        pointsContainer.innerHTML = `<div class="text-red-400 text-xs">Errore: ${e.message}</div>`;
+                
+                // PUNTO 4: Se il rally non è completo, mostra il messaggio di attesa
+                if (rallyData && !rallyData.is_completed) {
+                    pointsContainer.innerHTML = `<div class="text-xs text-slate-500 italic p-2 border border-slate-700 rounded bg-slate-800/30"><i class="fa-solid fa-lock mr-1"></i> La classifica punti sarà disponibile al termine del rally.</div>`;
+                } else {
+                    if (!pointsContainer.dataset.loaded) {
+                        pointsContainer.innerHTML = `<div class="text-xs text-slate-500 animate-pulse"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Caricamento punti...</div>`;
+                        try {
+                            const res = await apiJson(`/standings/rally/${id}`);
+                            pointsContainer.innerHTML = `<h4 class="text-[10px] uppercase text-vrg-accent font-bold mb-1">Classifica Punti Rally</h4>` + renderRallyPointsHTML(res.data);
+                            pointsContainer.dataset.loaded = true;
+                        } catch (e) {
+                            pointsContainer.innerHTML = `<div class="text-red-400 text-xs">Errore: ${e.message}</div>`;
+                        }
                     }
                 }
             }
         }
 
-        // QUESTA È LA FUNZIONE CHE MANCAVA!
         async function toggleLeg(rallyId, legId) {
             const body = document.getElementById(`leg-body-${legId}`);
             const chevron = document.getElementById(`chevron-leg-${legId}`);
@@ -302,12 +312,18 @@
 
             document.querySelectorAll('[id^="leg-body-"]').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('[id^="chevron-leg-"]').forEach(el => el.classList.remove('rotate-180'));
-            document.querySelectorAll('[id^="leg-header-"]').forEach(el => el.classList.remove('border-l-4', 'border-vrg-accent', 'bg-slate-700'));
+            document.querySelectorAll('[id^="leg-header-"]').forEach(el => el.classList.remove('border-vrg-accent', 'bg-slate-700'));
+            // Reset del bordo verde se non selezionata
+            document.querySelectorAll('[id^="leg-header-"]').forEach(el => el.classList.add('border-l-emerald-500'));
 
             if (isCurrentlyHidden) {
                 body.classList.remove('hidden');
                 chevron.classList.add('rotate-180');
-                document.getElementById(`leg-header-${legId}`).classList.add('border-l-4', 'border-vrg-accent', 'bg-slate-700');
+                
+                // Evidenzia la Leg selezionata cambiando il bordo in giallo
+                const legHeader = document.getElementById(`leg-header-${legId}`);
+                legHeader.classList.remove('border-l-emerald-500');
+                legHeader.classList.add('border-vrg-accent', 'bg-slate-700');
 
                 const standingsContainer = document.getElementById(`leg-standings-${legId}`);
                 if (!standingsContainer.dataset.loaded) {
@@ -334,7 +350,8 @@
                     const stageList = document.getElementById('stage-list');
                     if (leg.stages && leg.stages.length > 0) {
                         stageList.innerHTML = leg.stages.map(s => `
-                            <div class="bg-vrg-card border border-slate-700 rounded-xl overflow-hidden mb-3">
+                            <!-- BORDO GRIGIO PER LE STAGE -->
+                            <div class="bg-vrg-card border border-slate-700 border-l-4 border-l-slate-500 rounded-xl overflow-hidden mb-3">
                                 <div onclick="toggleStageResults(${s.id})" class="p-3 cursor-pointer flex justify-between items-center hover:bg-slate-800 transition-colors">
                                     <div>
                                         <h3 class="font-bold text-white text-sm">${s.name}</h3>
@@ -470,14 +487,12 @@
             setLayoutState('champ');
         }
 
-        // Tabella per i Punti del Rally
+        // Tabella per i Punti del Rally (Scrollabile)
         function renderRallyPointsHTML(data) {
             if (!data || data.length === 0) return `<div class="text-xs text-slate-500 p-2">Nessun punteggio.</div>`;
             
-            // Aggiunto max-h-64 (circa 8 righe) e overflow-y-auto per lo scroll
             let html = `<div class="border border-slate-700 rounded overflow-hidden mb-3 max-h-64 overflow-y-auto custom-scrollbar">
                         <table class="w-full text-xs text-left"><tbody>`;
-            
             data.forEach((s, idx) => {
                 html += `<tr class="border-b border-slate-800 bg-slate-900 ${idx===0 ? 'text-vrg-accent font-bold' : 'text-slate-300'}">
                     <td class="px-2 py-1.5 w-8 text-center border-r border-slate-700">${s.position}</td>
@@ -489,16 +504,27 @@
             return html;
         }
 
-        // Tabella per la Sommatoria Tempi della Leg
+        // Tabella Sommatoria Tempi Leg (Scrollabile e Vettura di fianco)
         function renderLegStandingsHTML(data) {
             if (!data || data.length === 0) return `<div class="text-xs text-slate-500 p-2">Nessun tempo registrato.</div>`;
-            let html = `<div class="border border-slate-700 rounded overflow-hidden mb-2"><table class="w-full text-[11px] text-left"><tbody>`;
+            
+            let html = `<div class="border border-slate-700 rounded overflow-hidden mb-2 max-h-64 overflow-y-auto custom-scrollbar">
+                        <table class="w-full text-[11px] text-left"><tbody>`;
             data.forEach((s, idx) => {
+                // Gestione DNF / DNS
+                let statusBadge = '';
+                if (s.status && s.status !== 'completed') {
+                    statusBadge = `<span class="text-[9px] bg-red-900/50 text-red-400 px-1 py-0.5 rounded ml-1">${s.status.toUpperCase()}</span>`;
+                }
+                
                 html += `<tr class="border-b border-slate-800 bg-slate-800/50 ${idx===0 ? 'text-white font-bold' : 'text-slate-300'}">
                     <td class="px-2 py-1.5 w-8 text-center border-r border-slate-700">${s.position}</td>
                     <td class="px-2 py-1.5">
-                        <div>${s.driver}</div>
-                        <div class="text-[9px] text-slate-500">${s.car || '-'}</div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium">${s.driver}</span>
+                            <span class="text-[9px] text-slate-500">${s.car || '-'}</span>
+                            ${statusBadge}
+                        </div>
                     </td>
                     <td class="px-2 py-1.5 text-right font-mono text-vrg-accent">${s.total_str}</td>
                 </tr>`;
@@ -507,17 +533,27 @@
             return html;
         }
 
-        // Tabella per i risultati della singola Stage
+        // Tabella Risultati Stage (Vettura di fianco)
         function renderStageResultsHTML(data) {
             if (!data || data.length === 0) return `<div class="text-xs text-slate-500 py-2 text-center">Nessun risultato ufficiale.</div>`;
-            let html = `<div class="overflow-x-auto"><table class="w-full text-left text-[11px]"><thead class="text-[9px] uppercase bg-slate-800 text-slate-400 border-b border-slate-700"><tr><th class="px-2 py-1.5 text-center w-8">Pos</th><th class="px-2 py-1.5">Pilota / Vettura</th><th class="px-2 py-1.5 text-right">Tempo</th></tr></thead><tbody>`;
+            
+            let html = `<div class="overflow-x-auto max-h-64 overflow-y-auto custom-scrollbar"><table class="w-full text-left text-[11px]"><thead class="text-[9px] uppercase bg-slate-800 text-slate-400 border-b border-slate-700 sticky top-0"><tr><th class="px-2 py-1.5 text-center w-8">Pos</th><th class="px-2 py-1.5">Pilota / Vettura</th><th class="px-2 py-1.5 text-right">Tempo</th></tr></thead><tbody>`;
             data.forEach((row, i) => {
                 const rowCls = i === 0 ? 'bg-vrg-accent/10' : (i % 2 === 1 ? 'bg-slate-900/30' : '');
+                
+                let statusBadge = '';
+                if (row.status && row.status !== 'completed') {
+                    statusBadge = `<span class="text-[9px] bg-red-900/50 text-red-400 px-1 py-0.5 rounded ml-1">${row.status.toUpperCase()}</span>`;
+                }
+
                 html += `<tr class="border-b border-slate-700/50 ${rowCls} hover:bg-slate-800 transition-colors">
                     <td class="px-2 py-1.5 text-center font-bold text-white">${row.position}</td>
                     <td class="px-2 py-1.5">
-                        <div class="font-medium text-slate-200">${row.driver_name}</div>
-                        <div class="text-[9px] text-slate-500">${row.car_model || '-'}</div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium text-slate-200">${row.driver_name}</span>
+                            <span class="text-[9px] text-slate-500">${row.car_model || '-'}</span>
+                            ${statusBadge}
+                        </div>
                     </td>
                     <td class="px-2 py-1.5 text-right font-mono text-vrg-accent">${row.time_str}</td>
                 </tr>`;

@@ -447,8 +447,7 @@ def get_tree(champ_id):
         stages_with_official = set(r['stage_id'] for r in results if r.get('is_official'))
         stages_with_draft    = set(r['stage_id'] for r in results if not r.get('is_official'))
 
-        # Calcoli per i badge
-        champ_stats = {'total_rallies': len(rallies), 'total_legs': 0, 'total_stages': 0, 'total_km': 0.0}
+        champ_stats = {'total_rallies': len(rallies), 'total_legs': 0, 'total_stages': 0, 'total_km': 0.0, 'is_completed': True}
         
         stages_by_leg = {}
         for s in stages:
@@ -461,20 +460,26 @@ def get_tree(champ_id):
         for l in legs:
             l['stages'] = stages_by_leg.get(l['id'], [])
             
-            # Calcoli per il badge della Leg
+            # Una Leg è completa se tutte le sue stage hanno risultati ufficiali
+            l['is_completed'] = len(l['stages']) > 0 and all(s['has_official_results'] for s in l['stages'])
+            
             l['total_stages'] = len(l['stages'])
             l['total_km'] = sum(float(s.get('distance_km', 0) or 0) for s in l['stages'])
             
             legs_by_rally.setdefault(l['rally_id'], []).append(l)
             
-            # Aggiorna totali campionato
             champ_stats['total_legs'] += 1
             champ_stats['total_stages'] += l['total_stages']
             champ_stats['total_km'] += l['total_km']
             
         for r in rallies:
             r['legs'] = legs_by_rally.get(r['id'], [])
-            # Calcoli per il badge del Rally
+            
+            # Un Rally è completo se tutte le sue Leg sono complete (e ha almeno una Leg)
+            r['is_completed'] = len(r['legs']) > 0 and all(l['is_completed'] for l in r['legs'])
+            if not r['is_completed']:
+                champ_stats['is_completed'] = False # Se un rally non è completo, il campionato non lo è
+                
             r['total_legs'] = len(r['legs'])
             r['total_stages'] = sum(l['total_stages'] for l in r['legs'])
             r['total_km'] = sum(l['total_km'] for l in r['legs'])
