@@ -116,12 +116,14 @@
                 col3.className = 'col-transition w-0 opacity-0 overflow-hidden flex flex-col gap-4';
             } 
             else if (stateName === 'champ') {
-                col1.className = 'col-transition w-1/3 flex flex-col gap-4 overflow-y-auto pr-2 opacity-50 hover:opacity-100';
+                // RIMOSSA L'OPACITÀ DALLA COLONNA 1
+                col1.className = 'col-transition w-1/3 flex flex-col gap-4 overflow-y-auto pr-2';
                 col2.className = 'col-transition w-2/3 flex flex-col gap-4 opacity-100 fade-in';
                 col3.className = 'col-transition w-0 opacity-0 overflow-hidden flex flex-col gap-4';
             } 
             else if (stateName === 'leg') {
-                col1.className = 'col-transition w-1/4 flex flex-col gap-4 overflow-y-auto pr-2 opacity-30 hover:opacity-50';
+                // RIMOSSA L'OPACITÀ DALLA COLONNA 1 ANCHE QUI
+                col1.className = 'col-transition w-1/4 flex flex-col gap-4 overflow-y-auto pr-2';
                 col2.className = 'col-transition w-1/3 flex flex-col gap-4 opacity-50 hover:opacity-100 overflow-y-auto pr-2';
                 col3.className = 'col-transition w-5/12 flex flex-col gap-4 opacity-100 fade-in';
             }
@@ -406,6 +408,46 @@
 
             html += `</tbody></table></div>`;
             return html;
+        }
+
+        // =========================================================
+        // RESET / NAVIGAZIONE INDIETRO (I tasti "X")
+        // =========================================================
+        function resetToChamp() {
+            // Resetta lo stato
+            state.currentChamp = null;
+            state.currentTree = null;
+            state.selectedLeg = null;
+
+            // Toglie l'effetto grigio/attivo da tutte le card
+            document.querySelectorAll('.champ-card').forEach(el => {
+                el.classList.remove('dimmed', 'active-item');
+                // Svuota e nasconde le tabelle dei punteggi
+                const matrix = el.querySelector('[id^="champ-matrix-container-"]');
+                if (matrix) {
+                    matrix.classList.add('hidden');
+                    matrix.innerHTML = '';
+                }
+            });
+
+            // Torna al layout a 1 colonna
+            setLayoutState('home');
+            
+            // Pulisce l'URL
+            window.history.pushState({}, '', window.location.pathname);
+        }
+
+        function resetToRally() {
+            // Resetta la leg selezionata
+            state.selectedLeg = null;
+
+            // Toglie l'evidenziazione dalle Leg
+            document.querySelectorAll('[id^="leg-item-"]').forEach(el => {
+                el.classList.remove('opacity-50', 'bg-slate-800', 'border-l-4', 'border-vrg-accent');
+            });
+
+            // Torna al layout a 2 colonne
+            setLayoutState('champ');
         }
     </script>
 </body>
