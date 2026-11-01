@@ -719,8 +719,7 @@ def _embed_stage(ctx, frontend_base="https://acr-championship.pages.dev"):
 
 
 def _compute_standings_for_stages(stage_ids):
-    """Restituisce la classifica (somma tempi, regola DNF) come lista ordinata.
-    Riusa la stessa logica di /api/standings ma filtrata su is_official=True."""
+    """Restituisce la classifica (somma tempi, regola DNF) come lista ordinata."""
     supabase = get_supabase()
     if not stage_ids:
         return []
@@ -734,23 +733,49 @@ def _compute_standings_for_stages(stage_ids):
     if not results:
         return []
 
+    # 1. Trova il tempo massimo per ogni stage (per DNF e mancata partecipazione)
     stage_max = {}
     for r in results:
         if r['status'] == 'completed' and r['time_ms']:
             sid = r['stage_id']
             stage_max[sid] = max(stage_max.get(sid, 0), r['time_ms'])
 
-    totals = {}
+    # 2. Trova tutti i piloti che hanno partecipato ad ALMENO una stage
+    all_drivers = set(r['driver_name'] for r in results)
+    
+    # Raggruppa i risultati per pilota e stage
+    driver_results = {}
     for r in results:
         drv = r['driver_name']
-        if drv not in totals:
-            totals[drv] = {'time_ms': 0, 'status': 'completed', 'car': r.get('car_model', '')}
-        if r['status'] in ('dnf', 'dns', 'dsq'):
-            totals[drv]['status'] = r['status']
-            last = stage_max.get(r['stage_id'], 300000)
-            totals[drv]['time_ms'] += last * 2
-        elif r['status'] == 'completed':
-            totals[drv]['time_ms'] += (r['time_ms'] or 0)
+        if drv not in driver_results:
+            driver_results[drv] = {}
+        driver_results[drv][r['stage_id']] = r
+
+    totals = {}
+    for drv in all_drivers:
+        totals[drv] = {'time_ms': 0, 'status': 'completed', 'car': ''}
+        
+        # Cicla su TUTTE le stage previste per questa leg/rally
+        for sid in stage_ids: 
+            r = driver_results[drv].get(sid)
+            
+            if r:
+                # Il pilota ha un risultato per questa stage
+                if r.get('car_model'): totals[drv]['car'] = r.get('car_model') 
+                
+                if r['status'] in ('dnf', 'dns', 'dsq'):
+                    totals[drv]['status'] = r['status']
+                    last = stage_max.get(sid, 300000)
+                    totals[drv]['time_ms'] += last * 2
+                elif r['status'] == 'completed':
+                    totals[drv]['time_ms'] += (r['time_ms'] or 0)
+            else:
+                # Il pilota NON ha un risultato per questa stage -> Penalità
+                # Assegniamo il doppio del tempo massimo della stage
+                last = stage_max.get(sid, 300000)
+                totals[drv]['time_ms'] += last * 2
+                # Marchiamo lo status come DNF perché non ha completato l'intera leg
+                totals[drv]['status'] = 'dnf'
 
     standings = [{'driver': k, 'total_ms': v['time_ms'], 'car': v['car'], 'status': v['status']} for k, v in totals.items()]
     standings.sort(key=lambda x: x['total_ms'])
@@ -766,7 +791,6 @@ def _compute_standings_for_stages(stage_ids):
         item['total_str'] = _format_ms(item['total_ms'])
 
     return standings
-
 
 def _compute_standings_for_leg(leg_id):
     supabase = get_supabase()
@@ -1108,7 +1132,7 @@ def get_standings(type, id):
     points_system = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1]
     
     try:
-        # Funzione di supporto per calcolare i tempi (con regola DNF)
+        # Funzione di supporto per calcolare i tempi (con regola DNF e partecipazione)
         def calculate_times(stage_ids):
             results = (
                         supabase.table('stage_result').select('*')
@@ -1118,33 +1142,52 @@ def get_standings(type, id):
                     )
             if not results: return []
             
-            driver_totals = {}
-            # 1. Trova l'ultimo tempo per ogni stage (per regola DNF)
+            # 1. Trova l'ultimo tempo per ogni stage
             stage_max_times = {}
             for r in results:
                 if r['status'] == 'completed' and r['time_ms']:
                     sid = r['stage_id']
                     stage_max_times[sid] = max(stage_max_times.get(sid, 0), r['time_ms'])
             
-            # 2. Somma i tempi applicando la regola DNF (ultimo tempo * 2)
+            # 2. Trova tutti i piloti
+            all_drivers = set(r['driver_name'] for r in results)
+            
+            # 3. Raggruppa per pilota
+            driver_results = {}
             for r in results:
                 drv = r['driver_name']
-                if drv not in driver_totals:
-                    driver_totals[drv] = {'time_ms': 0, 'status': 'completed', 'car': r.get('car_model', '')}
+                if drv not in driver_results:
+                    driver_results[drv] = {}
+                driver_results[drv][r['stage_id']] = r
+
+            driver_totals = {}
+            for drv in all_drivers:
+                driver_totals[drv] = {'time_ms': 0, 'status': 'completed', 'car': ''}
                 
-                if r['status'] in ['dnf', 'dns', 'dsq']:
-                    driver_totals[drv]['status'] = r['status']
-                    # Applica tempo fittizio: ultimo tempo dello stage * 2
-                    last_time = stage_max_times.get(r['stage_id'], 300000) # default 5 min se vuoto
-                    driver_totals[drv]['time_ms'] += (last_time * 2)
-                elif r['status'] == 'completed':
-                    driver_totals[drv]['time_ms'] += (r['time_ms'] or 0)
+                # Cicla su TUTTE le stage
+                for sid in stage_ids:
+                    r = driver_results[drv].get(sid)
+                    
+                    if r:
+                        if r.get('car_model'): driver_totals[drv]['car'] = r.get('car_model')
+                        
+                        if r['status'] in ['dnf', 'dns', 'dsq']:
+                            driver_totals[drv]['status'] = r['status']
+                            last_time = stage_max_times.get(sid, 300000)
+                            driver_totals[drv]['time_ms'] += (last_time * 2)
+                        elif r['status'] == 'completed':
+                            driver_totals[drv]['time_ms'] += (r['time_ms'] or 0)
+                    else:
+                        # Non ha corso questa stage -> Penalità
+                        last_time = stage_max_times.get(sid, 300000)
+                        driver_totals[drv]['time_ms'] += (last_time * 2)
+                        driver_totals[drv]['status'] = 'dnf'
             
-            # 3. Prepara la lista ordinata
+            # 4. Prepara la lista ordinata
             standings = [{'driver': k, 'total_ms': v['time_ms'], 'car': v['car'], 'status': v['status']} for k, v in driver_totals.items()]
             standings.sort(key=lambda x: x['total_ms'])
             
-            # 4. Gestione Parità (stessa posizione per tempi uguali)
+            # 5. Gestione Parità
             prev_time = -1
             current_pos = 1
             for i, item in enumerate(standings):
@@ -1157,7 +1200,7 @@ def get_standings(type, id):
                 item['total_str'] = ms_to_time_str(item['total_ms'])
             
             return standings
-
+        
         if type == 'stage':
             # Logica per singolo stage
             res = (
