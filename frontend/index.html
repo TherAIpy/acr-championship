@@ -110,22 +110,22 @@
             const col2 = document.getElementById('col-rallies');
             const col3 = document.getElementById('col-stages');
 
+            // Aggiungiamo h-[calc(100vh-100px)] per far apparire lo scroll interno alle colonne se sono lunghe
             if (stateName === 'home') {
-                col1.className = 'col-transition w-full max-w-4xl flex flex-col gap-4 overflow-y-auto pr-2';
-                col2.className = 'col-transition w-0 opacity-0 overflow-hidden flex flex-col gap-4';
-                col3.className = 'col-transition w-0 opacity-0 overflow-hidden flex flex-col gap-4';
+                col1.className = 'col-transition w-full max-w-4xl flex flex-col gap-4 overflow-y-auto pr-2 h-[calc(100vh-100px)]';
+                col2.className = 'col-transition w-0 opacity-0 overflow-hidden flex flex-col gap-4 h-[calc(100vh-100px)]';
+                col3.className = 'col-transition w-0 opacity-0 overflow-hidden flex flex-col gap-4 h-[calc(100vh-100px)]';
             } 
             else if (stateName === 'champ') {
-                // RIMOSSA L'OPACITÀ DALLA COLONNA 1
-                col1.className = 'col-transition w-1/3 flex flex-col gap-4 overflow-y-auto pr-2';
-                col2.className = 'col-transition w-2/3 flex flex-col gap-4 opacity-100 fade-in';
-                col3.className = 'col-transition w-0 opacity-0 overflow-hidden flex flex-col gap-4';
+                col1.className = 'col-transition w-1/3 flex flex-col gap-4 overflow-y-auto pr-2 h-[calc(100vh-100px)]';
+                col2.className = 'col-transition w-2/3 flex flex-col gap-4 opacity-100 fade-in h-[calc(100vh-100px)]';
+                col3.className = 'col-transition w-0 opacity-0 overflow-hidden flex flex-col gap-4 h-[calc(100vh-100px)]';
             } 
             else if (stateName === 'leg') {
-                // RIMOSSA L'OPACITÀ DALLA COLONNA 1 ANCHE QUI
-                col1.className = 'col-transition w-1/4 flex flex-col gap-4 overflow-y-auto pr-2';
-                col2.className = 'col-transition w-1/3 flex flex-col gap-4 opacity-50 hover:opacity-100 overflow-y-auto pr-2';
-                col3.className = 'col-transition w-5/12 flex flex-col gap-4 opacity-100 fade-in';
+                // NOTA: Rimosso opacity-50 da col2. Non si grigia!
+                col1.className = 'col-transition w-1/4 flex flex-col gap-4 overflow-y-auto pr-2 h-[calc(100vh-100px)]';
+                col2.className = 'col-transition w-1/3 flex flex-col gap-4 opacity-100 h-[calc(100vh-100px)] overflow-y-auto pr-2';
+                col3.className = 'col-transition w-5/12 flex flex-col gap-4 opacity-100 fade-in h-[calc(100vh-100px)]';
             }
         }
 
@@ -258,41 +258,58 @@
         }
 
         async function toggleRally(id) {
-            const body = document.getElementById(`rally-body-${id}`);
-            const chevron = document.getElementById(`chevron-rally-${id}`);
-            const isHidden = body.classList.contains('hidden');
-            
-            body.classList.toggle('hidden');
-            chevron.classList.toggle('rotate-180');
+            const currentBody = document.getElementById(`rally-body-${id}`);
+            const isCurrentlyHidden = currentBody.classList.contains('hidden');
 
-            // Se si sta aprendo, carica la matrice
-            if (isHidden) {
+            // 1. Chiudi TUTTI i rally aperti
+            document.querySelectorAll('[id^="rally-body-"]').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('[id^="chevron-rally-"]').forEach(el => el.classList.remove('rotate-180'));
+
+            // 2. Se il rally cliccato era chiuso, aprilo
+            if (isCurrentlyHidden) {
+                currentBody.classList.remove('hidden');
+                document.getElementById(`chevron-rally-${id}`).classList.add('rotate-180');
+
+                // Carica la matrice (Classifica Punti Rally)
                 const matrixContainer = document.getElementById(`rally-matrix-${id}`);
-                if (matrixContainer.dataset.loaded) return;
-                
-                matrixContainer.classList.remove('hidden');
-                matrixContainer.innerHTML = `<div class="text-xs text-slate-500 animate-pulse text-center">Caricamento punteggi...</div>`;
-                
-                try {
-                    const res = await apiJson(`/standings/matrix/rally/${id}`);
-                    matrixContainer.innerHTML = `<h4 class="text-xs uppercase text-vrg-accent font-bold mb-2">Punti per Leg</h4>` + renderMatrixHTML(res, 'rally');
-                    matrixContainer.dataset.loaded = true;
-                } catch (e) {
-                    matrixContainer.innerHTML = `<div class="text-red-400 text-xs">Errore: ${e.message}</div>`;
+                if (!matrixContainer.dataset.loaded) {
+                    matrixContainer.classList.remove('hidden');
+                    matrixContainer.innerHTML = `<div class="text-xs text-slate-500 animate-pulse text-center"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Caricamento classifica...</div>`;
+                    
+                    try {
+                        // Usiamo l'endpoint che calcola i punti del rally
+                        const res = await apiJson(`/standings/rally/${id}`);
+                        // Creiamo una finta struttura per renderMatrixHTML o usiamo una tabella dedicata
+                        // Per ora mostriamo i punti del rally
+                        let html = `<h4 class="text-xs uppercase text-vrg-accent font-bold mb-2">Classifica Punti Rally</h4>`;
+                        if (res.data && res.data.length > 0) {
+                            html += `<div class="border border-slate-700 rounded overflow-hidden"><table class="w-full text-xs text-left"><tbody>`;
+                            res.data.forEach((s, idx) => {
+                                html += `<tr class="border-b border-slate-800 bg-slate-900 ${idx===0 ? 'text-vrg-accent font-bold' : 'text-slate-300'}"><td class="px-2 py-1 w-6 text-center">${s.position}</td><td class="px-2 py-1">${s.driver}</td><td class="px-2 py-1 text-right">${s.points} pt</td></tr>`;
+                            });
+                            html += `</tbody></table></div>`;
+                        } else {
+                            html += `<div class="text-xs text-slate-500">Nessun risultato.</div>`;
+                        }
+                        matrixContainer.innerHTML = html;
+                        matrixContainer.dataset.loaded = true;
+                    } catch (e) {
+                        matrixContainer.innerHTML = `<div class="text-red-400 text-xs">Errore: ${e.message}</div>`;
+                    }
                 }
             }
         }
 
-        // =========================================================
-        // COLONNA 3: STAGE E RISULTATI
-        // =========================================================
-        function selectLeg(rallyId, legId) {
+        async function selectLeg(rallyId, legId) {
             const rally = state.currentTree.rallies.find(r => r.id == rallyId);
             const leg = rally.legs.find(l => l.id == legId);
             state.selectedLeg = leg;
 
-            // Effetto visivo Leg
-            document.querySelectorAll('[id^="leg-item-"]').forEach(el => el.classList.add('opacity-50'));
+            // Evidenzia solo la Leg selezionata
+            document.querySelectorAll('[id^="leg-item-"]').forEach(el => {
+                el.classList.remove('bg-slate-800', 'border-l-4', 'border-vrg-accent');
+                el.classList.add('opacity-50');
+            });
             const activeLeg = document.getElementById(`leg-item-${legId}`);
             if(activeLeg) {
                 activeLeg.classList.remove('opacity-50');
@@ -302,7 +319,45 @@
             setLayoutState('leg');
             document.getElementById('stages-title').innerHTML = `<i class="fa-solid fa-stopwatch text-vrg-accent mr-2"></i> ${leg.name}`;
             
-            renderStages(leg.stages);
+            // Carica la vista della Leg (Tempi + Stage)
+            const list = document.getElementById('stage-list');
+            list.innerHTML = `<div class="flex justify-center py-4"><i class="fa-solid fa-spinner fa-spin text-2xl text-vrg-accent"></i></div>`;
+
+            try {
+                // 1. Recupera la classifica tempi della Leg
+                const legStandingsRes = await apiJson(`/standings/leg/${legId}`);
+                
+                // 2. Prepara l'HTML
+                let html = `<div class="mb-4">
+                    <h4 class="text-xs uppercase text-vrg-accent font-bold mb-2">Classifica Tempi Leg</h4>
+                    ${renderTableHTML(legStandingsRes.data)}
+                </div>
+                <h4 class="text-xs uppercase text-vrg-accent font-bold mb-2 mt-6">Stage</h4>`;
+
+                // 3. Aggiunge le Stage (accordion)
+                html += leg.stages.map(s => `
+                    <div class="bg-vrg-card border border-slate-700 rounded-xl overflow-hidden mb-2">
+                        <div onclick="toggleStageResults(${s.id})" class="p-3 cursor-pointer flex justify-between items-center hover:bg-slate-800 transition-colors">
+                            <div>
+                                <h3 class="font-bold text-white text-sm">${s.name}</h3>
+                                <div class="text-[10px] text-slate-400 mt-1 flex gap-3">
+                                    ${s.distance_km ? `<span><i class="fa-solid fa-ruler"></i> ${s.distance_km} km</span>` : ''}
+                                    <span><i class="fa-solid fa-cloud"></i> ${s.weather || 'Sereno'}</span>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-chevron-down text-slate-500 transition-transform" id="chevron-stage-${s.id}"></i>
+                        </div>
+                        <div id="stage-body-${s.id}" class="hidden border-t border-slate-700">
+                            <div id="stage-results-${s.id}" class="p-2 text-center"></div>
+                        </div>
+                    </div>
+                `).join('');
+
+                list.innerHTML = html;
+
+            } catch (e) {
+                list.innerHTML = `<div class="text-red-400 text-sm">Errore: ${e.message}</div>`;
+            }
         }
 
         function renderStages(stages) {
@@ -364,45 +419,39 @@
         // =========================================================
         // COMPONENTE TABELLA RISULTATI (Per le Stage)
         // =========================================================
-                function renderMatrixHTML(data, type) {
+        function renderMatrixHTML(data, type) {
             if (!data.drivers || data.drivers.length === 0) return '<div class="text-slate-500 text-xs text-center py-2">Nessun punteggio.</div>';
 
             const cols = type === 'championship' ? data.rallies : data.legs;
             
-            // Intestazione
-            let html = `<div class="overflow-x-auto rounded border border-slate-700">
-                <table class="w-full text-left text-xs whitespace-nowrap">
+            let html = `<div class="overflow-x-auto rounded border border-slate-700 w-full">
+                <table class="w-full text-left text-xs table-fixed min-w-max">
                     <thead class="bg-slate-800 text-slate-400 uppercase text-[10px]">
                         <tr>
-                            <th class="px-2 py-2 sticky left-0 bg-slate-800 z-10 w-24">Pilota</th>`;
+                            <!-- Colonna Pilota larga fissa -->
+                            <th class="px-2 py-2 w-32 truncate">Pilota</th>`;
             
-            // Colonne dinamiche (Rally o Leg)
-            cols.forEach((c, index) => {
-                html += `<th class="px-2 py-2 text-center">R${index + 1}</th>`;
+            // Colonne dinamiche strette (w-8 = 32px)
+            cols.forEach((c) => {
+                html += `<th class="px-1 py-2 text-center w-8" title="${c.name}">R</th>`;
             });
             
-            html += `<th class="px-2 py-2 text-right bg-slate-800 font-bold text-vrg-accent sticky right-0 z-10 w-16">Tot</th>
+            html += `<th class="px-2 py-2 text-right bg-slate-800 font-bold text-vrg-accent w-10">Tot</th>
                     </tr>
                 </thead><tbody>`;
 
-            // Righe
             data.drivers.forEach((d, i) => {
                 const rowCls = i === 0 ? 'bg-vrg-accent/10' : (i % 2 === 1 ? 'bg-slate-900/50' : '');
                 html += `<tr class="border-b border-slate-700/50 hover:bg-slate-800 transition-colors ${rowCls}">
-                    <td class="px-2 py-2 font-medium text-white sticky left-0 bg-inherit z-10">${d.driver}</td>`;
+                    <td class="px-2 py-2 font-medium text-white w-32 truncate">${d.driver}</td>`;
                 
-                // Punti per ogni colonna
                 cols.forEach(c => {
                     const key = type === 'championship' ? 'rallies' : 'legs';
-                    
-                    // FIX: In JS le chiavi degli oggetti sono stringhe, quindi se c.id è un numero (es. 1) 
-                    // e l'oggetto ha la chiave "1", l'accesso con c.id funziona automaticamente.
-                    const pts = d[key][c.id] || 0; 
-                    
-                    html += `<td class="px-2 py-2 text-center ${pts > 0 ? 'text-slate-200' : 'text-slate-600'}">${pts > 0 ? pts : '-'}</td>`;
+                    const pts = d[key][c.id] || 0;
+                    html += `<td class="px-1 py-2 text-center ${pts > 0 ? 'text-slate-200 font-bold' : 'text-slate-600'}">${pts > 0 ? pts : '-'}</td>`;
                 });
                 
-                html += `<td class="px-2 py-2 text-right font-bold text-vrg-accent sticky right-0 bg-inherit z-10">${d.total}</td>
+                html += `<td class="px-2 py-2 text-right font-bold text-vrg-accent">${d.total}</td>
                 </tr>`;
             });
 
@@ -448,6 +497,28 @@
 
             // Torna al layout a 2 colonne
             setLayoutState('champ');
+        }
+
+            function renderTableHTML(data) {
+            if (!data || data.length === 0) {
+                return `<div class="text-slate-500 text-sm py-4 text-center">Nessun risultato ufficiale.</div>`;
+            }
+
+            let html = `<div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead class="text-[10px] uppercase bg-slate-800 text-slate-400 border-b border-slate-700"><tr><th class="px-2 py-2 text-center w-8">Pos</th><th class="px-2 py-2">Pilota / Vettura</th><th class="px-2 py-2 text-right">Tempo</th></tr></thead><tbody>`;
+            data.forEach((row, i) => {
+                const rowCls = i === 0 ? 'bg-vrg-accent/10' : (i % 2 === 1 ? 'bg-slate-900/30' : '');
+                // Inseriamo la vettura sotto il nome del pilota
+                html += `<tr class="border-b border-slate-700/50 ${rowCls} hover:bg-slate-800 transition-colors">
+                    <td class="px-2 py-3 text-center font-bold text-white">${row.position}</td>
+                    <td class="px-2 py-3">
+                        <div class="font-medium text-slate-200">${row.driver_name}</div>
+                        <div class="text-[10px] text-slate-500">${row.car_model || '-'}</div>
+                    </td>
+                    <td class="px-2 py-3 text-right font-mono text-vrg-accent">${row.time_str}</td>
+                </tr>`;
+            });
+            html += `</tbody></table></div>`;
+            return html;
         }
     </script>
 </body>
