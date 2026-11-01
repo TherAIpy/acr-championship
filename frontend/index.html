@@ -216,6 +216,9 @@
         // =========================================================
         // COLONNA 2: RALLY E LEG (Accordion)
         // =========================================================
+                // =========================================================
+        // COLONNA 2: RALLY E LEG
+        // =========================================================
         function renderRallies(rallies) {
             const list = document.getElementById('rally-list');
             if (!rallies || rallies.length === 0) {
@@ -225,7 +228,6 @@
 
             list.innerHTML = rallies.map(r => `
                 <div class="bg-vrg-card border border-slate-700 rounded-xl overflow-hidden mb-3">
-                    <!-- BADGE RALLY -->
                     <div onclick="toggleRally(${r.id})" class="p-4 cursor-pointer flex justify-between items-center hover:bg-slate-800 transition-colors">
                         <div>
                             <h3 class="font-bold text-lg text-white">${r.name}</h3>
@@ -238,7 +240,6 @@
                         <i class="fa-solid fa-chevron-down text-slate-500 transition-transform" id="chevron-rally-${r.id}"></i>
                     </div>
                     
-                    <!-- CORPO RALLY -->
                     <div id="rally-body-${r.id}" class="hidden border-t border-slate-700 bg-slate-900/80 p-3">
                         <div id="rally-points-${r.id}"></div>
                         
@@ -246,7 +247,7 @@
                         <div class="flex flex-col gap-2">
                             ${r.legs && r.legs.length > 0 ? r.legs.map(l => `
                                 <div class="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
-                                    <!-- BADGE LEG: Aggiunto event.stopPropagation() -->
+                                    <!-- NOTA: Chiama toggleLeg -->
                                     <div onclick="event.stopPropagation(); toggleLeg(${r.id}, ${l.id})" id="leg-header-${l.id}" class="p-3 cursor-pointer flex justify-between items-center hover:bg-slate-700 transition-colors">
                                         <div>
                                             <h4 class="font-semibold text-slate-200 text-sm">${l.name}</h4>
@@ -257,7 +258,6 @@
                                         <i class="fa-solid fa-chevron-down text-slate-500 transition-transform" id="chevron-leg-${l.id}"></i>
                                     </div>
                                     
-                                    <!-- CORPO LEG -->
                                     <div id="leg-body-${l.id}" class="hidden border-t border-slate-700 p-2 bg-slate-900">
                                         <div id="leg-standings-${l.id}"></div>
                                     </div>
@@ -273,59 +273,13 @@
             const currentBody = document.getElementById(`rally-body-${id}`);
             const isCurrentlyHidden = currentBody.classList.contains('hidden');
 
-            // 1. Chiudi TUTTI i rally aperti
             document.querySelectorAll('[id^="rally-body-"]').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('[id^="chevron-rally-"]').forEach(el => el.classList.remove('rotate-180'));
 
-            // 2. Se il rally cliccato era chiuso, aprilo
             if (isCurrentlyHidden) {
                 currentBody.classList.remove('hidden');
                 document.getElementById(`chevron-rally-${id}`).classList.add('rotate-180');
 
-                // Carica la matrice (Classifica Punti Rally)
-                const matrixContainer = document.getElementById(`rally-matrix-${id}`);
-                if (!matrixContainer.dataset.loaded) {
-                    matrixContainer.classList.remove('hidden');
-                    matrixContainer.innerHTML = `<div class="text-xs text-slate-500 animate-pulse text-center"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Caricamento classifica...</div>`;
-                    
-                    try {
-                        // Usiamo l'endpoint che calcola i punti del rally
-                        const res = await apiJson(`/standings/rally/${id}`);
-                        // Creiamo una finta struttura per renderMatrixHTML o usiamo una tabella dedicata
-                        // Per ora mostriamo i punti del rally
-                        let html = `<h4 class="text-xs uppercase text-vrg-accent font-bold mb-2">Classifica Punti Rally</h4>`;
-                        if (res.data && res.data.length > 0) {
-                            html += `<div class="border border-slate-700 rounded overflow-hidden"><table class="w-full text-xs text-left"><tbody>`;
-                            res.data.forEach((s, idx) => {
-                                html += `<tr class="border-b border-slate-800 bg-slate-900 ${idx===0 ? 'text-vrg-accent font-bold' : 'text-slate-300'}"><td class="px-2 py-1 w-6 text-center">${s.position}</td><td class="px-2 py-1">${s.driver}</td><td class="px-2 py-1 text-right">${s.points} pt</td></tr>`;
-                            });
-                            html += `</tbody></table></div>`;
-                        } else {
-                            html += `<div class="text-xs text-slate-500">Nessun risultato.</div>`;
-                        }
-                        matrixContainer.innerHTML = html;
-                        matrixContainer.dataset.loaded = true;
-                    } catch (e) {
-                        matrixContainer.innerHTML = `<div class="text-red-400 text-xs">Errore: ${e.message}</div>`;
-                    }
-                }
-            }
-        }
-
-        async function toggleRally(id) {
-            const currentBody = document.getElementById(`rally-body-${id}`);
-            const isCurrentlyHidden = currentBody.classList.contains('hidden');
-
-            // Chiudi tutti gli altri Rally
-            document.querySelectorAll('[id^="rally-body-"]').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('[id^="chevron-rally-"]').forEach(el => el.classList.remove('rotate-180'));
-
-            // Se era chiuso, aprilo
-            if (isCurrentlyHidden) {
-                currentBody.classList.remove('hidden');
-                document.getElementById(`chevron-rally-${id}`).classList.add('rotate-180');
-
-                // Carica i Punti del Rally
                 const pointsContainer = document.getElementById(`rally-points-${id}`);
                 if (!pointsContainer.dataset.loaded) {
                     pointsContainer.innerHTML = `<div class="text-xs text-slate-500 animate-pulse"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Caricamento punti...</div>`;
@@ -340,33 +294,72 @@
             }
         }
 
-        function renderStages(stages) {
-            const list = document.getElementById('stage-list');
-            if (!stages || stages.length === 0) {
-                list.innerHTML = `<div class="text-slate-500 text-center py-8">Nessuna stage in questa leg.</div>`;
-                return;
-            }
+        // QUESTA È LA FUNZIONE CHE MANCAVA!
+        async function toggleLeg(rallyId, legId) {
+            const body = document.getElementById(`leg-body-${legId}`);
+            const chevron = document.getElementById(`chevron-leg-${legId}`);
+            const isCurrentlyHidden = body.classList.contains('hidden');
 
-            list.innerHTML = stages.map(s => `
-                <div class="bg-vrg-card border border-slate-700 rounded-xl overflow-hidden">
-                    <div onclick="toggleStageResults(${s.id})" class="p-4 cursor-pointer flex justify-between items-center hover:bg-slate-800 transition-colors">
-                        <div>
-                            <h3 class="font-bold text-white">${s.name}</h3>
-                            <div class="text-xs text-slate-400 mt-1 flex gap-3">
-                                ${s.distance_km ? `<span><i class="fa-solid fa-ruler"></i> ${s.distance_km} km</span>` : ''}
-                                <span><i class="fa-solid fa-cloud"></i> ${s.weather || 'Sereno'}</span>
+            document.querySelectorAll('[id^="leg-body-"]').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('[id^="chevron-leg-"]').forEach(el => el.classList.remove('rotate-180'));
+            document.querySelectorAll('[id^="leg-header-"]').forEach(el => el.classList.remove('border-l-4', 'border-vrg-accent', 'bg-slate-700'));
+
+            if (isCurrentlyHidden) {
+                body.classList.remove('hidden');
+                chevron.classList.add('rotate-180');
+                document.getElementById(`leg-header-${legId}`).classList.add('border-l-4', 'border-vrg-accent', 'bg-slate-700');
+
+                const standingsContainer = document.getElementById(`leg-standings-${legId}`);
+                if (!standingsContainer.dataset.loaded) {
+                    standingsContainer.innerHTML = `<div class="text-xs text-slate-500 animate-pulse p-2"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Caricamento tempi...</div>`;
+                    try {
+                        const res = await apiJson(`/standings/leg/${legId}`);
+                        standingsContainer.innerHTML = renderLegStandingsHTML(res.data);
+                        standingsContainer.dataset.loaded = true;
+                    } catch (e) {
+                        standingsContainer.innerHTML = `<div class="text-red-400 text-xs p-2">Errore: ${e.message}</div>`;
+                    }
+                }
+
+                try {
+                    if (!state.currentTree || !state.currentTree.rallies) throw new Error("Dati non caricati");
+                    const rally = state.currentTree.rallies.find(r => r.id == rallyId);
+                    if (!rally) throw new Error("Rally non trovato");
+                    const leg = rally.legs.find(l => l.id == legId);
+                    if (!leg) throw new Error("Leg non trovata");
+
+                    setLayoutState('leg');
+                    document.getElementById('stages-title').innerHTML = `<i class="fa-solid fa-stopwatch text-vrg-accent mr-2"></i> ${leg.name}`;
+                    
+                    const stageList = document.getElementById('stage-list');
+                    if (leg.stages && leg.stages.length > 0) {
+                        stageList.innerHTML = leg.stages.map(s => `
+                            <div class="bg-vrg-card border border-slate-700 rounded-xl overflow-hidden mb-3">
+                                <div onclick="toggleStageResults(${s.id})" class="p-3 cursor-pointer flex justify-between items-center hover:bg-slate-800 transition-colors">
+                                    <div>
+                                        <h3 class="font-bold text-white text-sm">${s.name}</h3>
+                                        <div class="text-[10px] text-slate-400 mt-1 flex gap-3">
+                                            ${s.distance_km ? `<span><i class="fa-solid fa-ruler"></i> ${s.distance_km} km</span>` : ''}
+                                            <span><i class="fa-solid fa-cloud"></i> ${s.weather || 'Sereno'}</span>
+                                        </div>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-down text-slate-500 transition-transform" id="chevron-stage-${s.id}"></i>
+                                </div>
+                                <div id="stage-body-${s.id}" class="hidden border-t border-slate-700">
+                                    <div id="stage-results-${s.id}" class="p-2 text-center"></div>
+                                </div>
                             </div>
-                        </div>
-                        <i class="fa-solid fa-chevron-down text-slate-500 transition-transform" id="chevron-stage-${s.id}"></i>
-                    </div>
-                    <div id="stage-body-${s.id}" class="hidden border-t border-slate-700">
-                        <!-- I risultati vengono caricati qui in cascata -->
-                        <div id="stage-results-${s.id}" class="p-4 text-center">
-                            <i class="fa-solid fa-spinner fa-spin text-vrg-accent"></i>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+                        `).join('');
+                    } else {
+                        stageList.innerHTML = `<div class="text-slate-500 text-sm text-center py-4">Nessuna stage in questa leg.</div>`;
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Errore: " + e.message);
+                }
+            } else {
+                setLayoutState('champ');
+            }
         }
 
         async function toggleStageResults(stageId) {
@@ -374,7 +367,6 @@
             const chevron = document.getElementById(`chevron-stage-${stageId}`);
             const isHidden = body.classList.contains('hidden');
             
-            // Chiudi tutte le altre stage
             document.querySelectorAll('[id^="stage-body-"]').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('[id^="chevron-stage-"]').forEach(el => el.classList.remove('rotate-180'));
 
