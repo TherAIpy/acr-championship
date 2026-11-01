@@ -86,7 +86,8 @@ def _send_discord_message(webhook_url: str, embed: dict, thread_id: str = None) 
     payload = {"embeds": [embed]}
 
     try:
-        r = requests.post(url, params=params, json=payload, timeout=10)
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        r = requests.post(url, params=params, json=payload, headers=headers, timeout=10)
         if r.status_code in (200, 204):
             data = r.json() if r.text else {}
             return {"ok": True, "message_id": str(data.get("id", ""))}
@@ -107,7 +108,8 @@ def _edit_discord_message(webhook_url: str, message_id: str, embed: dict, thread
     payload = {"embeds": [embed]}
 
     try:
-        r = requests.patch(url, params=params or None, json=payload, timeout=10)
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        r = requests.patch(url, params=params or None, json=payload, headers=headers, timeout=10)
         if r.status_code in (200, 204):
             return {"ok": True}
         # Se il messaggio è stato cancellato a mano su Discord, lo trattiamo come "da ricreare"
