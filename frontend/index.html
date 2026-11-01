@@ -151,9 +151,13 @@
         function renderChampionships() {
             const list = document.getElementById('champ-list');
             list.innerHTML = state.championships.map(c => `
-                <div onclick="selectChampionshipById(${c.id})" id="champ-card-${c.id}" class="champ-card bg-vrg-card border border-slate-700 rounded-xl p-6 cursor-pointer transition-all hover:border-vrg-accent group">
-                    <h3 class="text-xl font-bold text-white mb-2 group-hover:text-vrg-accent transition-colors">${c.name}</h3>
-                    <p class="text-sm text-slate-400"><i class="fa-solid fa-trophy mr-2"></i> Clicca per esplorare</p>
+                <div onclick="selectChampionshipById(${c.id})" id="champ-card-${c.id}" class="champ-card bg-vrg-card border border-slate-700 rounded-xl p-6 cursor-pointer transition-all hover:border-vrg-accent group flex flex-col gap-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-2 group-hover:text-vrg-accent transition-colors">${c.name}</h3>
+                        <p class="text-sm text-slate-400"><i class="fa-solid fa-trophy mr-2"></i> Clicca per esplorare</p>
+                    </div>
+                    <!-- QUESTO È IL CONTENITORE (B2): è nascosto e vuoto, verrà riempito dopo -->
+                    <div id="champ-matrix-container-${c.id}" class="hidden w-full mt-2"></div>
                 </div>
             `).join('');
         }
@@ -163,10 +167,10 @@
             if (champ) selectChampionship(champ);
         }
 
-        async function selectChampionship(champ) {
+                async function selectChampionship(champ) {
             state.currentChamp = champ;
             
-            // Effetto visivo: evidenzia card selezionata, grigia le altre
+            // Effetto visivo
             document.querySelectorAll('.champ-card').forEach(el => {
                 el.classList.add('dimmed');
                 el.classList.remove('active-item');
@@ -183,21 +187,34 @@
             
             window.history.pushState({}, '', `?id=${champ.id}`);
 
+            // Prepariamo il contenitore della tabella per mostrare il caricamento
+            const matrixContainer = document.getElementById(`champ-matrix-container-${champ.id}`);
+            matrixContainer.classList.remove('hidden');
+            matrixContainer.innerHTML = `<div class="text-xs text-slate-500 animate-pulse border-t border-slate-700 pt-3 mt-2"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Caricamento punteggi...</div>`;
+
             try {
+                // 1. Carica i dati dei Rally/Leg
                 const res = await apiJson(`/tree/${champ.id}`);
                 if (res.success) {
                     state.currentTree = res.data;
                     renderRallies(res.data.rallies);
                 }
+
+                // 2. Carica la matrice dei punteggi Campionato
+                const matrixRes = await apiJson(`/standings/matrix/championship/${champ.id}`);
+                // Inserisce la tabella nel contenitore
+                matrixContainer.innerHTML = renderMatrixHTML(matrixRes, 'championship');
+                
             } catch (e) {
                 document.getElementById('rally-list').innerHTML = `<div class="text-red-400">Errore: ${e.message}</div>`;
+                matrixContainer.innerHTML = '';
             }
         }
 
         // =========================================================
         // COLONNA 2: RALLY E LEG (Accordion)
         // =========================================================
-        function renderRallies(rallies) {
+                function renderRallies(rallies) {
             const list = document.getElementById('rally-list');
             if (!rallies || rallies.length === 0) {
                 list.innerHTML = `<div class="text-slate-500 text-center py-8">Nessun rally in questo campionato.</div>`;
@@ -206,7 +223,6 @@
 
             list.innerHTML = rallies.map(r => `
                 <div class="bg-vrg-card border border-slate-700 rounded-xl overflow-hidden">
-                    <!-- Header Rally (Cliccabile per Accordion) -->
                     <div onclick="toggleRally(${r.id})" class="p-4 cursor-pointer flex justify-between items-center hover:bg-slate-800 transition-colors">
                         <div>
                             <h3 class="font-bold text-lg text-white">${r.name}</h3>
@@ -219,7 +235,6 @@
                         <i class="fa-solid fa-chevron-down text-slate-500 transition-transform" id="chevron-rally-${r.id}"></i>
                     </div>
                     
-                    <!-- Corpo Rally (Leg) -->
                     <div id="rally-body-${r.id}" class="hidden border-t border-slate-700 bg-slate-900/50">
                         ${r.legs && r.legs.length > 0 ? r.legs.map(l => `
                             <div onclick="selectLeg(${r.id}, ${l.id})" id="leg-item-${l.id}" class="p-4 border-b border-slate-800 last:border-0 cursor-pointer hover:bg-slate-800 flex justify-between items-center">
@@ -232,16 +247,38 @@
                                 <i class="fa-solid fa-chevron-right text-slate-600"></i>
                             </div>
                         `).join('') : `<div class="p-4 text-xs text-slate-500">Nessuna leg.</div>`}
+                        
+                        <!-- QUESTO È IL CONTENITORE (C1): è nascosto e vuoto, verrà riempito quando espandi il rally -->
+                        <div id="rally-matrix-${r.id}" class="hidden p-4 bg-slate-900 border-t border-slate-700"></div>
                     </div>
                 </div>
             `).join('');
         }
 
-        function toggleRally(id) {
+        async function toggleRally(id) {
             const body = document.getElementById(`rally-body-${id}`);
             const chevron = document.getElementById(`chevron-rally-${id}`);
+            const isHidden = body.classList.contains('hidden');
+            
             body.classList.toggle('hidden');
             chevron.classList.toggle('rotate-180');
+
+            // Se si sta aprendo, carica la matrice
+            if (isHidden) {
+                const matrixContainer = document.getElementById(`rally-matrix-${id}`);
+                if (matrixContainer.dataset.loaded) return;
+                
+                matrixContainer.classList.remove('hidden');
+                matrixContainer.innerHTML = `<div class="text-xs text-slate-500 animate-pulse text-center">Caricamento punteggi...</div>`;
+                
+                try {
+                    const res = await apiJson(`/standings/matrix/rally/${id}`);
+                    matrixContainer.innerHTML = `<h4 class="text-xs uppercase text-vrg-accent font-bold mb-2">Punti per Leg</h4>` + renderMatrixHTML(res, 'rally');
+                    matrixContainer.dataset.loaded = true;
+                } catch (e) {
+                    matrixContainer.innerHTML = `<div class="text-red-400 text-xs">Errore: ${e.message}</div>`;
+                }
+            }
         }
 
         // =========================================================
@@ -300,13 +337,17 @@
             const chevron = document.getElementById(`chevron-stage-${stageId}`);
             const isHidden = body.classList.contains('hidden');
             
-            body.classList.toggle('hidden');
-            chevron.classList.toggle('rotate-180');
+            // CHIUDI TUTTE LE ALTRE STAGE
+            document.querySelectorAll('[id^="stage-body-"]').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('[id^="chevron-stage-"]').forEach(el => el.classList.remove('rotate-180'));
 
+            // SE ERA CHIUSA, APRILA
             if (isHidden) {
-                // Carica i risultati solo la prima volta che si apre
+                body.classList.remove('hidden');
+                chevron.classList.add('rotate-180');
+
                 const container = document.getElementById(`stage-results-${stageId}`);
-                if (container.dataset.loaded) return; // Già caricati
+                if (container.dataset.loaded) return;
                 
                 try {
                     const res = await apiJson(`/standings/stage/${stageId}`);
@@ -362,6 +403,48 @@
             const urlParams = new URLSearchParams(window.location.search);
             if (!urlParams.has('id')) resetToChamp();
         });
+
+        function renderMatrixHTML(data, type) {
+            if (!data.drivers || data.drivers.length === 0) return '<div class="text-slate-500 text-xs text-center py-2">Nessun punteggio.</div>';
+
+            const cols = type === 'championship' ? data.rallies : data.legs;
+            
+            // Intestazione
+            let html = `<div class="overflow-x-auto rounded border border-slate-700">
+                <table class="w-full text-left text-xs whitespace-nowrap">
+                    <thead class="bg-slate-800 text-slate-400 uppercase text-[10px]">
+                        <tr>
+                            <th class="px-2 py-2 sticky left-0 bg-slate-800 z-10 w-24">Pilota</th>`;
+            
+            // Colonne dinamiche (Rally o Leg)
+            cols.forEach((c, index) => {
+                html += `<th class="px-2 py-2 text-center">R${index + 1}</th>`; // Usa R1, R2 per risparmiare spazio
+            });
+            
+            html += `<th class="px-2 py-2 text-right bg-slate-800 font-bold text-vrg-accent sticky right-0 z-10 w-16">Tot</th>
+                    </tr>
+                </thead><tbody>`;
+
+            // Righe
+            data.drivers.forEach((d, i) => {
+                const rowCls = i === 0 ? 'bg-vrg-accent/10' : (i % 2 === 1 ? 'bg-slate-900/50' : '');
+                html += `<tr class="border-b border-slate-700/50 hover:bg-slate-800 transition-colors ${rowCls}">
+                    <td class="px-2 py-2 font-medium text-white sticky left-0 bg-inherit z-10">${d.driver}</td>`;
+                
+                // Punti per ogni colonna
+                cols.forEach(c => {
+                    const key = type === 'championship' ? 'rallies' : 'legs';
+                    const pts = d[key][str(c.id)] || 0;
+                    html += `<td class="px-2 py-2 text-center ${pts > 0 ? 'text-slate-200' : 'text-slate-600'}">${pts > 0 ? pts : '-'}</td>`;
+                });
+                
+                html += `<td class="px-2 py-2 text-right font-bold text-vrg-accent sticky right-0 bg-inherit z-10">${d.total}</td>
+                </tr>`;
+            });
+
+            html += `</tbody></table></div>`;
+            return html;
+        }
     </script>
 </body>
 </html>

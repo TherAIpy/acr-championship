@@ -1196,6 +1196,81 @@ def get_standings(type, id):
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
+# =============================================================================
+# MATRICI PUNTEGGI (Punti Rally by Rally / Punti Leg by Leg)
+# =============================================================================
+@app.route('/api/standings/matrix/championship/<int:champ_id>', methods=['GET'])
+def get_matrix_championship(champ_id):
+    try:
+        supabase = get_supabase()
+        # Recuperiamo i rally del campionato
+        rallies = supabase.table('rally').select('id, name').eq('championship_id', champ_id).order('id').execute().data or []
+        if not rallies:
+            return jsonify({"success": True, "rallies": [], "drivers": []}), 200
+
+        # Calcoliamo i punti per ogni rally
+        matrix_data = {}
+        points_system = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1]
+
+        for r in rallies:
+            # Usiamo la funzione esistente per calcolare i punti di QUEL rally
+            rally_standings = _compute_points_for_rally(r['id'], points_system)
+            for s in rally_standings:
+                drv = s['driver']
+                if drv not in matrix_data:
+                    matrix_data[drv] = {'driver': drv, 'car': s.get('car', ''), 'rallies': {}, 'total': 0}
+                
+                matrix_data[drv]['rallies'][str(r['id'])] = s['points']
+                matrix_data[drv]['total'] += s['points']
+
+        # Ordiniamo i piloti per punteggio totale decrescente
+        drivers_list = list(matrix_data.values())
+        drivers_list.sort(key=lambda x: (-x['total'], x['driver']))
+
+        return jsonify({
+            "success": True,
+            "rallies": rallies, 
+            "drivers": drivers_list
+        }), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/standings/matrix/rally/<int:rally_id>', methods=['GET'])
+def get_matrix_rally(rally_id):
+    try:
+        supabase = get_supabase()
+        # Recuperiamo le leg del rally
+        legs = supabase.table('leg').select('id, name').eq('rally_id', rally_id).order('id').execute().data or []
+        if not legs:
+            return jsonify({"success": True, "legs": [], "drivers": []}), 200
+
+        matrix_data = {}
+        points_system = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1]
+
+        for l in legs:
+            # Usiamo la funzione che calcola i tempi della singola leg
+            leg_standings = _compute_standings_for_leg(l['id'])
+            for s in leg_standings:
+                drv = s['driver']
+                if drv not in matrix_data:
+                    matrix_data[drv] = {'driver': drv, 'car': s.get('car', ''), 'legs': {}, 'total': 0}
+                
+                # Assegniamo i punti in base alla posizione nella leg
+                pts = points_system[s['position'] - 1] if s['position'] <= len(points_system) else 0
+                matrix_data[drv]['legs'][str(l['id'])] = pts
+                matrix_data[drv]['total'] += pts
+
+        drivers_list = list(matrix_data.values())
+        drivers_list.sort(key=lambda x: (-x['total'], x['driver']))
+
+        return jsonify({
+            "success": True,
+            "legs": legs, 
+            "drivers": drivers_list
+        }), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/api/championship/<int:champ_id>', methods=['GET'])
 def get_championship_detail(champ_id):
     try:
