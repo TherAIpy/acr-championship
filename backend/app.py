@@ -307,15 +307,13 @@ def create_rally():
         res = supabase.table('rally').insert({
             "championship_id": data['championship_id'],
             "name": data['name'],
-            "discord_webhook_url": data.get('discord_webhook_url', '')
+            "discord_webhook_url": data.get('discord_webhook_url', ''),
+            "start_date": data.get('start_date'),
+            "end_date": data.get('end_date')
         }).execute()
         return jsonify({"success": True, "data": res.data[0]}), 201
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
-
-# =============================================================================
-# BLOCCO 1: LEG & STAGE
-# =============================================================================
 
 @app.route('/api/create-leg', methods=['POST'])
 @admin_required
@@ -334,12 +332,12 @@ def create_leg():
 
         res = supabase.table('leg').insert({
             "rally_id": rally_id,
-            "name": name
+            "name": name,
+            "date": data.get('date')
         }).execute()
         return jsonify({"success": True, "data": res.data[0]}), 201
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
-
 
 @app.route('/api/legs/<int:rally_id>', methods=['GET'])
 def get_legs(rally_id):
@@ -449,23 +447,45 @@ def get_tree(champ_id):
         stages_with_official = set(r['stage_id'] for r in results if r.get('is_official'))
         stages_with_draft    = set(r['stage_id'] for r in results if not r.get('is_official'))
 
+        # Calcoli per i badge
+        champ_stats = {'total_rallies': len(rallies), 'total_legs': 0, 'total_stages': 0, 'total_km': 0.0}
+        
         stages_by_leg = {}
         for s in stages:
             s['has_official_results'] = s['id'] in stages_with_official
             s['has_draft_results']    = s['id'] in stages_with_draft
-            s['has_results']          = s['id'] in stages_with_official  # retro-compat
+            s['has_results']          = s['id'] in stages_with_official
             stages_by_leg.setdefault(s['leg_id'], []).append(s)
             
         legs_by_rally = {}
         for l in legs:
             l['stages'] = stages_by_leg.get(l['id'], [])
+            
+            # Calcoli per il badge della Leg
+            l['total_stages'] = len(l['stages'])
+            l['total_km'] = sum(float(s.get('distance_km', 0) or 0) for s in l['stages'])
+            
             legs_by_rally.setdefault(l['rally_id'], []).append(l)
+            
+            # Aggiorna totali campionato
+            champ_stats['total_legs'] += 1
+            champ_stats['total_stages'] += l['total_stages']
+            champ_stats['total_km'] += l['total_km']
             
         for r in rallies:
             r['legs'] = legs_by_rally.get(r['id'], [])
+            # Calcoli per il badge del Rally
+            r['total_legs'] = len(r['legs'])
+            r['total_stages'] = sum(l['total_stages'] for l in r['legs'])
+            r['total_km'] = sum(l['total_km'] for l in r['legs'])
 
-        return jsonify({"success": True, "data": {"championship": champ.data[0], "rallies": rallies}}), 200
+        # Aggiungi le statistiche all'oggetto campionato
+        champ_data = champ.data[0]
+        champ_data.update(champ_stats)
+
+        return jsonify({"success": True, "data": {"championship": champ_data, "rallies": rallies}}), 200
     except Exception as e:
+        import traceback; traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
 class StageResultIn(BaseModel):
@@ -482,15 +502,17 @@ class StageResultIn(BaseModel):
 class SaveStageIn(BaseModel):
     stage_id: Optional[int] = None
     stage_name: str
-    track_name: Optional[str] = None
     leg_id: Optional[int] = None
+    track_id: Optional[int] = None
+    distance_km: Optional[float] = None
+    weather: Optional[str] = "Sereno"
+    temperature: Optional[int] = 20
     results: List[StageResultIn] = []
 
 @app.route('/api/save-stage', methods=['POST'])
 @admin_required
 def save_stage():
     try:
-        # 1. Validazione
         try:
             payload = SaveStageIn(**request.json)
         except ValidationError as e:
@@ -498,42 +520,44 @@ def save_stage():
 
         supabase = get_supabase()
 
-        # 2. Gestione Stage (Update o Insert)
+        # Prepariamo i metadati della stage
+        stage_meta = {
+            "name": payload.stage_name,
+            "track_id": payload.track_id,
+            "distance_km": payload.distance_km,
+            "weather": payload.weather,
+            "temperature": payload.temperature
+        }
+
+        # Aggiorna anche il track_name (per retro-compatibilità con l'OCR)
+        if payload.track_id:
+            track_res = supabase.table('track').select('name').eq('id', payload.track_id).execute()
+            if track_res.data:
+                stage_meta['track_name'] = track_res.data[0]['name']
+
         if payload.stage_id:
             existing = supabase.table('stage').select('id').eq('id', payload.stage_id).execute()
             if not existing.data:
                 return jsonify({"success": False, "error": "Stage non trovato"}), 404
             stage_id = payload.stage_id
             
+            # Aggiorna i metadati della stage
             if payload.stage_name and payload.stage_name != "Update":
-                supabase.table('stage').update({
-                    "name": payload.stage_name,
-                    "track_name": payload.track_name or 'Sconosciuto' # Evita NULL
-                }).eq('id', stage_id).execute()
+                supabase.table('stage').update(stage_meta).eq('id', stage_id).execute()
 
-            # Prossima version = max esistente + 1 (contando sia ufficiali che bozze correnti)
-            ver_res = (
-                    supabase.table('stage_result').select('version')
-                    .eq('stage_id', stage_id)
-                    .order('version', desc=True)
-                    .limit(1)
-                    .execute()
-                    )
+            ver_res = supabase.table('stage_result').select('version').eq('stage_id', stage_id).order('version', desc=True).limit(1).execute()
             next_version = (ver_res.data[0]['version'] + 1) if ver_res.data else 1
                 
             supabase.table('stage_result').delete().eq('stage_id', stage_id).eq('is_official', False).execute()
         else:
             if not payload.leg_id:
                 return jsonify({"success": False, "error": "leg_id obbligatorio per la creazione"}), 400
-            stage_res = supabase.table('stage').insert({
-                "leg_id": payload.leg_id,
-                "name": payload.stage_name,
-                "track_name": payload.track_name or 'Sconosciuto'
-            }).execute()
+            
+            stage_meta['leg_id'] = payload.leg_id
+            stage_res = supabase.table('stage').insert(stage_meta).execute()
             stage_id = stage_res.data[0]['id']
             next_version = 1
 
-        # 3. Inserimento Risultati
         if payload.results:
             insert_data = []
             for r in payload.results:
@@ -550,7 +574,6 @@ def save_stage():
                     except:
                         pass
                 
-                # Pulizia dati per evitare errori di validazione del DB
                 insert_data.append({
                     "stage_id": stage_id,
                     "position": r.position,
@@ -575,7 +598,7 @@ def save_stage():
     except Exception as e:
         import traceback
         print("ERRORE SALVATAGGIO STAGE:")
-        print(traceback.format_exc()) # Questo lo vedrai nei log di Render
+        print(traceback.format_exc())
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/publish-stage/<int:stage_id>', methods=['POST'])
