@@ -224,7 +224,6 @@
             }
 
             list.innerHTML = rallies.map(r => `
-                <!-- BORDO BLU PER IL RALLY -->
                 <div class="bg-vrg-card border border-slate-700 border-l-4 border-l-blue-500 rounded-xl overflow-hidden mb-3">
                     <div onclick="toggleRally(${r.id})" class="p-4 cursor-pointer flex justify-between items-center hover:bg-slate-800 transition-colors">
                         <div>
@@ -238,7 +237,10 @@
                                     : `<span class="bg-yellow-900/50 text-yellow-400 border border-yellow-700 text-[9px] px-1.5 py-0.5 rounded uppercase font-bold">In Corso</span>`}
                             </div>
                         </div>
-                        <i class="fa-solid fa-chevron-down text-slate-500 transition-transform" id="chevron-rally-${r.id}"></i>
+                        <div class="flex items-center gap-3">
+                            <span class="text-[9px] font-bold text-blue-400 bg-blue-900/30 px-2 py-1 rounded border border-blue-700/50">RALLY</span>
+                            <i class="fa-solid fa-chevron-down text-slate-500 transition-transform" id="chevron-rally-${r.id}"></i>
+                        </div>
                     </div>
                     
                     <div id="rally-body-${r.id}" class="hidden border-t border-slate-700 bg-slate-900/80 p-3">
@@ -247,7 +249,6 @@
                         <h4 class="text-[10px] uppercase text-slate-500 font-bold mt-4 mb-2">Elenco Leg</h4>
                         <div class="flex flex-col gap-2">
                             ${r.legs && r.legs.length > 0 ? r.legs.map(l => `
-                                <!-- BORDO VERDE PER LA LEG -->
                                 <div class="bg-slate-800 border border-slate-700 border-l-4 border-l-emerald-500 rounded-lg overflow-hidden">
                                     <div onclick="event.stopPropagation(); toggleLeg(${r.id}, ${l.id})" id="leg-header-${l.id}" class="p-3 cursor-pointer flex justify-between items-center hover:bg-slate-700 transition-colors">
                                         <div>
@@ -259,7 +260,10 @@
                                                     : `<span class="bg-yellow-900/50 text-yellow-400 border border-yellow-700 text-[8px] px-1 py-0.5 rounded uppercase font-bold">In Corso</span>`}
                                             </div>
                                         </div>
-                                        <i class="fa-solid fa-chevron-down text-slate-500 transition-transform" id="chevron-leg-${l.id}"></i>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-[8px] font-bold text-emerald-400 bg-emerald-900/30 px-2 py-1 rounded border border-emerald-700/50">LEG</span>
+                                            <i class="fa-solid fa-chevron-down text-slate-500 transition-transform" id="chevron-leg-${l.id}"></i>
+                                        </div>
                                     </div>
                                     
                                     <div id="leg-body-${l.id}" class="hidden border-t border-slate-700 p-2 bg-slate-900">
@@ -313,14 +317,12 @@
             document.querySelectorAll('[id^="leg-body-"]').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('[id^="chevron-leg-"]').forEach(el => el.classList.remove('rotate-180'));
             document.querySelectorAll('[id^="leg-header-"]').forEach(el => el.classList.remove('border-vrg-accent', 'bg-slate-700'));
-            // Reset del bordo verde se non selezionata
             document.querySelectorAll('[id^="leg-header-"]').forEach(el => el.classList.add('border-l-emerald-500'));
 
             if (isCurrentlyHidden) {
                 body.classList.remove('hidden');
                 chevron.classList.add('rotate-180');
                 
-                // Evidenzia la Leg selezionata cambiando il bordo in giallo
                 const legHeader = document.getElementById(`leg-header-${legId}`);
                 legHeader.classList.remove('border-l-emerald-500');
                 legHeader.classList.add('border-vrg-accent', 'bg-slate-700');
@@ -350,17 +352,21 @@
                     const stageList = document.getElementById('stage-list');
                     if (leg.stages && leg.stages.length > 0) {
                         stageList.innerHTML = leg.stages.map(s => `
-                            <!-- BORDO GRIGIO PER LE STAGE -->
                             <div class="bg-vrg-card border border-slate-700 border-l-4 border-l-slate-500 rounded-xl overflow-hidden mb-3">
                                 <div onclick="toggleStageResults(${s.id})" class="p-3 cursor-pointer flex justify-between items-center hover:bg-slate-800 transition-colors">
                                     <div>
                                         <h3 class="font-bold text-white text-sm">${s.name}</h3>
-                                        <div class="text-[10px] text-slate-400 mt-1 flex gap-3">
+                                        <!-- Aggiunte info meteo, temperatura e km -->
+                                        <div class="text-[10px] text-slate-400 mt-1 flex gap-2 items-center">
                                             ${s.distance_km ? `<span><i class="fa-solid fa-ruler"></i> ${s.distance_km} km</span>` : ''}
                                             <span><i class="fa-solid fa-cloud"></i> ${s.weather || 'Sereno'}</span>
+                                            ${s.temperature ? `<span><i class="fa-solid fa-temperature-half"></i> ${s.temperature}°C</span>` : ''}
                                         </div>
                                     </div>
-                                    <i class="fa-solid fa-chevron-down text-slate-500 transition-transform" id="chevron-stage-${s.id}"></i>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-[8px] font-bold text-slate-400 bg-slate-800 px-2 py-1 rounded border border-slate-600">STAGE</span>
+                                        <i class="fa-solid fa-chevron-down text-slate-500 transition-transform" id="chevron-stage-${s.id}"></i>
+                                    </div>
                                 </div>
                                 <div id="stage-body-${s.id}" class="hidden border-t border-slate-700">
                                     <div id="stage-results-${s.id}" class="p-2 text-center"></div>
@@ -537,7 +543,8 @@
         function renderStageResultsHTML(data) {
             if (!data || data.length === 0) return `<div class="text-xs text-slate-500 py-2 text-center">Nessun risultato ufficiale.</div>`;
             
-            let html = `<div class="overflow-x-auto max-h-64 overflow-y-auto custom-scrollbar"><table class="w-full text-left text-[11px]"><thead class="text-[9px] uppercase bg-slate-800 text-slate-400 border-b border-slate-700 sticky top-0"><tr><th class="px-2 py-1.5 text-center w-8">Pos</th><th class="px-2 py-1.5">Pilota / Vettura</th><th class="px-2 py-1.5 text-right">Tempo</th></tr></thead><tbody>`;
+            // RIMOSSO max-h-64 e overflow-y-auto: mostra tutta la classifica
+            let html = `<div class="overflow-x-auto w-full"><table class="w-full text-left text-[11px]"><thead class="text-[9px] uppercase bg-slate-800 text-slate-400 border-b border-slate-700 sticky top-0"><tr><th class="px-2 py-1.5 text-center w-8">Pos</th><th class="px-2 py-1.5">Pilota / Vettura</th><th class="px-2 py-1.5 text-right">Tempo</th></tr></thead><tbody>`;
             data.forEach((row, i) => {
                 const rowCls = i === 0 ? 'bg-vrg-accent/10' : (i % 2 === 1 ? 'bg-slate-900/30' : '');
                 
