@@ -904,7 +904,7 @@
             openModal('modal-standings');
 
             try {
-                const res = await apiJson(`/standings/${type}/${id}`);
+                const res = await apiCall(`/standings/${type}/${id}`);
                 if (res.success && res.data.length > 0) {
                     tbody.innerHTML = '';
                     res.data.forEach(r => {
