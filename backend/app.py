@@ -298,6 +298,42 @@ def create_championship():
     res = supabase.table('championship').insert({"name": data['name']}).execute()
     return jsonify({"success": True, "championship": res.data[0]})
 
+@app.route('/api/delete-championship/<int:champ_id>', methods=['DELETE'])
+@admin_required
+def delete_championship(champ_id):
+    try:
+        supabase = get_supabase()
+        
+        # 1. Trova tutti i Rally del campionato
+        rallies = supabase.table('rally').select('id').eq('championship_id', champ_id).execute().data
+        rally_ids = [r['id'] for r in rallies]
+        
+        if rally_ids:
+            # 2. Trova tutte le Leg
+            legs = supabase.table('leg').select('id').in_('rally_id', rally_ids).execute().data
+            leg_ids = [l['id'] for l in legs]
+            
+            if leg_ids:
+                # 3. Trova tutte le Stage
+                stages = supabase.table('stage').select('id').in_('leg_id', leg_ids).execute().data
+                stage_ids = [s['id'] for s in stages]
+                
+                if stage_ids:
+                    # 4. Elimina i risultati delle stage
+                    supabase.table('stage_result').delete().in_('stage_id', stage_ids).execute()
+                
+                # 5. Elimina le Stage, Leg e Rally
+                supabase.table('stage').delete().in_('leg_id', leg_ids).execute()
+                supabase.table('leg').delete().in_('rally_id', rally_ids).execute()
+            supabase.table('rally').delete().eq('championship_id', champ_id).execute()
+            
+        # 6. Elimina il Campionato
+        supabase.table('championship').delete().eq('id', champ_id).execute()
+        
+        return jsonify({"success": True, "message": "Campionato eliminato"}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/api/create-rally', methods=['POST'])
 @admin_required
 def create_rally():
@@ -314,6 +350,18 @@ def create_rally():
         return jsonify({"success": True, "data": res.data[0]}), 201
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+def _update_rally_dates(rally_id):
+    """Calcola la data minima e massima delle Leg e aggiorna il Rally."""
+    supabase = get_supabase()
+    legs = supabase.table('leg').select('date').eq('rally_id', rally_id).not_.is_('date', 'null').execute().data
+    if legs:
+        dates = sorted([l['date'] for l in legs if l['date']])
+        if dates:
+            supabase.table('rally').update({
+                'start_date': dates[0],
+                'end_date': dates[-1]
+            }).eq('id', rally_id).execute()
 
 @app.route('/api/create-leg', methods=['POST'])
 @admin_required
@@ -333,8 +381,12 @@ def create_leg():
         res = supabase.table('leg').insert({
             "rally_id": rally_id,
             "name": name,
-            "date": data.get('date')
+            "date": data.get('date') # Accetta la data
         }).execute()
+        
+        # Aggiorna le date del rally genitore
+        _update_rally_dates(rally_id)
+        
         return jsonify({"success": True, "data": res.data[0]}), 201
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -512,6 +564,9 @@ class SaveStageIn(BaseModel):
     distance_km: Optional[float] = None
     weather: Optional[str] = "Sereno"
     temperature: Optional[int] = 20
+    surface: Optional[str] = "Asfalto"     # NUOVO
+    start_time: Optional[str] = None       # NUOVO
+    notes: Optional[str] = None            # NUOVO
     results: List[StageResultIn] = []
 
 @app.route('/api/save-stage', methods=['POST'])
@@ -524,17 +579,45 @@ def save_stage():
             return jsonify({"success": False, "error": e.errors()}), 400
 
         supabase = get_supabase()
+        
+        # --- LOGICA PER TROVARE IL CAMPIONATO E LE CLASSI AMMESSE ---
+        allowed_classes = []
+        # Se stiamo modificando una stage esistente, risaliamo al campionato
+        target_stage_id = payload.stage_id
+        if not target_stage_id and payload.leg_id:
+            # Se è nuova, risaliamo dalla Leg
+            leg_res = supabase.table('leg').select('rally_id').eq('id', payload.leg_id).execute()
+            if leg_res.data:
+                rally_res = supabase.table('rally').select('championship_id').eq('id', leg_res.data[0]['rally_id']).execute()
+                if rally_res.data:
+                    champ_res = supabase.table('championship').select('allowed_classes').eq('id', rally_res.data[0]['championship_id']).execute()
+                    if champ_res.data:
+                        allowed_classes = champ_res.data[0].get('allowed_classes') or []
+        
+        if target_stage_id:
+            # Se è un update, risaliamo dalla Stage esistente
+            stage_res = supabase.table('stage').select('leg_id').eq('id', target_stage_id).execute()
+            if stage_res.data:
+                leg_res = supabase.table('leg').select('rally_id').eq('id', stage_res.data[0]['leg_id']).execute()
+                if leg_res.data:
+                    rally_res = supabase.table('rally').select('championship_id').eq('id', leg_res.data[0]['rally_id']).execute()
+                    if rally_res.data:
+                        champ_res = supabase.table('championship').select('allowed_classes').eq('id', rally_res.data[0]['championship_id']).execute()
+                        if champ_res.data:
+                            allowed_classes = champ_res.data[0].get('allowed_classes') or []
 
-        # Prepariamo i metadati della stage
+        # Metadati Stage
         stage_meta = {
             "name": payload.stage_name,
             "track_id": payload.track_id,
             "distance_km": payload.distance_km,
             "weather": payload.weather,
-            "temperature": payload.temperature
+            "temperature": payload.temperature,
+            "surface": payload.surface,
+            "start_time": payload.start_time,
+            "notes": payload.notes
         }
 
-        # Aggiorna anche il track_name (per retro-compatibilità con l'OCR)
         if payload.track_id:
             track_res = supabase.table('track').select('name').eq('id', payload.track_id).execute()
             if track_res.data:
@@ -546,7 +629,6 @@ def save_stage():
                 return jsonify({"success": False, "error": "Stage non trovato"}), 404
             stage_id = payload.stage_id
             
-            # Aggiorna i metadati della stage
             if payload.stage_name and payload.stage_name != "Update":
                 supabase.table('stage').update(stage_meta).eq('id', stage_id).execute()
 
@@ -579,6 +661,13 @@ def save_stage():
                     except:
                         pass
                 
+                # --- DSQ AUTOMATICO ---
+                is_dsq = r.is_disqualified
+                if allowed_classes and r.car_class_id:
+                    # Se il campionato ha classi ammesse e il pilota ha una classe assegnata
+                    if r.car_class_id not in allowed_classes:
+                        is_dsq = True # Squalifica se la classe non è ammessa
+                
                 insert_data.append({
                     "stage_id": stage_id,
                     "position": r.position,
@@ -589,10 +678,10 @@ def save_stage():
                     "gap": r.gap or "-",
                     "car_id": r.car_id,
                     "car_class_id": r.car_class_id,
-                    "is_disqualified": r.is_disqualified,
+                    "is_disqualified": is_dsq, # Applicato qui
                     "time_ms": t_ms,
                     "penalty_sec": p_sec,
-                    "status": "completed",
+                    "status": "dsq" if is_dsq else "completed", # Se DSQ, cambia lo status
                     "is_official": False,
                     "version": next_version
                 })
@@ -602,7 +691,6 @@ def save_stage():
         
     except Exception as e:
         import traceback
-        print("ERRORE SALVATAGGIO STAGE:")
         print(traceback.format_exc())
         return jsonify({"success": False, "error": str(e)}), 500
 
