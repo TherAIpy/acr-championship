@@ -104,6 +104,7 @@
             <h2 class="text-xl font-bold text-white mb-4">Nuova Leg</h2>
             <input type="hidden" id="input-leg-rally-id">
             <input type="text" id="input-nome-leg" placeholder="Nome Leg" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:border-vrg-accent">
+            <input type="date" id="input-data-leg" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:border-vrg-accent">
             <div class="flex justify-end gap-3 mt-8">
                 <button onclick="closeModal('modal-leg')" class="px-5 py-2 rounded-lg text-sm text-slate-300 hover:text-white">Annulla</button>
                 <button id="btn-salva-leg" class="bg-vrg-accent text-black px-5 py-2 rounded-lg text-sm font-bold">Salva</button>
@@ -301,6 +302,7 @@
             document.getElementById('btn-salva-leg').onclick = async () => {
                 const rallyId = document.getElementById('input-leg-rally-id').value;
                 const nome = document.getElementById('input-nome-leg').value.trim();
+                const data = document.getElementById('input-data-leg').value;
                 if (!nome) return alert("Inserisci un nome");
                 try {
                     await api.createLeg({ rally_id: rallyId, name: nome });
@@ -383,8 +385,9 @@
                 rallyEl.className = "bg-vrg-card border border-slate-700 rounded-xl overflow-hidden mb-4";
 
                 const adminLegBtn = isAdmin
-                    ? `<button onclick="event.stopPropagation(); openAddLeg(${rally.id})" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded mr-2 transition-colors"><i class="fa-solid fa-plus"></i> Leg</button>`
-                    : '';
+                ? `<button onclick="event.stopPropagation(); openAddLeg(${rally.id})" class="...">...</button>
+                    <button onclick="event.stopPropagation(); deleteRally(${rally.id})" class="text-xs bg-red-900/50 hover:bg-red-700 text-red-200 px-2 py-1 rounded ml-1 transition-colors" title="Elimina Rally"><i class="fa-solid fa-trash"></i></button>`
+                : '';
 
                 const rallyStandingsBtn = `<button onclick="event.stopPropagation(); viewStandings('rally', ${rally.id})" class="text-xs bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-ranking-star text-vrg-accent"></i> Classifica Rally</button>`;
                 const rallyDiscordBtn = isAdmin
@@ -408,8 +411,9 @@
                 } else {
                     rally.legs.forEach(leg => {
                         const adminStageBtn = isAdmin
-                            ? `<button onclick="event.stopPropagation(); openAddStage(${leg.id})" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded mr-2 transition-colors"><i class="fa-solid fa-plus"></i> Stage</button>`
-                            : '';
+                        ? `<button onclick="event.stopPropagation(); openAddStage(${leg.id})" class="...">...</button>
+                            <button onclick="event.stopPropagation(); deleteLeg(${leg.id})" class="text-xs bg-red-900/50 hover:bg-red-700 text-red-200 px-2 py-1 rounded ml-1 transition-colors" title="Elimina Leg"><i class="fa-solid fa-trash"></i></button>`
+                        : '';
                         const legStandingsBtn = `<button onclick="event.stopPropagation(); viewStandings('leg', ${leg.id})" class="text-xs bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-stopwatch text-vrg-accent"></i> Tempi Leg</button>`;
                         const legDiscordBtn = isAdmin
                         ? `<button onclick="event.stopPropagation(); openDiscordPublish('leg', ${leg.id}, ${JSON.stringify(leg.name)})" class="text-xs bg-indigo-900/40 border border-indigo-700 hover:bg-indigo-800 text-indigo-300 px-2 py-1 rounded ml-1 transition-colors" title="Pubblica classifica leg su Discord"><i class="fa-brands fa-discord"></i></button>`
@@ -458,6 +462,7 @@
                                             <button onclick="event.stopPropagation(); openStageResults(${stage.id})" class="text-xs text-slate-400 hover:text-vrg-accent transition-colors px-2 py-1 bg-slate-800/50 rounded border border-slate-700 hover:border-vrg-accent" title="Visualizza/Gestisci Risultati">
                                                 <i class="fa-solid fa-list-ol"></i> Risultati
                                             </button>
+                                            <button onclick="event.stopPropagation(); deleteStage(${stage.id})" class="text-xs text-red-500 hover:text-red-400 transition-colors px-2 py-1" title="Elimina Stage"><i class="fa-solid fa-trash"></i></button>
                                             ${isAdmin && hasOfficial
                                             ? `<button onclick="event.stopPropagation(); openDiscordPublish('stage', ${stage.id}, ${JSON.stringify(stage.name)})" class="text-xs bg-indigo-900/40 border border-indigo-700 hover:bg-indigo-800 text-indigo-300 px-2 py-1 rounded transition-colors" title="Pubblica risultati stage su Discord"><i class="fa-brands fa-discord"></i></button>`
                                             : ''}
@@ -933,6 +938,19 @@
             } catch (e) {
                 tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-red-400">Errore: ${e.message}</td></tr>`;
             }
+        }
+
+        async function deleteRally(id) {
+            if (!confirm("Eliminare questo rally e tutto il suo contenuto?")) return;
+            try { await api.deleteRally(id); await loadTree(); } catch (e) { alert(e.message); }
+        }
+        async function deleteLeg(id) {
+            if (!confirm("Eliminare questa leg e le sue stage?")) return;
+            try { await api.deleteLeg(id); await loadTree(); } catch (e) { alert(e.message); }
+        }
+        async function deleteStage(id) {
+            if (!confirm("Eliminare questa stage e i suoi risultati?")) return;
+            try { await api.deleteStage(id); await loadTree(); } catch (e) { alert(e.message); }
         }
     </script>
 </body>

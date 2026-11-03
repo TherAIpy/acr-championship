@@ -334,18 +334,40 @@ def delete_championship(champ_id):
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/delete-rally/<int:rally_id>', methods=['DELETE'])
+@admin_required
+def delete_rally(rally_id):
+    try:
+        supabase = get_supabase()
+        legs = supabase.table('leg').select('id').eq('rally_id', rally_id).execute().data
+        leg_ids = [l['id'] for l in legs]
+        if leg_ids:
+            stages = supabase.table('stage').select('id').in_('leg_id', leg_ids).execute().data
+            stage_ids = [s['id'] for s in stages]
+            if stage_ids:
+                supabase.table('stage_result').delete().in_('stage_id', stage_ids).execute()
+                supabase.table('stage').delete().in_('leg_id', leg_ids).execute()
+            supabase.table('leg').delete().eq('rally_id', rally_id).execute()
+        supabase.table('rally').delete().eq('id', rally_id).execute()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/api/create-rally', methods=['POST'])
 @admin_required
 def create_rally():
     try:
-        data = request.json
-        supabase = get_supabase()
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        if start_date == "": start_date = None
+        if end_date == "": end_date = None
+
         res = supabase.table('rally').insert({
             "championship_id": data['championship_id'],
             "name": data['name'],
             "discord_webhook_url": data.get('discord_webhook_url', ''),
-            "start_date": data.get('start_date'),
-            "end_date": data.get('end_date')
+            "start_date": start_date,
+            "end_date": end_date
         }).execute()
         return jsonify({"success": True, "data": res.data[0]}), 201
     except Exception as e:
@@ -378,10 +400,13 @@ def create_leg():
         if not rally.data:
             return jsonify({"success": False, "error": "Rally non trovato"}), 404
 
+        leg_date = data.get('date')
+        if leg_date == "" or leg_date is None: leg_date = None
+
         res = supabase.table('leg').insert({
             "rally_id": rally_id,
             "name": name,
-            "date": data.get('date') # Accetta la data
+            "date": leg_date
         }).execute()
         
         # Aggiorna le date del rally genitore
@@ -614,7 +639,7 @@ def save_stage():
             "weather": payload.weather,
             "temperature": payload.temperature,
             "surface": payload.surface,
-            "start_time": payload.start_time,
+            "start_time": payload.start_time if payload.start_time else None,
             "notes": payload.notes
         }
 
@@ -1099,6 +1124,65 @@ def discord_publish(entity_type, entity_id):
         "action": result.get('action'),
         "message_id": result.get('message_id')
     })
+
+# =============================================================================
+# ROTTE PER LE TENDINE (TRACKS, CARS, CLASSI)
+# =============================================================================
+@app.route('/api/tracks', methods=['GET'])
+def get_tracks():
+    try:
+        supabase = get_supabase()
+        res = supabase.table('track').select('*').order('name').execute()
+        return jsonify({"success": True, "data": res.data}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/car-classes', methods=['GET'])
+def get_car_classes():
+    try:
+        supabase = get_supabase()
+        res = supabase.table('car_class').select('*').order('name').execute()
+        return jsonify({"success": True, "data": res.data}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/cars', methods=['GET'])
+def get_cars():
+    try:
+        supabase = get_supabase()
+        res = supabase.table('car').select('*, car_class(name)').order('brand').execute()
+        return jsonify({"success": True, "data": res.data}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# =============================================================================
+# ROTTE ELIMINAZIONE (LEG E STAGE)
+# =============================================================================
+@app.route('/api/delete-leg/<int:leg_id>', methods=['DELETE'])
+@admin_required
+def delete_leg(leg_id):
+    try:
+        supabase = get_supabase()
+        stages = supabase.table('stage').select('id').eq('leg_id', leg_id).execute().data
+        stage_ids = [s['id'] for s in stages]
+        if stage_ids:
+            supabase.table('stage_result').delete().in_('stage_id', stage_ids).execute()
+            supabase.table('stage').delete().eq('leg_id', leg_id).execute()
+        supabase.table('leg').delete().eq('id', leg_id).execute()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/delete-stage/<int:stage_id>', methods=['DELETE'])
+@admin_required
+def delete_stage(stage_id):
+    try:
+        supabase = get_supabase()
+        supabase.table('stage_result').delete().eq('stage_id', stage_id).execute()
+        supabase.table('stage').delete().eq('id', stage_id).execute()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/championships', methods=['GET'])
 def get_championships():

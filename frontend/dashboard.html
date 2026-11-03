@@ -98,9 +98,9 @@
             <!-- Toolbar (Filtri e Bottone Nuovo) -->
             <div class="flex justify-between items-center mb-6">
                 <div class="flex gap-2">
-                    <button class="bg-vrg-card text-white px-4 py-2 rounded-lg text-sm font-medium border border-slate-700">Tutti</button>
-                    <button class="text-slate-400 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">In corso</button>
-                    <button class="text-slate-400 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Conclusi</button>
+                    <button onclick="setFilter('all')" class="filter-btn bg-vrg-card text-white px-4 py-2 rounded-lg text-sm font-medium border border-slate-700">Tutti</button>
+                    <button onclick="setFilter('active')" class="filter-btn text-slate-400 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">In corso</button>
+                    <button onclick="setFilter('completed')" class="filter-btn text-slate-400 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Conclusi</button>
                 </div>
                 
                 <button id="btn-nuovo-campionato" class="admin-only bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-yellow-500/20 hidden">
@@ -283,7 +283,8 @@
                 response.data.forEach(champ => {
                     const anno = new Date(champ.created_at).getFullYear();
                     const tr = document.createElement('tr');
-                    tr.className = "hover:bg-slate-800/30 transition-colors group";
+                    tr.className = "hover:bg-slate-800/30 transition-colors group cursor-pointer";
+                    tr.onclick = () => { window.location.href = `championship-detail.html?id=${champ.id}`; };
                     tr.innerHTML = `
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-4">
@@ -314,7 +315,10 @@
                             <span class="bg-slate-700 text-slate-300 px-3 py-1 rounded-full text-xs font-medium border border-slate-600">In corso</span>
                         </td>
                         <td class="px-6 py-4 text-right">
-                            <button onclick="window.location.href='championship-detail.html?id=${champ.id}'" class="text-slate-500 hover:text-vrg-accent transition-colors">
+                            <button onclick="event.stopPropagation(); deleteChampionship(${champ.id})" class="text-slate-500 hover:text-red-500 transition-colors mr-4" title="Elimina">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                            <button class="text-slate-500 hover:text-vrg-accent transition-colors">
                                 <i class="fa-solid fa-chevron-right"></i>
                             </button>
                         </td>
@@ -325,6 +329,33 @@
                 console.error("Errore nel caricamento:", error);
                 tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-red-400">Errore nel caricamento dei dati. Backend offline o problema di rete.</td></tr>`;
             }
+        }
+
+        let allChamps = [];
+        let currentFilter = 'all';
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.className = "filter-btn text-slate-400 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors";
+            });
+        event.target.className = "filter-btn bg-vrg-card text-white px-4 py-2 rounded-lg text-sm font-medium border border-slate-700";
+            applyFilter();
+        }
+
+        function applyFilter() {
+            // Qui andrai a filtrare la tabella, ma per ora ti basta nascondere le righe
+            const tbody = document.getElementById('campionati-tbody');
+            // Implementazione semplice per ora (basata sulla classe o ricaricando):
+            loadChampionships(); // Per ora ricarica, in futuro potremo filtrare in memoria
+        }
+
+        async function deleteChampionship(id) {
+            if (!confirm("Eliminare questo campionato? Verrà cancellato tutto.")) return;
+            try {
+                await api.deleteChampionship(id);
+                loadChampionships();
+            } catch (e) { alert("Errore: " + e.message); }
         }
     </script>
 </body>
