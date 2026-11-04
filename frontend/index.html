@@ -356,10 +356,11 @@
                                 <div onclick="toggleStageResults(${s.id})" class="p-3 cursor-pointer flex justify-between items-center hover:bg-slate-800 transition-colors">
                                     <div>
                                         <h3 class="font-bold text-white text-sm">${s.name}</h3>
-                                        <!-- Aggiunte info meteo, temperatura e km -->
-                                        <div class="text-[10px] text-slate-400 mt-1 flex gap-2 items-center">
+                                        <!-- BADGE CON ICONE -->
+                                        <div class="text-[10px] text-slate-400 mt-1 flex gap-3 items-center">
                                             ${s.distance_km ? `<span><i class="fa-solid fa-ruler"></i> ${s.distance_km} km</span>` : ''}
-                                            <span><i class="fa-solid fa-cloud"></i> ${s.weather || 'Sereno'}</span>
+                                            <span title="${s.weather}">${getWeatherIcon(s.weather)} ${s.weather || 'Sereno'}</span>
+                                            <span title="${s.surface}">${getSurfaceIcon(s.surface)} ${s.surface || 'Asfalto'}</span>
                                             ${s.temperature ? `<span><i class="fa-solid fa-temperature-half"></i> ${s.temperature}°C</span>` : ''}
                                         </div>
                                     </div>
@@ -567,6 +568,26 @@
             });
             html += `</tbody></table></div>`;
             return html;
+        }
+
+                function getWeatherIcon(weather) {
+            if (!weather) return `<i class="fa-solid fa-sun text-yellow-400"></i>`;
+            const w = weather.toLowerCase();
+            if (w.includes('pioggia intensa')) return `<i class="fa-solid fa-cloud-showers-water text-blue-500"></i>`;
+            if (w.includes('pioggia')) return `<i class="fa-solid fa-cloud-rain text-blue-400"></i>`;
+            if (w.includes('neve')) return `<i class="fa-solid fa-snowflake text-white"></i>`;
+            if (w.includes('nuvoloso')) return `<i class="fa-solid fa-cloud text-slate-300"></i>`;
+            return `<i class="fa-solid fa-sun text-yellow-400"></i>`; // Default Sereno
+        }
+
+        function getSurfaceIcon(surface) {
+            if (!surface) return '';
+            const s = surface.toLowerCase();
+            if (s.includes('ghiaccio')) return `<i class="fa-solid fa-icicles text-cyan-400"></i>`;
+            if (s.includes('neve')) return `<i class="fa-solid fa-snowflake text-white"></i>`;
+            if (s.includes('fango')) return `<i class="fa-solid fa-mound text-amber-700"></i>`;
+            if (s.includes('sterrato')) return `<i class="fa-solid fa-mountain text-amber-600"></i>`;
+            return `<i class="fa-solid fa-road text-slate-400"></i>`; // Default Asfalto
         }
     </script>
 </body>

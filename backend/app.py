@@ -832,48 +832,48 @@ def _embed_stage(ctx, frontend_base="https://acr-championship.pages.dev"):
 
 
 def _compute_standings_for_stages(stage_ids):
-    """Restituisce la classifica (somma tempi, regola DNF) come lista ordinata."""
     supabase = get_supabase()
-    if not stage_ids:
-        return []
+    if not stage_ids: return []
 
+    # 1. Prendi tutti i risultati ufficiali per queste stage
     results = (
         supabase.table('stage_result').select('*')
         .in_('stage_id', stage_ids).eq('is_official', True)
         .execute().data
     ) or []
 
-    if not results:
-        return []
+    if not results: return []
 
-    # 1. Trova il tempo massimo per ogni stage (per DNF e mancata partecipazione)
+    # 2. QUALE STAGE SONO STATE EFFETTIVAMENTE CARICATE?
+    # Creiamo un set con gli ID delle stage che hanno almeno un risultato
+    stages_with_results = set(r['stage_id'] for r in results)
+
+    # 3. Trova il tempo massimo per ogni stage (per DNF)
     stage_max = {}
     for r in results:
         if r['status'] == 'completed' and r['time_ms']:
             sid = r['stage_id']
             stage_max[sid] = max(stage_max.get(sid, 0), r['time_ms'])
 
-    # 2. Trova tutti i piloti che hanno partecipato ad ALMENO una stage
+    # 4. Trova tutti i piloti
     all_drivers = set(r['driver_name'] for r in results)
     
-    # Raggruppa i risultati per pilota e stage
+    # Raggruppa i risultati per pilota
     driver_results = {}
     for r in results:
         drv = r['driver_name']
-        if drv not in driver_results:
-            driver_results[drv] = {}
+        if drv not in driver_results: driver_results[drv] = {}
         driver_results[drv][r['stage_id']] = r
 
     totals = {}
     for drv in all_drivers:
         totals[drv] = {'time_ms': 0, 'status': 'completed', 'car': ''}
         
-        # Cicla su TUTTE le stage previste per questa leg/rally
-        for sid in stage_ids: 
+        # CICLA SOLO SULLE STAGE CHE HANNO RISULTATI (Ignora quelle vuote!)
+        for sid in stages_with_results:
             r = driver_results[drv].get(sid)
             
             if r:
-                # Il pilota ha un risultato per questa stage
                 if r.get('car_model'): totals[drv]['car'] = r.get('car_model') 
                 
                 if r['status'] in ('dnf', 'dns', 'dsq'):
@@ -883,11 +883,9 @@ def _compute_standings_for_stages(stage_ids):
                 elif r['status'] == 'completed':
                     totals[drv]['time_ms'] += (r['time_ms'] or 0)
             else:
-                # Il pilota NON ha un risultato per questa stage -> Penalità
-                # Assegniamo il doppio del tempo massimo della stage
+                # Il pilota NON ha un risultato per questa stage (ma la stage ha risultati per altri) -> DNF
                 last = stage_max.get(sid, 300000)
                 totals[drv]['time_ms'] += last * 2
-                # Marchiamo lo status come DNF perché non ha completato l'intera leg
                 totals[drv]['status'] = 'dnf'
 
     standings = [{'driver': k, 'total_ms': v['time_ms'], 'car': v['car'], 'status': v['status']} for k, v in totals.items()]
@@ -895,8 +893,7 @@ def _compute_standings_for_stages(stage_ids):
 
     prev, pos = -1, 1
     for i, item in enumerate(standings):
-        if item['total_ms'] == prev:
-            item['position'] = pos
+        if item['total_ms'] == prev: item['position'] = pos
         else:
             item['position'] = i + 1
             pos = item['position']
@@ -1314,30 +1311,28 @@ def get_standings(type, id):
                     )
             if not results: return []
             
-            # 1. Trova l'ultimo tempo per ogni stage
+            # Filtra solo le stage che hanno risultati
+            stages_with_results = set(r['stage_id'] for r in results)
+            
             stage_max_times = {}
             for r in results:
                 if r['status'] == 'completed' and r['time_ms']:
                     sid = r['stage_id']
                     stage_max_times[sid] = max(stage_max_times.get(sid, 0), r['time_ms'])
             
-            # 2. Trova tutti i piloti
             all_drivers = set(r['driver_name'] for r in results)
-            
-            # 3. Raggruppa per pilota
             driver_results = {}
             for r in results:
                 drv = r['driver_name']
-                if drv not in driver_results:
-                    driver_results[drv] = {}
+                if drv not in driver_results: driver_results[drv] = {}
                 driver_results[drv][r['stage_id']] = r
 
             driver_totals = {}
             for drv in all_drivers:
                 driver_totals[drv] = {'time_ms': 0, 'status': 'completed', 'car': ''}
                 
-                # Cicla su TUTTE le stage
-                for sid in stage_ids:
+                # CICLA SOLO SULLE STAGE VALIDE
+                for sid in stages_with_results:
                     r = driver_results[drv].get(sid)
                     
                     if r:
@@ -1350,21 +1345,17 @@ def get_standings(type, id):
                         elif r['status'] == 'completed':
                             driver_totals[drv]['time_ms'] += (r['time_ms'] or 0)
                     else:
-                        # Non ha corso questa stage -> Penalità
                         last_time = stage_max_times.get(sid, 300000)
                         driver_totals[drv]['time_ms'] += (last_time * 2)
                         driver_totals[drv]['status'] = 'dnf'
             
-            # 4. Prepara la lista ordinata
             standings = [{'driver': k, 'total_ms': v['time_ms'], 'car': v['car'], 'status': v['status']} for k, v in driver_totals.items()]
             standings.sort(key=lambda x: x['total_ms'])
             
-            # 5. Gestione Parità
             prev_time = -1
             current_pos = 1
             for i, item in enumerate(standings):
-                if item['total_ms'] == prev_time:
-                    item['position'] = current_pos
+                if item['total_ms'] == prev_time: item['position'] = current_pos
                 else:
                     item['position'] = i + 1
                     current_pos = item['position']
