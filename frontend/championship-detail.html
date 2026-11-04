@@ -112,16 +112,64 @@
         </div>
     </div>
 
-    <!-- MODALE AGGIUNGI STAGE -->
+        <!-- MODALE AGGIUNGI STAGE (AGGIORNATO) -->
     <div id="modal-stage" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
-        <div class="bg-vrg-card p-8 rounded-xl w-full max-w-md border border-slate-700 shadow-2xl">
+        <div class="bg-vrg-card p-6 rounded-xl w-full max-w-xl border border-slate-700 shadow-2xl flex flex-col">
             <h2 class="text-xl font-bold text-white mb-4">Nuova Stage</h2>
             <input type="hidden" id="input-stage-leg-id">
-            <input type="text" id="input-nome-stage" placeholder="Nome Stage" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:border-vrg-accent">
-            <input type="text" id="input-track-stage" placeholder="Tracciato (Opzionale)" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:border-vrg-accent">
+            
+            <div class="grid grid-cols-2 gap-4">
+                <!-- Tracciato Ufficiale -->
+                <div class="col-span-2">
+                    <label class="block text-xs text-slate-400 mb-1">Tracciato (dal database ACR)</label>
+                    <select id="select-tracciato" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
+                        <option value="">Caricamento tracciati...</option>
+                    </select>
+                </div>
+                
+                <!-- Nome Personalizzato (opzionale, es. SS1) -->
+                <div class="col-span-2">
+                    <label class="block text-xs text-slate-400 mb-1">Nome Personalizzato (es. SS1, PS2)</label>
+                    <input type="text" id="input-nome-stage" placeholder="Se vuoto, userà il nome del tracciato" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
+                </div>
+
+                <!-- Meteo e Fondo -->
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Meteo</label>
+                    <select id="select-meteo" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
+                        <option value="Sereno">Sereno</option>
+                        <option value="Nuvoloso">Nuvoloso</option>
+                        <option value="Pioggia Leggera">Pioggia Leggera</option>
+                        <option value="Pioggia Intensa">Pioggia Intensa</option>
+                        <option value="Neve">Neve</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Manto Stradale</label>
+                    <select id="select-fondo" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
+                        <option value="Asfalto Asciutto">Asfalto Asciutto</option>
+                        <option value="Asfalto Bagnato">Asfalto Bagnato</option>
+                        <option value="Sterrato">Sterrato</option>
+                        <option value="Fango">Fango</option>
+                        <option value="Neve Compatta">Neve Compatta</option>
+                        <option value="Ghiaccio">Ghiaccio</option>
+                    </select>
+                </div>
+
+                <!-- Temperatura e Orario -->
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Temperatura (°C)</label>
+                    <input type="number" id="input-temp" value="20" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Orario di Inizio</label>
+                    <input type="time" id="input-orario" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
+                </div>
+            </div>
+
             <div class="flex justify-end gap-3 mt-8">
-                <button onclick="closeModal('modal-stage')" class="px-5 py-2 rounded-lg text-sm text-slate-300 hover:text-white">Annulla</button>
-                <button id="btn-salva-stage" class="bg-vrg-accent text-black px-5 py-2 rounded-lg text-sm font-bold">Salva</button>
+                <button onclick="closeModal('modal-stage')" class="px-5 py-2 rounded-lg text-sm text-slate-300 hover:text-white transition-colors">Annulla</button>
+                <button id="btn-salva-stage" class="bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold transition-colors">Salva Stage</button>
             </div>
         </div>
     </div>
@@ -314,18 +362,33 @@
 
             document.getElementById('btn-salva-stage').onclick = async () => {
                 const legId = document.getElementById('input-stage-leg-id').value;
-                const nome = document.getElementById('input-nome-stage').value.trim();
-                const track = document.getElementById('input-track-stage').value.trim();
-                if (!nome) return alert("Inserisci un nome");
+                const trackId = document.getElementById('select-tracciato').value;
+                const trackName = document.getElementById('select-tracciato').options[document.getElementById('select-tracciato').selectedIndex].text;
+                const nome = document.getElementById('input-nome-stage').value.trim() || trackName;
+                
+                const meteo = document.getElementById('select-meteo').value;
+                const fondo = document.getElementById('select-fondo').value;
+                const temp = document.getElementById('input-temp').value;
+                const orario = document.getElementById('input-orario').value;
+
+                if (!trackId) return alert("Seleziona un tracciato dal database ACR!");
+
                 try {
-                    await api.createStage({ leg_id: legId, name: nome, track_name: track });
+                    await api.createStage({ 
+                        leg_id: legId, 
+                        name: nome, 
+                        track_id: trackId,
+                        track_name: trackName,
+                        weather: meteo,
+                        surface: fondo,
+                        temperature: parseInt(temp),
+                        start_time: orario || null
+                    });
                     closeModal('modal-stage');
                     document.getElementById('input-nome-stage').value = '';
-                    document.getElementById('input-track-stage').value = '';
                     await loadTree();
                 } catch (e) { alert("Errore: " + e.message); }
             };
-        });
 
         function openModal(id) { document.getElementById(id).classList.replace('hidden', 'flex'); }
         function closeModal(id) { document.getElementById(id).classList.replace('flex', 'hidden'); }
@@ -385,9 +448,8 @@
                 rallyEl.className = "bg-vrg-card border border-slate-700 rounded-xl overflow-hidden mb-4";
 
                 const adminLegBtn = isAdmin
-                ? `<button onclick="event.stopPropagation(); openAddLeg(${rally.id})" class="...">...</button>
-                    <button onclick="event.stopPropagation(); deleteRally(${rally.id})" class="text-xs bg-red-900/50 hover:bg-red-700 text-red-200 px-2 py-1 rounded ml-1 transition-colors" title="Elimina Rally"><i class="fa-solid fa-trash"></i></button>`
-                : '';
+                    ? `<button onclick="event.stopPropagation(); openAddLeg(${rally.id})" class="text-xs bg-blue-900/50 border border-blue-700 hover:bg-blue-800 text-blue-200 px-3 py-1.5 rounded flex items-center gap-1 transition-colors"><i class="fa-solid fa-plus"></i> Leg</button>`
+                    : '';
 
                 const rallyStandingsBtn = `<button onclick="event.stopPropagation(); viewStandings('rally', ${rally.id})" class="text-xs bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-ranking-star text-vrg-accent"></i> Classifica Rally</button>`;
                 const rallyDiscordBtn = isAdmin
@@ -411,8 +473,13 @@
                 } else {
                     rally.legs.forEach(leg => {
                         const adminStageBtn = isAdmin
-                        ? `<button onclick="event.stopPropagation(); openAddStage(${leg.id})" class="...">...</button>
-                            <button onclick="event.stopPropagation(); deleteLeg(${leg.id})" class="text-xs bg-red-900/50 hover:bg-red-700 text-red-200 px-2 py-1 rounded ml-1 transition-colors" title="Elimina Leg"><i class="fa-solid fa-trash"></i></button>`
+                            ? `<button onclick="event.stopPropagation(); openAddStage(${leg.id})" class="text-xs bg-emerald-900/50 border border-emerald-700 hover:bg-emerald-800 text-emerald-200 px-3 py-1.5 rounded flex items-center gap-1 transition-colors"><i class="fa-solid fa-plus"></i> Stage</button>`
+                            : '';
+                        const deleteLegBtn = isAdmin 
+                            ? `<button onclick="event.stopPropagation(); deleteLeg(${leg.id})" class="text-xs bg-red-900/50 hover:bg-red-700 text-red-200 px-2 py-1.5 rounded ml-1 transition-colors" title="Elimina Leg"><i class="fa-solid fa-trash"></i></button>`
+                            : '';
+                        const deleteRallyBtn = isAdmin 
+                        ? `<button onclick="event.stopPropagation(); deleteRally(${rally.id})" class="text-xs bg-red-900/50 hover:bg-red-700 text-red-200 px-2 py-1.5 rounded ml-1 transition-colors" title="Elimina Rally"><i class="fa-solid fa-trash"></i></button>` 
                         : '';
                         const legStandingsBtn = `<button onclick="event.stopPropagation(); viewStandings('leg', ${leg.id})" class="text-xs bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-stopwatch text-vrg-accent"></i> Tempi Leg</button>`;
                         const legDiscordBtn = isAdmin
@@ -718,6 +785,16 @@
                             results: results
                         });
                         if (res.success) {
+                                        // Carica i tracciati nel menu a tendina
+                            try {
+                                const tracksRes = await api.getTracks();
+                                const selectTracciato = document.getElementById('select-tracciato');
+                                if (selectTracciato) {
+                                    selectTracciato.innerHTML = `<option value="">Scegli un tracciato...</option>` + 
+                                        tracksRes.data.map(t => `<option value="${t.id}">${t.name} (${t.location})</option>`).join('');
+                                }
+                            } catch (e) { console.error("Errore caricamento tracciati", e); }
+
                             await loadTree();
                             await openStageResults(stageId);
                         } else {
