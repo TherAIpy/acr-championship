@@ -456,14 +456,20 @@
                 const rallyEl = document.createElement('div');
                 rallyEl.className = "bg-vrg-card border border-slate-700 rounded-xl overflow-hidden mb-4";
 
+                // BOTTONI DEL RALLY (Ora deleteRallyBtn è definito qui!)
                 const adminLegBtn = isAdmin
                     ? `<button onclick="event.stopPropagation(); openAddLeg(${rally.id})" class="text-xs bg-blue-900/50 border border-blue-700 hover:bg-blue-800 text-blue-200 px-3 py-1.5 rounded flex items-center gap-1 transition-colors"><i class="fa-solid fa-plus"></i> Leg</button>`
                     : '';
+                
+                const deleteRallyBtn = isAdmin 
+                    ? `<button onclick="event.stopPropagation(); deleteRally(${rally.id})" class="text-xs bg-red-900/50 hover:bg-red-700 text-red-200 px-2 py-1.5 rounded ml-1 transition-colors" title="Elimina Rally"><i class="fa-solid fa-trash"></i></button>` 
+                    : '';
 
                 const rallyStandingsBtn = `<button onclick="event.stopPropagation(); viewStandings('rally', ${rally.id})" class="text-xs bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-ranking-star text-vrg-accent"></i> Classifica Rally</button>`;
+                
                 const rallyDiscordBtn = isAdmin
-                ? `<button onclick="event.stopPropagation(); openDiscordPublish('rally', ${rally.id}, ${JSON.stringify(rally.name)})" class="text-xs bg-indigo-900/40 border border-indigo-700 hover:bg-indigo-800 text-indigo-300 px-2 py-1 rounded ml-1 transition-colors" title="Pubblica classifica su Discord"><i class="fa-brands fa-discord"></i></button>`
-                : '';
+                    ? `<button onclick="event.stopPropagation(); openDiscordPublish('rally', ${rally.id}, ${JSON.stringify(rally.name)})" class="text-xs bg-indigo-900/40 border border-indigo-700 hover:bg-indigo-800 text-indigo-300 px-2 py-1 rounded ml-1 transition-colors" title="Pubblica classifica su Discord"><i class="fa-brands fa-discord"></i></button>`
+                    : '';
 
                 let innerHtml = `
                     <div class="flex items-center justify-between p-4 bg-slate-800/50 cursor-pointer" onclick="toggleVisibility('rally-body-${rally.id}')">
@@ -481,19 +487,20 @@
                     innerHtml += `<div class="text-sm text-slate-500 p-2 pl-8">Nessuna Leg presente.</div>`;
                 } else {
                     rally.legs.forEach(leg => {
+                        // BOTTONI DELLA LEG
                         const adminStageBtn = isAdmin
                             ? `<button onclick="event.stopPropagation(); openAddStage(${leg.id})" class="text-xs bg-emerald-900/50 border border-emerald-700 hover:bg-emerald-800 text-emerald-200 px-3 py-1.5 rounded flex items-center gap-1 transition-colors"><i class="fa-solid fa-plus"></i> Stage</button>`
                             : '';
+                        
                         const deleteLegBtn = isAdmin 
                             ? `<button onclick="event.stopPropagation(); deleteLeg(${leg.id})" class="text-xs bg-red-900/50 hover:bg-red-700 text-red-200 px-2 py-1.5 rounded ml-1 transition-colors" title="Elimina Leg"><i class="fa-solid fa-trash"></i></button>`
                             : '';
-                        const deleteRallyBtn = isAdmin 
-                        ? `<button onclick="event.stopPropagation(); deleteRally(${rally.id})" class="text-xs bg-red-900/50 hover:bg-red-700 text-red-200 px-2 py-1.5 rounded ml-1 transition-colors" title="Elimina Rally"><i class="fa-solid fa-trash"></i></button>` 
-                        : '';
+                        
                         const legStandingsBtn = `<button onclick="event.stopPropagation(); viewStandings('leg', ${leg.id})" class="text-xs bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded transition-colors"><i class="fa-solid fa-stopwatch text-vrg-accent"></i> Tempi Leg</button>`;
+                        
                         const legDiscordBtn = isAdmin
-                        ? `<button onclick="event.stopPropagation(); openDiscordPublish('leg', ${leg.id}, ${JSON.stringify(leg.name)})" class="text-xs bg-indigo-900/40 border border-indigo-700 hover:bg-indigo-800 text-indigo-300 px-2 py-1 rounded ml-1 transition-colors" title="Pubblica classifica leg su Discord"><i class="fa-brands fa-discord"></i></button>`
-                        : '';
+                            ? `<button onclick="event.stopPropagation(); openDiscordPublish('leg', ${leg.id}, ${JSON.stringify(leg.name)})" class="text-xs bg-indigo-900/40 border border-indigo-700 hover:bg-indigo-800 text-indigo-300 px-2 py-1 rounded ml-1 transition-colors" title="Pubblica classifica leg su Discord"><i class="fa-brands fa-discord"></i></button>`
+                            : '';
 
                         innerHtml += `
                             <div class="ml-4 border-l border-slate-700 pl-4">
@@ -512,8 +519,6 @@
                             innerHtml += `<div class="text-xs text-slate-500 py-1">Nessuna Stage presente.</div>`;
                         } else {
                             leg.stages.forEach(stage => {
-                                // Pallino a tre stati: verde = ufficiale, giallo = bozza (solo admin), grigio = vuoto
-                                // Fallback su has_results per retro-compatibilità
                                 const hasOfficial = stage.has_official_results === true || stage.has_results === true;
                                 const hasDraft = stage.has_draft_results === true;
 
