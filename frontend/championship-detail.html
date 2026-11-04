@@ -331,6 +331,15 @@
                     <i class="fa-solid fa-power-off text-lg"></i>
                 </button>
             `;
+            // Carica i tracciati nel menu a tendina
+            try {
+                const tracksRes = await api.getTracks();
+                const selectTracciato = document.getElementById('select-tracciato');
+                if (selectTracciato) {
+                selectTracciato.innerHTML = `<option value="">Scegli un tracciato...</option>` + 
+                    tracksRes.data.map(t => `<option value="${t.id}">${t.name} (${t.location})</option>`).join('');
+                }
+            } catch (e) { console.error("Errore caricamento tracciati", e); }
 
             // 4. Ora è sicuro caricare i dati
             await loadTree();
@@ -785,16 +794,6 @@
                             results: results
                         });
                         if (res.success) {
-                                        // Carica i tracciati nel menu a tendina
-                            try {
-                                const tracksRes = await api.getTracks();
-                                const selectTracciato = document.getElementById('select-tracciato');
-                                if (selectTracciato) {
-                                    selectTracciato.innerHTML = `<option value="">Scegli un tracciato...</option>` + 
-                                        tracksRes.data.map(t => `<option value="${t.id}">${t.name} (${t.location})</option>`).join('');
-                                }
-                            } catch (e) { console.error("Errore caricamento tracciati", e); }
-
                             await loadTree();
                             await openStageResults(stageId);
                         } else {
