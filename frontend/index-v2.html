@@ -29,12 +29,29 @@
             
             <!-- COLONNA SINISTRA: CLASSIFICA GENERALE CAMPIONATO -->
             <div class="lg:col-span-4 card-wrc overflow-hidden h-fit sticky top-6">
-                <div class="bg-[#23211F] text-white p-3 flex justify-between items-center">
-                    <h2 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-trophy text-[#E10600]"></i> Classifica Generale</h2>
+                
+                <!-- NUOVO HEADER CON IMMAGINE AUTO E NOME CAMPIONATO -->
+                <div class="relative h-36 overflow-hidden bg-[#23211F]">
+                    <!-- Immagine di sfondo dell'auto -->
+                    <img id="champ-bg-image" src="https://images.unsplash.com/photo-1541343672885-9be56236302a?auto=format&fit=crop&q=80" alt="Rally Car" class="absolute inset-0 w-full h-full object-cover opacity-60">
+                    <!-- Gradiente per far leggere il testo (scuro in basso, trasparente in alto) -->
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#23211F] via-[#23211F]/40 to-transparent"></div>
+                    
+                    <!-- Titolo del Campionato -->
+                    <div class="absolute bottom-3 left-4 right-4 flex justify-between items-end">
+                        <h2 class="text-3xl font-black italic font-racing text-white drop-shadow-lg flex items-center gap-2">
+                            <i class="fa-solid fa-trophy text-[#E10600]"></i> 
+                            <span id="left-col-title">Caricamento...</span>
+                        </h2>
+                    </div>
                 </div>
-                <div id="left-col-title" class="p-3 border-b border-[#D1CBBF] bg-[#EBE6DC] text-lg font-bold text-[#2C2A28] text-center font-racing">
-                    Caricamento...
+                
+                <!-- SOTTO-HEADER CHIARO: Classifica Generale -->
+                <div class="p-2 border-b border-[#D1CBBF] bg-[#EBE6DC] text-xs font-bold text-[#6B665F] text-center uppercase tracking-widest">
+                    Classifica Generale
                 </div>
+
+                <!-- Tabella (Rimane identica) -->
                 <div class="w-full overflow-x-auto">
                     <table class="w-full table-wrc text-xs whitespace-nowrap">
                         <thead class="sticky top-0">
@@ -149,6 +166,7 @@
                 v2State.champ = urlId ? (res.data.find(c => c.id == urlId) || res.data[0]) : (res.data.find(c => c.is_visible === true) || res.data[0]);
                 
                 document.getElementById('left-col-title').textContent = v2State.champ.name;
+                document.getElementById('champ-bg-image').src = getChampionshipBackground(v2State.champ.name);
                 
                 // Carica Classifica Generale
                 const standRes = await apiJson(`/standings/championship/${v2State.champ.id}`);
@@ -556,6 +574,17 @@
             if (n.includes('livigno') || n.includes('ghiaccio')) 
                 return 'https://images.unsplash.com/photo-1483664852095-d6cc6870702d?auto=format&fit=crop&q=80'; // Neve
             return 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80';
+        }
+
+        function getChampionshipBackground(champName) {
+            if (!champName) return 'https://images.unsplash.com/photo-1541343672885-9be56236302a?auto=format&fit=crop&q=80';
+            const n = champName.toLowerCase();
+            // Puoi sostituire questi URL con immagini specifiche per i tuoi campionati
+            if (n.includes('prova')) 
+                return 'https://images.unsplash.com/photo-1541343672885-9be56236302a?auto=format&fit=crop&q=80'; // Auto da rally sterrato
+            if (n.includes('alsazia') || n.includes('montecarlo')) 
+                return 'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&q=80'; // Auto da rally asfalto
+            return 'https://images.unsplash.com/photo-1541343672885-9be56236302a?auto=format&fit=crop&q=80'; // Default
         }
     </script>
 </body>
