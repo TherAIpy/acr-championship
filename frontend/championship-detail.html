@@ -671,17 +671,20 @@
             let mode = 'empty';
             try {
                 if (isAdmin) {
-                    const draftRes = await apiCall(`/stage-results/${stageId}/draft`);
+                    // CAMBIA apiCall IN apiJson
+                    const draftRes = await apiJson(`/stage-results/${stageId}/draft`); 
                     if (draftRes.success && draftRes.data.length > 0) {
                         data = draftRes.data; mode = 'draft';
                     } else {
-                        const offRes = await apiCall(`/stage-results/${stageId}`);
+                        // CAMBIA apiCall IN apiJson
+                        const offRes = await apiJson(`/stage-results/${stageId}`);
                         if (offRes.success && offRes.data.length > 0) {
                             data = offRes.data; mode = 'official';
                         }
                     }
                 } else {
-                    const offRes = await apiCall(`/stage-results/${stageId}`);
+                    // CAMBIA apiCall IN apiJson
+                    const offRes = await apiJson(`/stage-results/${stageId}`);
                     if (offRes.success && offRes.data.length > 0) {
                         data = offRes.data; mode = 'official';
                     }
@@ -914,7 +917,7 @@
             openModal('modal-discord');
 
             try {
-                const status = await apiCall(`/discord/status/${entityType}/${entityId}`);
+                const status = await apiJson(`/discord/status/${entityType}/${entityId}`);
 
              if (status.success) {
                     if (status.suggested_webhook) {
@@ -1034,7 +1037,7 @@
             openModal('modal-standings');
 
             try {
-                const res = await apiCall(`/standings/${type}/${id}`);
+                const res = await apiJson(`/standings/${type}/${id}`);
                 if (res.success && res.data.length > 0) {
                     tbody.innerHTML = '';
                     res.data.forEach(r => {
