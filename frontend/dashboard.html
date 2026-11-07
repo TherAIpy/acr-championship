@@ -127,8 +127,8 @@
                         <!-- Popolato via JS -->
                          <td class="px-6 py-4 text-right">
                         <!-- Bottone Visibilità (Occhio) -->
-                        <button onclick="event.stopPropagation(); toggleVisibility(${champ.id})" class="text-slate-500 hover:text-vrg-accent transition-colors mr-3" title="${champ.is_visible !== false ? 'Nascondi' : 'Rendi Visibile'}">
-                            <i class="fa-solid ${champ.is_visible !== false ? 'fa-eye' : 'fa-eye-slash'}"></i>
+                        <button onclick="event.stopPropagation(); toggleVisibility(${champ.id})" class="transition-colors mr-3" style="color: ${champ.is_visible !== false ? '#10B981' : '#EF4444'};" title="${champ.is_visible !== false ? 'Nascondi' : 'Rendi Visibile'}">
+                                <i class="fa-solid ${champ.is_visible !== false ? 'fa-eye' : 'fa-eye-slash'}"></i>
                         </button>
                         <!-- Bottone Modifica (Matita) -->
                         <button onclick="event.stopPropagation(); editChamp(${champ.id}, '${champ.name}')" class="text-slate-500 hover:text-blue-400 transition-colors mr-3" title="Modifica">
