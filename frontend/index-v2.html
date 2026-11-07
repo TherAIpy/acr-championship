@@ -12,18 +12,13 @@
 
     <!-- HEADER -->
     <header class="bg-[#23211F] text-white shadow-lg relative overflow-hidden border-b-4 border-[#E10600]">
-        <div class="absolute inset-0 opacity-30 bg-[url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80')] bg-cover bg-center mix-blend-luminosity"></div>
-        <div class="absolute inset-0 bg-gradient-to-r from-[#23211F] via-transparent to-[#23211F] opacity-80"></div>
-        
         <div class="relative max-w-[1600px] mx-auto px-4 py-4 flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <h1 class="text-3xl font-black text-white italic tracking-tighter">ACR <span class="text-[#E10600]">CHAMPIONSHIP</span></h1>
             </div>
-            
             <nav class="hidden md:flex items-center gap-6 font-racing font-bold text-sm">
-                <a href="#" class="text-white border-b-2 border-[#E10600] pb-1"><i class="fa-solid fa-trophy mr-2"></i>Campionato</a>
+                <a href="index-v2.html" class="text-white border-b-2 border-[#E10600] pb-1"><i class="fa-solid fa-trophy mr-2"></i>Campionato</a>
                 <a href="archive-v2.html" class="text-[#A8A29A] hover:text-white transition"><i class="fa-solid fa-box-archive mr-2"></i>Archivio</a>
-                <a href="index.html" class="text-[#A8A29A] hover:text-white transition"><i class="fa-solid fa-ranking-star mr-2"></i>Torna alla V1</a>
             </nav>
         </div>
     </header>
@@ -32,46 +27,91 @@
     <main class="max-w-[1600px] mx-auto px-4 mt-6">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            <!-- COLONNA SINISTRA: CLASSIFICA CAMPIONATO -->
+            <!-- COLONNA SINISTRA: CLASSIFICA GENERALE CAMPIONATO -->
             <div class="lg:col-span-3 card-wrc overflow-hidden h-fit sticky top-6">
                 <div class="bg-[#23211F] text-white p-3 flex justify-between items-center">
-                    <h2 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-trophy text-[#E10600]"></i> Classifica</h2>
+                    <h2 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-trophy text-[#E10600]"></i> Classifica Generale</h2>
                 </div>
-                    <div id="left-col-title" class="p-3 border-b border-[#D1CBBF] bg-[#EBE6DC] text-lg font-bold text-[#2C2A28] text-center font-racing">
+                <div id="left-col-title" class="p-3 border-b border-[#D1CBBF] bg-[#EBE6DC] text-lg font-bold text-[#2C2A28] text-center font-racing">
                     Caricamento...
                 </div>
-                <table class="w-full table-wrc text-sm">
-                    <thead>
-                        <tr>
-                            <th class="w-10 text-center">Pos</th>
-                            <th>Pilota</th>
-                            <th class="w-10 text-center">Cls</th>
-                            <th class="w-12 text-right">Punti</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody-champ-standings">
-                        <tr><td colspan="4" class="text-center py-4 text-gray-500"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- COLONNA CENTRALE: RALLY E LEG -->
-            <div class="lg:col-span-4 flex flex-col gap-4">
-                <div id="middle-col-container">
-                    <div class="card-wrc p-8 text-center text-gray-500">
-                        <i class="fa-solid fa-spinner fa-spin text-3xl mb-4"></i>
-                        <p>Caricamento Rally in corso...</p>
-                    </div>
+                <div class="max-h-[600px] overflow-y-auto custom-scrollbar">
+                    <table class="w-full table-wrc text-sm">
+                        <thead class="sticky top-0">
+                            <tr>
+                                <th class="w-10 text-center">Pos</th>
+                                <th>Pilota</th>
+                                <th class="w-12 text-right">Punti</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-champ-standings">
+                            <tr><td colspan="3" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- COLONNA DESTRA: STAGE / RISULTATI -->
-            <div class="lg:col-span-5 flex flex-col gap-4">
-                <div id="right-col-container">
-                    <div class="card-wrc p-12 text-center text-gray-500 h-full flex flex-col justify-center items-center min-h-[400px]">
-                        <i class="fa-solid fa-mouse-pointer text-4xl mb-4 opacity-50"></i>
-                        <p>Seleziona una Leg dalla colonna centrale<br>per visualizzare i tempi.</p>
+            <!-- COLONNA CENTRALE: RALLY, LEG E CLASSIFICHE -->
+            <div class="lg:col-span-4 flex flex-col gap-4">
+                
+                <!-- 1. Rally Tabs (Fogli orizzontali) -->
+                <div id="rally-tabs-container" class="flex overflow-x-auto gap-2 pb-2 custom-scrollbar">
+                    <!-- Popolato via JS -->
+                </div>
+
+                <!-- 2. Leg Accordion -->
+                <div id="legs-container" class="card-wrc overflow-hidden flex flex-col">
+                    <!-- Popolato via JS -->
+                </div>
+
+                <!-- 3. Classifica Leg (Dark) - Nascosta se non c'è leg selezionata -->
+                <div id="leg-standings-container" class="hidden">
+                    <div class="bg-[#23211F] text-white p-3 rounded-t-lg border-b border-[#3D3833] flex justify-between items-center">
+                        <h3 class="text-sm font-bold flex items-center gap-2"><i class="fa-solid fa-stopwatch text-[#EAB308]"></i> Classifica Leg</h3>
+                        <span class="text-[10px] bg-[#3D3833] px-2 py-1 rounded text-[#A8A29A]">Top 5</span>
                     </div>
+                    <div class="bg-[#2C2A28] text-white max-h-64 overflow-y-auto custom-scrollbar border-t-0 border border-[#3D3833] rounded-b-lg">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-[#23211F] text-[#A8A29A] uppercase sticky top-0">
+                                <tr>
+                                    <th class="p-2 w-8 text-center">Pos</th>
+                                    <th class="p-2">Pilota</th>
+                                    <th class="p-2 text-right">Tempo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-leg-standings"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 4. Classifica Rally (Dark) -->
+                <div id="rally-standings-container">
+                    <div class="bg-[#23211F] text-white p-3 rounded-t-lg border-b border-[#3D3833] flex justify-between items-center">
+                        <h3 class="text-sm font-bold flex items-center gap-2"><i class="fa-solid fa-ranking-star text-[#E10600]"></i> Classifica Rally</h3>
+                        <span class="text-[10px] bg-[#3D3833] px-2 py-1 rounded text-[#A8A29A]">Top 10</span>
+                    </div>
+                    <div class="bg-[#2C2A28] text-white max-h-72 overflow-y-auto custom-scrollbar border border-[#3D3833] rounded-b-lg">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-[#23211F] text-[#A8A29A] uppercase sticky top-0">
+                                <tr>
+                                    <th class="p-2 w-8 text-center">Pos</th>
+                                    <th class="p-2">Pilota</th>
+                                    <th class="p-2 text-right">Punti</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-rally-standings">
+                                <tr><td colspan="3" class="text-center p-4 text-gray-500">Seleziona un Rally</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- COLONNA DESTRA: NEWS / STAGE / RISULTATI -->
+            <div class="lg:col-span-5">
+                <div id="right-col-container" class="h-full">
+                    <!-- Popolato via JS (Default: News) -->
                 </div>
             </div>
 
@@ -84,201 +124,266 @@
     <script src="js/api.js"></script>
 
     <script>
-        const v2State = { champ: null, tree: null, selectedLegId: null };
+        const v2State = {
+            champ: null,
+            tree: null,
+            selectedRally: null,
+            selectedLeg: null,
+            selectedStage: null
+        };
 
         document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const res = await api.getChampionships();
-                if (!res.data || res.data.length === 0) {
-                    document.getElementById('left-col-title').textContent = "Nessun campionato";
-                    return;
-                }
+                if (!res.data || res.data.length === 0) return;
                 
                 const urlParams = new URLSearchParams(window.location.search);
                 const urlId = urlParams.get('id');
+                v2State.champ = urlId ? (res.data.find(c => c.id == urlId) || res.data[0]) : (res.data.find(c => c.is_visible === true) || res.data[0]);
                 
-                if (urlId) {
-                    // Se c'è un ID nell'URL (dall'archivio), usa quello
-                    v2State.champ = res.data.find(c => c.id == urlId) || res.data[0];
-                } else {
-                    // ALTRIMENTI: Cerca il primo campionato VISIBILE
-                    const visibleChamp = res.data.find(c => c.is_visible === true);
-                    v2State.champ = visibleChamp || res.data[0]; // Se non trova visibili, usa il primo
+                document.getElementById('left-col-title').textContent = v2State.champ.name;
+                
+                // Carica Classifica Generale
+                const standRes = await apiJson(`/standings/championship/${v2State.champ.id}`);
+                renderChampionshipStandings(standRes.data);
+
+                // Carica Albero
+                const treeRes = await apiJson(`/tree/${v2State.champ.id}`);
+                v2State.tree = treeRes.data;
+                
+                // Seleziona il primo rally di default
+                if (v2State.tree.rallies && v2State.tree.rallies.length > 0) {
+                    selectRally(v2State.tree.rallies[0].id);
                 }
 
-                document.getElementById('left-col-title').textContent = v2State.champ.name;
-                await loadTreeAndStandings();
+                // Mostra le news di default a destra
+                renderRightDefault();
                 
             } catch (e) { console.error("Errore V2:", e); }
         });
 
-        async function loadTreeAndStandings() {
-            try {
-                const standRes = await apiJson(`/standings/championship/${v2State.champ.id}`);
-                renderChampionshipStandings(standRes.data);
-            } catch (e) { console.error("Errore classifica", e); }
-
-            try {
-                const treeRes = await apiJson(`/tree/${v2State.champ.id}`);
-                v2State.tree = treeRes.data;
-                renderRallies();
-            } catch (e) { console.error("Errore albero", e); }
-        }
-
-        async function loadTreeAndStandings() {
-            // Carica Classifica Campionato (Colonna Sinistra)
-            try {
-                const standRes = await apiJson(`/standings/championship/${v2State.champ.id}`);
-                renderChampionshipStandings(standRes.data);
-            } catch (e) { console.error("Errore classifica", e); }
-
-            // Carica Albero (Colonna Centrale)
-            try {
-                const treeRes = await apiJson(`/tree/${v2State.champ.id}`);
-                v2State.tree = treeRes.data;
-                renderRallies();
-            } catch (e) { console.error("Errore albero", e); }
-        }
-
+        // --- COLONNA SINISTRA ---
         function renderChampionshipStandings(data) {
             const tbody = document.getElementById('tbody-champ-standings');
-            if (!data || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4">Nessun punto.</td></tr>`;
-                return;
-            }
-
+            if (!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4">Nessun dato.</td></tr>`; return; }
             tbody.innerHTML = data.map((r, i) => `
                 <tr class="${i === 0 ? 'row-first' : ''}">
-                    <td class="text-center">${r.position}</td>
+                    <td class="text-center font-bold">${r.position}</td>
                     <td class="flex items-center gap-2">
-                        <span class="text-lg">🇮🇹</span> ${r.driver}
+                        <span class="text-lg">🇮🇹</span> <span class="truncate">${r.driver}</span>
                     </td>
-                    <td class="text-center"><span class="bg-[#23211F] text-white text-[10px] px-1 rounded">R5</span></td>
                     <td class="text-right font-bold">${r.points}</td>
                 </tr>
             `).join('');
         }
 
-        function renderRallies() {
-            const container = document.getElementById('middle-col-container');
-            if (!v2State.tree.rallies || v2State.tree.rallies.length === 0) {
-                container.innerHTML = `<div class="card-wrc p-4 text-center">Nessun rally presente.</div>`;
+        // --- COLONNA CENTRALE ---
+        function selectRally(rallyId) {
+            v2State.selectedRally = v2State.tree.rallies.find(r => r.id === rallyId);
+            v2State.selectedLeg = null; // Reset leg
+            v2State.selectedStage = null; // Reset stage
+
+            renderRallyTabs();
+            renderLegs();
+            loadRallyStandings(rallyId);
+            
+            // Nascondi classifica leg (perché non c'è leg selezionata)
+            document.getElementById('leg-standings-container').classList.add('hidden');
+            
+            // Riporta la colonna destra alle news
+            renderRightDefault();
+        }
+
+        function renderRallyTabs() {
+            const container = document.getElementById('rally-tabs-container');
+            container.innerHTML = v2State.tree.rallies.map(r => {
+                const isActive = v2State.selectedRally.id === r.id;
+                return `
+                    <button onclick="selectRally(${r.id})" class="whitespace-nowrap px-4 py-2 font-racing font-bold text-lg rounded-t-lg transition-colors border-b-2 
+                        ${isActive ? 'bg-[#F4F1EA] border-[#E10600] text-[#2C2A28]' : 'bg-[#D1CBBF] border-transparent text-[#6B665F] hover:bg-[#E5E0D8]'}">
+                        ${r.name}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function renderLegs() {
+            const container = document.getElementById('legs-container');
+            if (!v2State.selectedRally.legs || v2State.selectedRally.legs.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-gray-500">Nessuna Leg in questo Rally.</div>`;
                 return;
             }
-
-            container.innerHTML = v2State.tree.rallies.map(rally => `
-                <div class="card-wrc overflow-hidden mb-4">
-                    <div class="p-4 border-b border-[#D1CBBF] flex justify-between items-start bg-[#F4F1EA]">
-                        <div>
-                            <h2 class="text-3xl font-black italic mb-1 text-[#2C2A28]">${rally.name}</h2>
-                            <div class="flex gap-4 mt-2 text-xs font-semibold text-[#6B665F]">
-                                <span><i class="fa-solid fa-road mr-1"></i> ${rally.total_legs} Leg</span>
-                                <span><i class="fa-solid fa-stopwatch mr-1"></i> ${rally.total_stages} Stage</span>
-                            </div>
+            container.innerHTML = v2State.selectedRally.legs.map(l => {
+                const isActive = v2State.selectedLeg && v2State.selectedLeg.id === l.id;
+                return `
+                    <div class="border-b border-[#D1CBBF] last:border-0">
+                        <div onclick="selectLeg(${l.id})" class="p-4 cursor-pointer flex justify-between items-center transition-colors
+                            ${isActive ? 'bg-[#EBE6DC]' : 'bg-[#F4F1EA] hover:bg-[#EBE6DC]'}">
+                            <span class="font-bold text-[#2C2A28] font-racing text-xl">${l.name}</span>
+                            <i class="fa-solid fa-chevron-right ${isActive ? 'text-[#E10600]' : 'text-gray-400'}"></i>
                         </div>
-                        <span class="${rally.is_completed ? 'bg-[#4D7C0F]' : 'bg-[#EAB308]'} text-white text-xs font-bold px-2 py-1 rounded shadow-sm">
-                            ${rally.is_completed ? 'CONCLUSO' : 'IN CORSO'}
-                        </span>
                     </div>
-                    
-                    <div class="flex flex-col">
-                        ${rally.legs && rally.legs.length > 0 ? rally.legs.map(leg => `
-                            <div onclick="selectLeg(${leg.id})" class="bg-[#EBE6DC] p-3 border-b border-[#D1CBBF] cursor-pointer hover:bg-[#D1CBBF] transition-colors flex justify-between items-center group">
-                                <span class="font-bold text-[#2C2A28] font-racing text-lg">${leg.name}</span>
-                                <i class="fa-solid fa-chevron-right text-gray-400 group-hover:text-[#E10600]"></i>
-                            </div>
-                        `).join('') : '<div class="p-3 text-sm text-gray-500">Nessuna Leg.</div>'}
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         async function selectLeg(legId) {
-            v2State.selectedLegId = legId;
-            const container = document.getElementById('right-col-container');
-            container.innerHTML = `<div class="card-wrc p-12 text-center"><i class="fa-solid fa-spinner fa-spin text-3xl text-[#E10600] mb-4"></i><p>Caricamento tempi...</p></div>`;
-
+            v2State.selectedLeg = v2State.selectedRally.legs.find(l => l.id === legId);
+            v2State.selectedStage = null; // Reset stage
+            
+            renderLegs(); // Aggiorna evidenziazione
+            document.getElementById('leg-standings-container').classList.remove('hidden');
+            
+            // Carica Classifica Leg
             try {
                 const res = await apiJson(`/standings/leg/${legId}`);
-                renderLegResults(res.data, legId);
-            } catch (e) {
-                container.innerHTML = `<div class="card-wrc p-4 text-red-500">Errore: ${e.message}</div>`;
-            }
+                const tbody = document.getElementById('tbody-leg-standings');
+                tbody.innerHTML = res.data.slice(0, 5).map((r, i) => `
+                    <tr class="border-b border-[#3D3833] last:border-0 ${i === 0 ? 'bg-[#EAB308] text-[#2C2A28] font-bold' : ''}">
+                        <td class="p-2 text-center">${r.position}</td>
+                        <td class="p-2 truncate">${r.driver}</td>
+                        <td class="p-2 text-right font-mono">${r.total_str}</td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error(e); }
+
+            // Mostra gli Stage nella colonna di destra
+            renderRightStages();
         }
 
-        function renderLegResults(data, legId) {
-            const container = document.getElementById('right-col-container');
-            
-            // Trova il nome della leg per il titolo
-            let legName = "Leg";
-            for (const r of v2State.tree.rallies) {
-                const l = r.legs.find(x => x.id === legId);
-                if (l) { legName = l.name; break; }
-            }
+        async function loadRallyStandings(rallyId) {
+            try {
+                const res = await apiJson(`/standings/rally/${rallyId}`);
+                const tbody = document.getElementById('tbody-rally-standings');
+                tbody.innerHTML = res.data.slice(0, 10).map((r, i) => `
+                    <tr class="border-b border-[#3D3833] last:border-0 ${i === 0 ? 'bg-[#EAB308] text-[#2C2A28] font-bold' : ''}">
+                        <td class="p-2 text-center">${r.position}</td>
+                        <td class="p-2 truncate">${r.driver}</td>
+                        <td class="p-2 text-right font-bold">${r.points} pt</td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
 
-            if (!data || data.length === 0) {
-                container.innerHTML = `<div class="card-wrc p-8 text-center text-gray-500">Nessun tempo registrato per questa Leg.</div>`;
+        // --- COLONNA DESTRA ---
+        function renderRightDefault() {
+            const container = document.getElementById('right-col-container');
+            container.innerHTML = `
+                <div class="card-wrc p-8 flex flex-col items-center justify-center min-h-[500px] text-center bg-[url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80')] bg-cover bg-center relative overflow-hidden">
+                    <div class="absolute inset-0 bg-[#23211F] opacity-80"></div>
+                    <div class="relative z-10 text-white">
+                        <h2 class="text-4xl font-black font-racing mb-4 text-[#EAB308]">${v2State.champ.name}</h2>
+                        <p class="text-lg font-medium opacity-80 mb-6">Benvenuti all'evento. Seleziona una Leg dalla colonna centrale per visualizzare le Stage e i risultati.</p>
+                        <div class="flex justify-center gap-4 text-sm font-bold bg-[#1A1816] p-4 rounded-lg border border-[#3D3833]">
+                            <span><i class="fa-solid fa-flag-checkered text-[#E10600] mr-1"></i> ${v2State.selectedRally?.total_stages || 0} Stage Totali</span>
+                            <span><i class="fa-solid fa-road text-[#E10600] mr-1"></i> ${v2State.selectedRally?.total_km || 0} km</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderRightStages() {
+            const container = document.getElementById('right-col-container');
+            const leg = v2State.selectedLeg;
+            
+            if (!leg || !leg.stages || leg.stages.length === 0) {
+                container.innerHTML = `<div class="card-wrc p-8 text-center text-gray-500">Nessuna Stage in questa Leg.</div>`;
                 return;
             }
 
-            // Calcolo distacchi lato client
-            const leaderTimeMs = data[0].total_ms;
-
-            let rowsHtml = data.map((r, i) => {
-                // Gap dal primo
-                const gapToFirstMs = r.total_ms - leaderTimeMs;
-                const gapToFirstStr = gapToFirstMs === 0 ? '-' : `+${(gapToFirstMs/1000).toFixed(2)}`;
-                
-                // Gap dal precedente
-                let gapToPrevStr = '-';
-                if (i > 0) {
-                    const prevMs = data[i-1].total_ms;
-                    const gapToPrevMs = r.total_ms - prevMs;
-                    gapToPrevStr = `+${(gapToPrevMs/1000).toFixed(2)}`;
-                }
-
-                return `
-                    <tr class="${i === 0 ? 'row-first' : ''}">
-                        <td class="text-center">${r.position}</td>
-                        <td class="flex items-center gap-2">
-                            <span class="text-lg">🇮🇹</span> ${r.driver}
-                        </td>
-                        <td class="text-xs font-semibold text-[#6B665F]">R5 / Auto</td>
-                        <td class="text-right font-mono font-bold">${r.total_str}</td>
-                        <td class="text-right text-[#E10600]">${gapToPrevStr}</td>
-                        <td class="text-right text-[#E10600]">${gapToFirstStr}</td>
-                    </tr>
-                `;
-            }).join('');
+            let stageHtml = leg.stages.map(s => `
+                <div onclick="selectStage(${s.id})" class="card-wrc p-4 mb-3 cursor-pointer hover:border-[#E10600] transition-colors group flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-black font-racing text-[#2C2A28] group-hover:text-[#E10600]">${s.name}</h3>
+                        <div class="flex gap-4 text-xs font-bold text-[#6B665F] mt-1">
+                            <span><i class="fa-solid fa-sun text-[#EAB308] mr-1"></i> ${s.weather}</span>
+                            <span><i class="fa-solid fa-road mr-1"></i> ${s.surface}</span>
+                            <span><i class="fa-solid fa-temperature-half text-[#E10600] mr-1"></i> ${s.temperature}°C</span>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-400 group-hover:text-[#E10600]"></i>
+                </div>
+            `).join('');
 
             container.innerHTML = `
-                <div class="card-wrc overflow-hidden relative">
-                    <div class="absolute top-0 right-0 bg-[#23211F] text-white px-6 py-3 rounded-bl-xl text-right z-10 shadow-lg border-b-2 border-l-2 border-[#D1CBBF]">
-                        <div class="text-[10px] uppercase text-[#A8A29A] font-bold tracking-wider">Tempo Vincente</div>
-                        <div class="text-3xl font-black text-[#EAB308] font-mono leading-none">${data[0].total_str}</div>
-                    </div>
-
-                    <div class="p-4 border-b border-[#D1CBBF] bg-[#F4F1EA]">
-                        <h2 class="text-3xl font-black italic mb-2 flex items-center gap-2 text-[#2C2A28]"><i class="fa-solid fa-stopwatch"></i> ${legName}</h2>
-                    </div>
-                    
-                    <table class="w-full table-wrc text-sm">
-                        <thead>
-                            <tr>
-                                <th class="w-10 text-center">Pos</th>
-                                <th>Pilota</th>
-                                <th>Cl. / Vettura</th>
-                                <th class="text-right">Tempo</th>
-                                <th class="text-right text-[#E10600]">Dist. Prec.</th>
-                                <th class="text-right text-[#A8A29A]">Dist. 1°</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${rowsHtml}
-                        </tbody>
-                    </table>
+                <div class="mb-4 flex justify-between items-end">
+                    <h2 class="text-3xl font-black font-racing text-[#2C2A28]">${leg.name}</h2>
+                    <button onclick="renderRightDefault()" class="text-sm text-[#6B665F] hover:text-[#E10600] font-bold"><i class="fa-solid fa-xmark mr-1"></i> Chiudi</button>
                 </div>
+                ${stageHtml}
             `;
+        }
+
+        async function selectStage(stageId) {
+            // Trova lo stage nell'albero
+            let stageData = null;
+            for (const leg of v2State.selectedRally.legs) {
+                const s = leg.stages.find(st => st.id === stageId);
+                if (s) { stageData = s; break; }
+            }
+            if (!stageData) return;
+            v2State.selectedStage = stageData;
+
+            const container = document.getElementById('right-col-container');
+            container.innerHTML = `<div class="card-wrc p-12 text-center"><i class="fa-solid fa-spinner fa-spin text-3xl text-[#E10600] mb-4"></i><p>Caricamento risultati...</p></div>`;
+
+            try {
+                const res = await apiJson(`/standings/stage/${stageId}`);
+                const data = res.data || [];
+                const leaderTimeMs = data.length > 0 ? data[0].time_ms : 0;
+
+                let rowsHtml = data.map((r, i) => {
+                    const gapMs = r.time_ms - leaderTimeMs;
+                    const gapStr = gapMs === 0 ? '-' : `+${(gapMs/1000).toFixed(2)}`;
+                    return `
+                        <tr class="${i === 0 ? 'row-first' : ''}">
+                            <td class="text-center font-bold">${r.position}</td>
+                            <td>${r.driver_name}</td>
+                            <td class="text-xs font-semibold text-[#6B665F]">${r.car_model}</td>
+                            <td class="text-right font-mono font-bold">${r.time_str}</td>
+                            <td class="text-right text-[#E10600]">${gapStr}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                if (data.length === 0) {
+                    rowsHtml = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Nessun risultato ufficiale per questa Stage.</td></tr>`;
+                }
+
+                container.innerHTML = `
+                    <div class="card-wrc overflow-hidden relative">
+                        <div class="p-4 border-b border-[#D1CBBF] bg-[#F4F1EA] flex justify-between items-start">
+                            <div>
+                                <h2 class="text-3xl font-black italic mb-2 text-[#2C2A28]"><i class="fa-solid fa-stopwatch text-[#E10600] mr-2"></i>${v2State.selectedStage.name}</h2>
+                                <div class="flex gap-4 text-sm font-bold text-[#6B665F]">
+                                    <span><i class="fa-solid fa-sun text-[#EAB308] mr-1"></i> ${v2State.selectedStage.weather}</span>
+                                    <span><i class="fa-solid fa-road mr-1"></i> ${v2State.selectedStage.surface}</span>
+                                    <span><i class="fa-solid fa-temperature-half text-[#E10600] mr-1"></i> ${v2State.selectedStage.temperature}°C</span>
+                                </div>
+                            </div>
+                            <button onclick="renderRightStages()" class="bg-[#23211F] hover:bg-[#3D3833] text-white px-3 py-1 text-xs font-bold rounded transition-colors"><i class="fa-solid fa-arrow-left mr-1"></i> Torna alle Stage</button>
+                        </div>
+                        
+                        <table class="w-full table-wrc text-sm">
+                            <thead>
+                                <tr>
+                                    <th class="w-10 text-center">Pos</th>
+                                    <th>Pilota</th>
+                                    <th>Vettura</th>
+                                    <th class="text-right">Tempo</th>
+                                    <th class="text-right text-[#E10600]">Distacco</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } catch (e) {
+                container.innerHTML = `<div class="card-wrc p-4 text-red-500">Errore: ${e.message}</div>`;
+            }
         }
     </script>
 </body>
