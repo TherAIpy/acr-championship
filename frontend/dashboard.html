@@ -327,7 +327,10 @@
                 });
             } catch (error) {
                 console.error("Errore nel caricamento:", error);
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-red-400">Errore nel caricamento dei dati. Backend offline o problema di rete.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-red-400 font-bold">
+                    Errore: ${error.message}
+                    <br><span class="text-sm text-slate-400 font-normal mt-2 block">Controlla la console (F12) per i dettagli.</span>
+                </td></tr>`;
             }
         }
 
