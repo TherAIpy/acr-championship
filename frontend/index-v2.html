@@ -28,24 +28,26 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
             <!-- COLONNA SINISTRA: CLASSIFICA GENERALE CAMPIONATO -->
-            <div class="lg:col-span-3 card-wrc overflow-hidden h-fit sticky top-6">
+            <div class="lg:col-span-4 card-wrc overflow-hidden h-fit sticky top-6">
                 <div class="bg-[#23211F] text-white p-3 flex justify-between items-center">
                     <h2 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-trophy text-[#E10600]"></i> Classifica Generale</h2>
                 </div>
                 <div id="left-col-title" class="p-3 border-b border-[#D1CBBF] bg-[#EBE6DC] text-lg font-bold text-[#2C2A28] text-center font-racing">
                     Caricamento...
                 </div>
-                <div class="max-h-[600px] overflow-y-auto custom-scrollbar">
-                    <table class="w-full table-wrc text-sm">
+                <div class="w-full overflow-x-auto">
+                    <table class="w-full table-wrc text-xs whitespace-nowrap">
                         <thead class="sticky top-0">
-                            <tr>
-                                <th class="w-10 text-center">Pos</th>
-                                <th>Pilota</th>
-                                <th class="w-12 text-right">Punti</th>
+                            <tr id="champ-standings-thead">
+                                <th class="w-8 text-center">Pos</th>
+                                <th>Pilota / Vettura</th>
+                                <th class="text-center">Cls</th>
+                                <!-- Le colonne dei rally vengono generate qui -->
+                                <th class="text-right">Tot</th>
                             </tr>
                         </thead>
                         <tbody id="tbody-champ-standings">
-                            <tr><td colspan="3" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
+                            <tr><td colspan="5" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -54,14 +56,16 @@
             <!-- COLONNA CENTRALE: RALLY, LEG E CLASSIFICHE -->
             <div class="lg:col-span-4 flex flex-col gap-4">
                 
-                <!-- 1. Rally Tabs (Fogli orizzontali) -->
-                <div id="rally-tabs-container" class="flex overflow-x-auto gap-2 pb-2 custom-scrollbar">
-                    <!-- Popolato via JS -->
-                </div>
-
-                <!-- 2. Leg Accordion -->
-                <div id="legs-container" class="card-wrc overflow-hidden flex flex-col">
-                    <!-- Popolato via JS -->
+                <!-- Blocco Unico: Tab Rally + Leg -->
+                <div class="card-wrc overflow-hidden flex flex-col mb-4">
+                    <!-- Tab dei Rally -->
+                    <div id="rally-tabs-container" class="flex overflow-x-auto bg-[#D1CBBF] custom-scrollbar">
+                        <!-- Popolato via JS -->
+                    </div>
+                    <!-- Lista Leg -->
+                    <div id="legs-container" class="flex flex-col">
+                        <!-- Popolato via JS -->
+                    </div>
                 </div>
 
                 <!-- 3. Classifica Leg (Dark) - Nascosta se non c'è leg selezionata -->
@@ -109,7 +113,7 @@
             </div>
 
             <!-- COLONNA DESTRA: NEWS / STAGE / RISULTATI -->
-            <div class="lg:col-span-5">
+            <div class="lg:col-span-4">
                 <div id="right-col-container" class="h-full">
                     <!-- Popolato via JS (Default: News) -->
                 </div>
@@ -145,7 +149,7 @@
                 
                 // Carica Classifica Generale
                 const standRes = await apiJson(`/standings/championship/${v2State.champ.id}`);
-                renderChampionshipStandings(standRes.data);
+                await renderChampionshipStandings();
 
                 // Carica Albero
                 const treeRes = await apiJson(`/tree/${v2State.champ.id}`);
@@ -163,18 +167,48 @@
         });
 
         // --- COLONNA SINISTRA ---
-        function renderChampionshipStandings(data) {
+        async function renderChampionshipStandings() {
             const tbody = document.getElementById('tbody-champ-standings');
-            if (!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4">Nessun dato.</td></tr>`; return; }
-            tbody.innerHTML = data.map((r, i) => `
-                <tr class="${i === 0 ? 'row-first' : ''}">
-                    <td class="text-center font-bold">${r.position}</td>
-                    <td class="flex items-center gap-2">
-                        <span class="text-lg">🇮🇹</span> <span class="truncate">${r.driver}</span>
-                    </td>
-                    <td class="text-right font-bold">${r.points}</td>
-                </tr>
-            `).join('');
+            const thead = document.getElementById('champ-standings-thead');
+            try {
+                const res = await apiJson(`/standings/matrix/championship/${v2State.champ.id}`);
+                const rallies = res.rallies || [];
+                const drivers = res.drivers || [];
+
+                // Costruisci l'header dinamicamente (Pos, Pilota, Cls, R1, R2..., Tot)
+                let headHtml = `<th class="w-8 text-center">Pos</th><th>Pilota</th><th class="text-center">Cls</th>`;
+                rallies.forEach((r, i) => {
+                    headHtml += `<th class="text-center" title="${r.name}">R${i+1}</th>`;
+                });
+                headHtml += `<th class="text-right">Tot</th>`;
+                thead.innerHTML = headHtml;
+
+                if (drivers.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="${4 + rallies.length}" class="text-center py-4">Nessun dato.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = drivers.map((d, i) => {
+                    let cells = `
+                        <td class="text-center font-bold">${i + 1}</td>
+                        <td>
+                            <div class="font-bold text-[#2C2A28]">${d.driver}</div>
+                            <div class="text-[10px] text-[#6B665F]">${d.car || 'Auto sconosciuta'}</div>
+                        </td>
+                        <td class="text-center"><span class="bg-[#23211F] text-white text-[9px] px-1 rounded">R5</span></td>
+                    `;
+                    
+                    rallies.forEach(r => {
+                        const pts = d.rallies[r.id] || 0;
+                        cells += `<td class="text-center ${pts > 0 ? 'font-bold' : 'text-gray-400'}">${pts > 0 ? pts : '-'}</td>`;
+                    });
+
+                    cells += `<td class="text-right font-black text-[#E10600] text-sm">${d.total}</td>`;
+
+                    return `<tr class="${i === 0 ? 'row-first' : ''}">${cells}</tr>`;
+                }).join('');
+
+            } catch (e) { console.error("Errore classifica", e); }
         }
 
         // --- COLONNA CENTRALE ---
@@ -199,8 +233,8 @@
             container.innerHTML = v2State.tree.rallies.map(r => {
                 const isActive = v2State.selectedRally.id === r.id;
                 return `
-                    <button onclick="selectRally(${r.id})" class="whitespace-nowrap px-4 py-2 font-racing font-bold text-lg rounded-t-lg transition-colors border-b-2 
-                        ${isActive ? 'bg-[#F4F1EA] border-[#E10600] text-[#2C2A28]' : 'bg-[#D1CBBF] border-transparent text-[#6B665F] hover:bg-[#E5E0D8]'}">
+                    <button onclick="selectRally(${r.id})" class="whitespace-nowrap px-4 py-3 font-racing font-bold text-lg border-b-2 transition-colors 
+                        ${isActive ? 'bg-[#F4F1EA] border-[#E10600] text-[#2C2A28]' : 'bg-transparent border-transparent text-[#6B665F] hover:bg-[#E5E0D8]'}">
                         ${r.name}
                     </button>
                 `;
@@ -210,7 +244,7 @@
         function renderLegs() {
             const container = document.getElementById('legs-container');
             if (!v2State.selectedRally.legs || v2State.selectedRally.legs.length === 0) {
-                container.innerHTML = `<div class="p-4 text-center text-gray-500">Nessuna Leg in questo Rally.</div>`;
+                container.innerHTML = `<div class="p-4 text-center text-gray-500 bg-[#F4F1EA]">Nessuna Leg in questo Rally.</div>`;
                 return;
             }
             container.innerHTML = v2State.selectedRally.legs.map(l => {
@@ -219,7 +253,14 @@
                     <div class="border-b border-[#D1CBBF] last:border-0">
                         <div onclick="selectLeg(${l.id})" class="p-4 cursor-pointer flex justify-between items-center transition-colors
                             ${isActive ? 'bg-[#EBE6DC]' : 'bg-[#F4F1EA] hover:bg-[#EBE6DC]'}">
-                            <span class="font-bold text-[#2C2A28] font-racing text-xl">${l.name}</span>
+                            <div>
+                                <div class="font-bold text-[#2C2A28] font-racing text-xl">${l.name}</div>
+                                <div class="text-xs text-[#6B665F] font-bold mt-1">
+                                    <i class="fa-solid fa-stopwatch mr-1"></i> ${l.total_stages || 0} Stage 
+                                    <span class="mx-2">|</span> 
+                                    <i class="fa-solid fa-road mr-1"></i> ${l.total_km || 0} km
+                                </div>
+                            </div>
                             <i class="fa-solid fa-chevron-right ${isActive ? 'text-[#E10600]' : 'text-gray-400'}"></i>
                         </div>
                     </div>
@@ -255,10 +296,19 @@
             try {
                 const res = await apiJson(`/standings/rally/${rallyId}`);
                 const tbody = document.getElementById('tbody-rally-standings');
+                // Aggiorna l'header per includere il tempo
+                document.querySelector('#rally-standings-container thead tr').innerHTML = `
+                    <th class="p-2 w-8 text-center">Pos</th>
+                    <th class="p-2">Pilota</th>
+                    <th class="p-2 text-right">Tempo</th>
+                    <th class="p-2 text-right">Punti</th>
+                `;
+                
                 tbody.innerHTML = res.data.slice(0, 10).map((r, i) => `
                     <tr class="border-b border-[#3D3833] last:border-0 ${i === 0 ? 'bg-[#EAB308] text-[#2C2A28] font-bold' : ''}">
                         <td class="p-2 text-center">${r.position}</td>
                         <td class="p-2 truncate">${r.driver}</td>
+                        <td class="p-2 text-right font-mono">${r.total_str || '-'}</td>
                         <td class="p-2 text-right font-bold">${r.points} pt</td>
                     </tr>
                 `).join('');

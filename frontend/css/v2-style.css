@@ -55,3 +55,18 @@ h1, h2, h3, h4, .font-racing {
     background-color: #F3E5AB !important; /* Giallo sabbia */
     font-weight: bold;
 }
+
+/* Scrollbar ultra-fine per le classifiche */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
