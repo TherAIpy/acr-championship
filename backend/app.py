@@ -534,6 +534,41 @@ def update_stage(stage_id):
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/track-results/<int:track_id>', methods=['GET'])
+def get_track_results(track_id):
+    try:
+        supabase = get_supabase()
+        # 1. Trova tutte le stage associate a questo tracciato
+        stages = supabase.table('stage').select('id, name, weather, surface, temperature, distance_km').eq('track_id', track_id).execute().data
+        if not stages:
+            return jsonify({"success": True, "data": [], "track_info": None}), 200
+
+        stage_ids = [s['id'] for s in stages]
+        stage_meta = {s['id']: s for s in stages}
+
+        # 2. Prendi i risultati ufficiali
+        results = supabase.table('stage_result').select('*').in_('stage_id', stage_ids).eq('is_official', True).execute().data
+
+        # 3. Arricchisci i risultati con i dati meteo dello stage specifico
+        for r in results:
+            meta = stage_meta.get(r['stage_id'], {})
+            r['weather'] = meta.get('weather')
+            r['surface'] = meta.get('surface')
+            r['temperature'] = meta.get('temperature')
+
+        # 4. Ordina per tempo (dal più veloce al più lento)
+        results.sort(key=lambda x: x['time_ms'])
+        
+        # Prendi le info del tracciato (la prima stage andrà bene come riferimento per il nome)
+        track_info = {
+            "name": stages[0].get('name') if len(stages) == 1 else "Tracciato Multiplo",
+            "distance_km": stages[0].get('distance_km')
+        }
+
+        return jsonify({"success": True, "data": results, "track_info": track_info}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/api/tree/<int:champ_id>', methods=['GET'])
 def get_tree(champ_id):
     try:

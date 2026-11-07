@@ -442,9 +442,18 @@
                                         <i class="fa-solid fa-up-right-from-square text-sm opacity-50"></i>
                                     </a>
                                 </h2>
+                            <div>
+                                <h2 class="text-3xl font-black italic mb-2 text-[#2C2A28] flex items-center gap-3">
+                                    <i class="fa-solid fa-stopwatch text-[#E10600]"></i>
+                                    <!-- LINK AL TRACCIATO (track_id) -->
+                                    <a href="track-detail.html?id=${v2State.selectedStage.track_id}" target="_blank" class="hover:text-[#E10600] transition-colors flex items-center gap-2">
+                                        ${v2State.selectedStage.name}
+                                        <i class="fa-solid fa-up-right-from-square text-sm opacity-50" title="Vedi Leaderboard Tracciato"></i>
+                                    </a>
+                                </h2>
                                 <div class="flex gap-4 text-sm font-bold text-[#6B665F]">
-                                    <span><i class="fa-solid fa-sun text-[#EAB308] mr-1"></i> ${v2State.selectedStage.weather}</span>
-                                    <span><i class="fa-solid fa-road mr-1"></i> ${v2State.selectedStage.surface}</span>
+                                    <span><i class="fa-solid ${getWeatherIcon(v2State.selectedStage.weather)} mr-1"></i> ${v2State.selectedStage.weather}</span>
+                                    <span><i class="fa-solid ${getSurfaceIcon(v2State.selectedStage.surface)} mr-1"></i> ${v2State.selectedStage.surface}</span>
                                     <span><i class="fa-solid fa-temperature-half text-[#E10600] mr-1"></i> ${v2State.selectedStage.temperature}°C</span>
                                 </div>
                             </div>
@@ -482,6 +491,26 @@
             if (n.includes('grecia') || n.includes('sterrato')) 
                 return 'https://images.unsplash.com/photo-1505993597083-3bd19eb4596b?auto=format&fit=crop&q=80'; // Sterrato/Terra
             return 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80'; // Default
+        }
+
+        function getWeatherIcon(weather) {
+            if (!weather) return 'fa-sun text-[#EAB308]';
+            const w = weather.toLowerCase();
+            if (w.includes('pioggia intensa') || w.includes('temporale')) return 'fa-cloud-showers-heavy text-blue-500';
+            if (w.includes('pioggia')) return 'fa-cloud-rain text-blue-400';
+            if (w.includes('neve')) return 'fa-snowflake text-white';
+            if (w.includes('nuvoloso')) return 'fa-cloud text-gray-400';
+            return 'fa-sun text-[#EAB308]';
+        }
+
+        function getSurfaceIcon(surface) {
+            if (!surface) return 'fa-road text-[#2C2A28]';
+            const s = surface.toLowerCase();
+            if (s.includes('bagnato')) return 'fa-droplet text-blue-400';
+            if (s.includes('ghiaccio')) return 'fa-icicles text-cyan-400';
+            if (s.includes('neve')) return 'fa-snowflake text-white';
+            if (s.includes('sterrato') || s.includes('fango')) return 'fa-mountain text-[#8B5A2B]';
+            return 'fa-road text-[#2C2A28]';
         }
     </script>
 </body>
