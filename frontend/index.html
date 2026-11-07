@@ -94,9 +94,32 @@
             const { data: { session } } = await sb.auth.getSession();
             const nav = document.getElementById('header-nav');
             if (session) {
-                nav.innerHTML = `<span class="text-sm text-slate-400">${session.user.email}</span><button onclick="window.supabaseClient.auth.signOut().then(()=>window.location.reload())" class="text-slate-400 hover:text-red-400"><i class="fa-solid fa-power-off"></i></button>`;
+                const isAdmin = session.user.app_metadata?.role === 'admin';
+                
+                if (isAdmin) {
+                    nav.innerHTML = `
+                        <a href="dashboard.html" class="bg-vrg-accent hover:bg-yellow-500 text-black px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors mr-2 shadow-lg shadow-yellow-500/20">
+                            <i class="fa-solid fa-gear"></i> Gestione
+                        </a>
+                        <span class="text-sm text-slate-400 hidden md:block">${session.user.email}</span>
+                        <button onclick="window.supabaseClient.auth.signOut().then(()=>window.location.reload())" class="text-slate-400 hover:text-red-400 ml-2" title="Logout">
+                            <i class="fa-solid fa-power-off"></i>
+                        </button>
+                    `;
+                } else {
+                    nav.innerHTML = `
+                        <span class="text-sm text-slate-400 hidden md:block">${session.user.email}</span>
+                        <button onclick="window.supabaseClient.auth.signOut().then(()=>window.location.reload())" class="text-slate-400 hover:text-red-400 ml-2" title="Logout">
+                            <i class="fa-solid fa-power-off"></i>
+                        </button>
+                    `;
+                }
             } else {
-                nav.innerHTML = `<a href="login.html" class="bg-vrg-accent hover:bg-yellow-500 text-black px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2"><i class="fa-solid fa-user-lock"></i> Accedi</a>`;
+                nav.innerHTML = `
+                    <a href="login.html" class="bg-vrg-accent hover:bg-yellow-500 text-black px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                        <i class="fa-solid fa-user-lock"></i> Accedi
+                    </a>
+                `;
             }
 
             await loadChampionships();
@@ -152,16 +175,24 @@
 
         function renderChampionships() {
             const list = document.getElementById('champ-list');
-            list.innerHTML = state.championships.map(c => `
-                <div onclick="selectChampionshipById(${c.id})" id="champ-card-${c.id}" class="champ-card bg-vrg-card border border-slate-700 rounded-xl p-6 cursor-pointer transition-all hover:border-vrg-accent group flex flex-col gap-4">
-                    <div>
-                        <h3 class="text-xl font-bold text-white mb-2 group-hover:text-vrg-accent transition-colors">${c.name}</h3>
-                        <p class="text-sm text-slate-400"><i class="fa-solid fa-trophy mr-2"></i> Clicca per esplorare</p>
+            list.innerHTML = state.championships.map(c => {
+                const isHidden = c.is_visible === false;
+                const hiddenBadge = isHidden 
+                    ? `<span class="bg-red-900/50 text-red-400 border border-red-700 text-[10px] uppercase font-bold px-2 py-1 rounded mb-2 inline-block"><i class="fa-solid fa-eye-slash mr-1"></i> Nascosto</span>` 
+                    : '';
+                const borderClass = isHidden ? 'border-red-900/50' : 'border-slate-700';
+
+                return `
+                    <div onclick="selectChampionshipById(${c.id})" id="champ-card-${c.id}" class="champ-card bg-vrg-card border ${borderClass} rounded-xl p-6 cursor-pointer transition-all hover:border-vrg-accent group flex flex-col gap-4">
+                        <div>
+                            ${hiddenBadge}
+                            <h3 class="text-xl font-bold text-white mb-2 group-hover:text-vrg-accent transition-colors">${c.name}</h3>
+                            <p class="text-sm text-slate-400"><i class="fa-solid fa-trophy mr-2"></i> Clicca per esplorare</p>
+                        </div>
+                        <div id="champ-matrix-container-${c.id}" class="hidden w-full mt-2"></div>
                     </div>
-                    <!-- QUESTO È IL CONTENITORE (B2): è nascosto e vuoto, verrà riempito dopo -->
-                    <div id="champ-matrix-container-${c.id}" class="hidden w-full mt-2"></div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         async function selectChampionshipById(id) {
