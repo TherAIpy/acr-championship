@@ -385,7 +385,7 @@
             `;
         }
 
-                async function selectStage(stageId) {
+        async function selectStage(stageId) {
             let stageData = null;
             for (const leg of v2State.selectedRally.legs) {
                 const s = leg.stages.find(st => st.id === stageId);
@@ -432,22 +432,37 @@
                 // Blocco HTML pulito con i tag correttamente chiusi
                 container.innerHTML = `
                     <div class="card-wrc overflow-hidden">
-                        <div class="p-4 border-b border-[#D1CBBF] bg-[#F4F1EA]">
-                            <div class="flex justify-between items-start">
+                        <div class="relative p-5 border-b border-[#D1CBBF] overflow-hidden">
+                            <!-- Sfondo Dinamico con effetto patinato -->
+                            <div class="absolute inset-0 bg-cover bg-center transition-all duration-700" style="background-image: url('${getTrackBackground(v2State.selectedStage.track_name)}');"></div>
+                            <!-- Overlay Sabbia/Patina -->
+                            <div class="absolute inset-0 bg-[#F4F1EA]/85 backdrop-blur-[3px]"></div>
+
+                            <div class="relative z-10 flex justify-between items-start">
                                 <div>
-                                    <h2 class="text-3xl font-black italic text-[#2C2A28]">
-                                        <i class="fa-solid fa-stopwatch text-[#E10600] mr-2"></i>${v2State.selectedStage.name}
+                                    <!-- Nome Stage (Etichetta) -->
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="bg-[#23211F] text-white text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded shadow-sm">Stage</span>
+                                    </div>
+                                    <h2 class="text-4xl font-black italic text-[#2C2A28] drop-shadow-sm leading-tight mb-2">
+                                        ${v2State.selectedStage.name}
                                     </h2>
-                                    <a href="track-detail.html?id=${v2State.selectedStage.track_id}" target="_blank" class="inline-flex items-center gap-1 text-sm font-bold text-[#6B665F] hover:text-[#E10600] mt-1 transition-colors">
-                                        <i class="fa-solid fa-up-right-from-square"></i> Vedi Leaderboard Tracciato
+                                    
+                                    <!-- Link Figo al Tracciato -->
+                                    <a href="track-detail.html?id=${v2State.selectedStage.track_id}" target="_blank" class="inline-flex items-center gap-2 text-lg font-black text-[#E10600] hover:text-[#2C2A28] transition-colors bg-white/70 px-4 py-1.5 rounded-lg shadow-sm border border-white/50 backdrop-blur-sm group">
+                                        <i class="fa-solid fa-map-location-dot"></i> 
+                                        ${v2State.selectedStage.track_name || 'Tracciato Sconosciuto'}
+                                        <i class="fa-solid fa-up-right-from-square text-xs opacity-50 group-hover:opacity-100 transition-opacity"></i>
                                     </a>
                                 </div>
-                                <button onclick="renderRightStages()" class="bg-[#23211F] hover:bg-[#3D3833] text-white px-3 py-1.5 text-xs font-bold rounded transition-colors shadow-sm shrink-0">
-                                    <i class="fa-solid fa-arrow-left mr-1"></i> Indietro
+                                
+                                <button onclick="renderRightStages()" class="bg-[#23211F] hover:bg-[#E10600] text-white px-4 py-2 text-xs font-bold rounded transition-colors shadow-md shrink-0">
+                                    <i class="fa-solid fa-arrow-left mr-1"></i> Torna alle Stage
                                 </button>
                             </div>
                             
-                            <div class="flex gap-6 text-sm font-bold text-[#6B665F] mt-3">
+                            <!-- Meteo e info -->
+                            <div class="relative z-10 flex gap-6 text-sm font-bold text-[#2C2A28] mt-4 bg-white/60 p-2.5 rounded-lg backdrop-blur-md w-fit border border-white/60 shadow-sm">
                                 <span class="flex items-center gap-2"><i class="fa-solid ${getWeatherIcon(v2State.selectedStage.weather)} text-lg"></i> ${v2State.selectedStage.weather}</span>
                                 <span class="flex items-center gap-2"><i class="fa-solid ${getSurfaceIcon(v2State.selectedStage.surface)} text-lg"></i> ${v2State.selectedStage.surface}</span>
                                 <span class="flex items-center gap-2"><i class="fa-solid fa-temperature-half text-[#E10600] text-lg"></i> ${v2State.selectedStage.temperature}°C</span>
@@ -507,6 +522,23 @@
             if (s.includes('neve')) return 'fa-snowflake text-white';
             if (s.includes('sterrato') || s.includes('fango')) return 'fa-mountain text-[#8B5A2B]';
             return 'fa-road text-[#2C2A28]';
+        }
+
+        function getTrackBackground(trackName) {
+            if (!trackName) return 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80';
+            const n = trackName.toLowerCase();
+            // Puoi personalizzare questi abbinamenti con le immagini che preferisci
+            if (n.includes('alsazia') || n.includes('munster') || n.includes('saverne')) 
+                return 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80'; // Montagne
+            if (n.includes('turini') || n.includes('montecarlo') || n.includes('sisteron')) 
+                return 'https://images.unsplash.com/photo-1505993597083-3bd19eb4596b?auto=format&fit=crop&q=80'; // Montagna brulla
+            if (n.includes('galles') || n.includes('hafren') || n.includes('cwmbiga')) 
+                return 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&q=80'; // Foresta
+            if (n.includes('grecia') || n.includes('elatia') || n.includes('loutraki')) 
+                return 'https://images.unsplash.com/photo-1505993597083-3bd19eb4596b?auto=format&fit=crop&q=80'; // Sterrato
+            if (n.includes('livigno') || n.includes('ghiaccio')) 
+                return 'https://images.unsplash.com/photo-1483664852095-d6cc6870702d?auto=format&fit=crop&q=80'; // Neve
+            return 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80';
         }
     </script>
 </body>
