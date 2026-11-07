@@ -290,6 +290,59 @@ def get_setup():
     champs = supabase.table('championship').select('*, rally(*, leg(*, stage(*)))').execute()
     return jsonify({"championships": champs.data})
 
+@app.route('/api/register', methods=['POST'])
+def register_user():
+    try:
+        data = request.json
+        email = data.get('email')
+        password = data.get('password')
+        driver_name = data.get('driver_name')
+        car_id = data.get('car_id')
+        invite_code = data.get('invite_code')
+
+        if not email or not password or not driver_name or not car_id:
+            return jsonify({"success": False, "error": "Tutti i campi sono obbligatori"}), 400
+
+        # 1. Verifica la parola magica (letta da Render)
+        expected_code = os.environ.get('INVITE_CODE', 'ACR_RALLY_2026')
+        if invite_code != expected_code:
+            return jsonify({"success": False, "error": "Codice invito non valido."}), 403
+
+        supabase = get_supabase()
+
+        # 2. Crea l'utente in Supabase Auth
+        # Usiamo la Service Role Key per bypassare il blocco delle registrazioni pubbliche
+        auth_res = supabase.auth.admin.create_user({
+            "email": email,
+            "password": password,
+            "email_confirm": True, # Lo confermiamo in automatico
+            "app_metadata": {"role": "user"} # Assegniamo il ruolo di utente standard
+        })
+
+        if not auth_res.user:
+            return jsonify({"success": False, "error": "Errore durante la creazione dell'utente"}), 500
+
+        user_id = auth_res.user.id
+
+        # 3. Salva il profilo del pilota
+        profile_res = supabase.table('profiles').insert({
+            "id": user_id,
+            "driver_name": driver_name,
+            "car_id": car_id
+        }).execute()
+
+        if not profile_res.data:
+            return jsonify({"success": False, "error": "Errore durante il salvataggio del profilo"}), 500
+
+        return jsonify({"success": True, "message": "Registrazione completata con successo!"}), 201
+
+    except Exception as e:
+        # Se l'email è già registrata, Supabase restituirà un errore
+        error_msg = str(e)
+        if "already registered" in error_msg.lower() or "unique" in error_msg.lower():
+            return jsonify({"success": False, "error": "Questa email è già registrata."}), 400
+        return jsonify({"success": False, "error": error_msg}), 500
+
 @app.route('/api/create-championship', methods=['POST'])
 @admin_required
 def create_championship():
