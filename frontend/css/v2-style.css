@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+    --wrc-bg: #F3F4F6;
+    --wrc-card: #FFFFFF;
+    --wrc-text: #1F2937;
+    --wrc-accent: #E10600;
+    --wrc-gold: #FDE047;
+}
+
+body {
+    background-color: var(--wrc-bg);
+    color: var(--wrc-text);
+    font-family: 'Inter', sans-serif;
+}
+
+h1, h2, h3, h4, .font-racing {
+    font-family: 'Barlow Condensed', sans-serif;
+    text-transform: uppercase;
+    font-style: italic;
+    letter-spacing: 0.5px;
+}
+
+.card-wrc {
+    background-color: var(--wrc-card);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid #E5E7EB;
+}
+
+/* Effetto tabella stile WRC */
+.table-wrc th {
+    background-color: #374151;
+    color: white;
+    text-transform: uppercase;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    padding: 0.5rem;
+}
+.table-wrc td {
+    padding: 0.5rem;
+    border-bottom: 1px solid #F3F4F6;
+}
+.table-wrc tr:nth-child(even) {
+    background-color: #F9FAFB;
+}
