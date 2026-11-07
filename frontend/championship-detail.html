@@ -627,6 +627,100 @@
             openModal('modal-stage');
         }
 
+        async function openStageResults(stageId) {
+            let stageName = 'Stage';
+            if (treeData && treeData.rallies) {
+                for (const rally of treeData.rallies) {
+                    if (rally.legs) {
+                        for (const leg of rally.legs) {
+                            if (leg.stages) {
+                                const s = leg.stages.find(st => st.id === stageId);
+                                if (s) { stageName = s.name; break; }
+                            }
+                        }
+                    }
+                }
+            }
+
+            document.getElementById('input-risultati-stage-id').value = stageId;
+            document.getElementById('modal-risultati-title').textContent = stageName;
+            document.getElementById('risultati-tbody').innerHTML = '';
+
+            const adminControls = document.getElementById('ocr-container');
+            const btnSaveDraft = document.getElementById('btn-save-draft');
+            const btnPublish = document.getElementById('btn-publish');
+            const btnAddPilota = document.getElementById('btn-add-pilota');
+
+            if (isAdmin) {
+                adminControls.classList.remove('hidden');
+                btnSaveDraft.classList.remove('hidden');
+                btnPublish.classList.remove('hidden');
+                btnAddPilota.classList.remove('hidden');
+            } else {
+                adminControls.classList.add('hidden');
+                btnSaveDraft.classList.add('hidden');
+                btnPublish.classList.add('hidden');
+                btnAddPilota.classList.add('hidden');
+            }
+
+            openModal('modal-risultati');
+
+            let data = [];
+            let mode = 'empty';
+            try {
+                if (isAdmin) {
+                    const draftRes = await apiCall(`/stage-results/${stageId}/draft`);
+                    if (draftRes.success && draftRes.data.length > 0) {
+                        data = draftRes.data; mode = 'draft';
+                    } else {
+                        const offRes = await apiCall(`/stage-results/${stageId}`);
+                        if (offRes.success && offRes.data.length > 0) {
+                            data = offRes.data; mode = 'official';
+                        }
+                    }
+                } else {
+                    const offRes = await apiCall(`/stage-results/${stageId}`);
+                    if (offRes.success && offRes.data.length > 0) {
+                        data = offRes.data; mode = 'official';
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+            }
+
+            if (data.length > 0) {
+                data.forEach(r => addResultRow(r, !isAdmin));
+            } else if (isAdmin) {
+                addResultRow();
+            } else {
+                document.getElementById('risultati-tbody').innerHTML =
+                    `<tr><td colspan="6" class="text-center py-6 text-slate-500">Nessun risultato pubblicato per questo stage.</td></tr>`;
+            }
+
+            const banner = document.getElementById('results-status-banner');
+            banner.classList.remove('hidden');
+            if (mode === 'draft') {
+                banner.className = "mb-3 px-3 py-2 rounded text-sm bg-yellow-900/40 text-yellow-300 border border-yellow-700";
+                banner.textContent = "BOZZA — non visibile al pubblico finché non premi Pubblica.";
+            } else if (mode === 'official') {
+                banner.className = "mb-3 px-3 py-2 rounded text-sm bg-green-900/40 text-green-300 border border-green-700";
+                banner.textContent = "Risultati ufficiali pubblicati.";
+            } else {
+                banner.className = "mb-3 px-3 py-2 rounded text-sm bg-slate-800 text-slate-400 border border-slate-700";
+                banner.textContent = "Nessun risultato.";
+            }
+
+            if (isAdmin) {
+                if (mode === 'draft') {
+                    btnPublish.disabled = false;
+                    btnPublish.classList.remove('opacity-50', 'cursor-not-allowed');
+                } else {
+                    btnPublish.disabled = true;
+                    btnPublish.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            }
+        }
+
             // Controlli admin
             const adminControls = document.getElementById('ocr-container');
             const btnSaveDraft = document.getElementById('btn-save-draft');
@@ -818,10 +912,13 @@
                     btnSaveDraft.disabled = true;
                     btnSaveDraft.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvataggio...';
                     try {
-                        const res = await apiJson('/save-stage', 'POST', {
-                            stage_id: stageId,
-                            stage_name: "Update",
-                            results: results
+                        const res = await apiJson('/save-stage', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                stage_id: stageId,
+                                stage_name: "Update",
+                                results: results
+                            })
                         });
                         if (res.success) {
                             await loadTree();
