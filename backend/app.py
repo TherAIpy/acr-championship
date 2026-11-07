@@ -296,27 +296,26 @@ def register_user():
         data = request.json
         email = data.get('email')
         password = data.get('password')
-        driver_name = data.get('driver_name')
-        car_id = data.get('car_id')
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        ign = data.get('ign')
         invite_code = data.get('invite_code')
 
-        if not email or not password or not driver_name or not car_id:
+        if not all([email, password, first_name, last_name, ign]):
             return jsonify({"success": False, "error": "Tutti i campi sono obbligatori"}), 400
 
-        # 1. Verifica la parola magica (letta da Render)
         expected_code = os.environ.get('INVITE_CODE', 'ACR_RALLY_2026')
         if invite_code != expected_code:
             return jsonify({"success": False, "error": "Codice invito non valido."}), 403
 
         supabase = get_supabase()
 
-        # 2. Crea l'utente in Supabase Auth
-        # Usiamo la Service Role Key per bypassare il blocco delle registrazioni pubbliche
+        # Crea l'utente con ruolo FORZATO a 'user'
         auth_res = supabase.auth.admin.create_user({
             "email": email,
             "password": password,
-            "email_confirm": True, # Lo confermiamo in automatico
-            "app_metadata": {"role": "user"} # Assegniamo il ruolo di utente standard
+            "email_confirm": True, 
+            "app_metadata": {"role": "user"} 
         })
 
         if not auth_res.user:
@@ -324,24 +323,88 @@ def register_user():
 
         user_id = auth_res.user.id
 
-        # 3. Salva il profilo del pilota
+        # Salva il profilo
         profile_res = supabase.table('profiles').insert({
             "id": user_id,
-            "driver_name": driver_name,
-            "car_id": car_id
+            "first_name": first_name,
+            "last_name": last_name,
+            "ign": ign,
+            "driver_name": f"{first_name} {last_name}" # Opzionale per retrocompatibilità
         }).execute()
 
-        if not profile_res.data:
-            return jsonify({"success": False, "error": "Errore durante il salvataggio del profilo"}), 500
-
-        return jsonify({"success": True, "message": "Registrazione completata con successo!"}), 201
+        return jsonify({"success": True, "message": "Registrazione completata!"}), 201
 
     except Exception as e:
-        # Se l'email è già registrata, Supabase restituirà un errore
         error_msg = str(e)
         if "already registered" in error_msg.lower() or "unique" in error_msg.lower():
             return jsonify({"success": False, "error": "Questa email è già registrata."}), 400
         return jsonify({"success": False, "error": error_msg}), 500
+
+@app.route('/api/join-championship', methods=['POST'])
+def join_championship():
+    try:
+        # 1. Controlla l'utente tramite il token
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({"success": False, "error": "Devi essere loggato"}), 401
+        
+        token = auth_header.split(' ')[1]
+        supabase = get_supabase()
+        user_res = supabase.auth.get_user(token)
+        if not user_res.user:
+            return jsonify({"success": False, "error": "Sessione non valida"}), 401
+        
+        user_id = user_res.user.id
+
+        # 2. Prendi i dati dell'iscrizione
+        data = request.json
+        championship_id = data.get('championship_id')
+        car_id = data.get('car_id')
+
+        if not championship_id or not car_id:
+            return jsonify({"success": False, "error": "Campionato e Auto sono obbligatori"}), 400
+
+        # 3. Inserisci l'iscrizione (se esiste già, Supabase darà errore per il vincolo UNIQUE)
+        res = supabase.table('championship_entry').insert({
+            "championship_id": championship_id,
+            "user_id": user_id,
+            "car_id": car_id
+        }).execute()
+
+        return jsonify({"success": True, "message": "Iscrizione al campionato completata!"}), 201
+
+    except Exception as e:
+        if "duplicate key" in str(e):
+            return jsonify({"success": False, "error": "Sei già iscritto a questo campionato."}), 400
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/my-entry/<int:champ_id>', methods=['GET'])
+def get_my_entry(champ_id):
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({"success": True, "data": None}) # Non loggato
+            
+        token = auth_header.split(' ')[1]
+        supabase = get_supabase()
+        user_res = supabase.auth.get_user(token)
+        if not user_res.user:
+            return jsonify({"success": True, "data": None})
+            
+        user_id = user_res.user.id
+        
+        # Cerca l'iscrizione dell'utente per questo campionato, unendo i dati dell'auto
+        res = supabase.table('championship_entry') \
+            .select('*, car(*), profiles(driver_name)') \
+            .eq('championship_id', champ_id) \
+            .eq('user_id', user_id) \
+            .execute()
+            
+        if res.data:
+            return jsonify({"success": True, "data": res.data[0]}), 200
+        return jsonify({"success": True, "data": None}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/create-championship', methods=['POST'])
 @admin_required

@@ -18,33 +18,47 @@
                 <input type="password" id="password" class="w-full bg-gray-700 rounded p-2 text-white border border-gray-600 focus:outline-none focus:border-yellow-500" required>
             </div>
             <button type="submit" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 rounded transition-colors">Entra</button>
+            <p class="text-center text-sm text-gray-500 mt-4">Non hai un account? <a href="register.html" class="text-[#E10600] font-bold hover:underline">Registrati qui</a></p>
         </form>
         <div id="error-msg" class="text-red-400 text-sm mt-4 text-center hidden"></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase.js"></script>
-    <script>
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const btn = e.target.querySelector('button');
-            const errorMsg = document.getElementById('error-msg');
+        <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById('login-form'); // Assicurati che il tuo form abbia questo ID
+            
+            if(loginForm) {
+                loginForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('email').value;
+                    const password = document.getElementById('password').value;
+                    const btn = loginForm.querySelector('button[type="submit"]');
+                    
+                    btn.disabled = true;
+                    btn.innerHTML = 'Accesso...';
 
-            btn.textContent = 'Caricamento...';
-            btn.disabled = true;
-            errorMsg.classList.add('hidden');
+                    try {
+                        const sb = window.supabaseClient || window.supabase;
+                        const { data, error } = await sb.auth.signInWithPassword({ email, password });
+                        
+                        if (error) throw error;
 
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-            if (error) {
-                errorMsg.textContent = error.message;
-                errorMsg.classList.remove('hidden');
-                btn.textContent = 'Entra';
-                btn.disabled = false;
-            } else {
-                window.location.href = 'dashboard.html';
+                        // Controlla il ruolo
+                        const isAdmin = data.user.app_metadata?.role === 'admin';
+                        
+                        if (isAdmin) {
+                            window.location.href = 'dashboard.html';
+                        } else {
+                            window.location.href = 'index-v2.html';
+                        }
+                    } catch (err) {
+                        alert("Errore di login: " + err.message);
+                        btn.disabled = false;
+                        btn.innerHTML = 'Accedi';
+                    }
+                });
             }
         });
     </script>

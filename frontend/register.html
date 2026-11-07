@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrazione VRG ACR Champ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/v2-style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="min-h-screen flex items-center justify-center bg-[#E5E0D8] p-4 relative overflow-hidden">
+
+    <!-- Sfondo con montagne sfumate -->
+    <div class="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80')] bg-cover bg-center"></div>
+
+    <div class="card-wrc w-full max-w-md relative z-10 p-8">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-black text-[#2C2A28] italic tracking-tighter">ACR <span class="text-[#E10600]">REGISTRAZIONE</span></h1>
+            <p class="text-[#6B665F] text-sm font-bold mt-2 uppercase tracking-widest">Entra a far parte del campionato</p>
+        </div>
+
+        <form id="register-form" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-[#6B665F] uppercase mb-1">Nome</label>
+                    <input type="text" id="first-name" placeholder="Mario" class="w-full bg-white text-[#2C2A28] border border-[#D1CBBF] rounded-lg px-4 py-2 focus:outline-none focus:border-[#E10600] font-bold" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#6B665F] uppercase mb-1">Cognome</label>
+                    <input type="text" id="last-name" placeholder="Rossi" class="w-full bg-white text-[#2C2A28] border border-[#D1CBBF] rounded-lg px-4 py-2 focus:outline-none focus:border-[#E10600] font-bold" required>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-[#6B665F] uppercase mb-1">Nome in Game (IGN)</label>
+                <input type="text" id="ign" placeholder="Es. Rossi_Marco" class="w-full bg-white text-[#2C2A28] border border-[#D1CBBF] rounded-lg px-4 py-2 focus:outline-none focus:border-[#E10600] font-bold" required>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-[#6B665F] uppercase mb-1">Email</label>
+                <input type="email" id="email" placeholder="tua@email.com" class="w-full bg-white text-[#2C2A28] border border-[#D1CBBF] rounded-lg px-4 py-2 focus:outline-none focus:border-[#E10600] font-bold" required>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-[#6B665F] uppercase mb-1">Password</label>
+                <input type="password" id="password" placeholder="Minimo 6 caratteri" class="w-full bg-white text-[#2C2A28] border border-[#D1CBBF] rounded-lg px-4 py-2 focus:outline-none focus:border-[#E10600] font-bold" required minlength="6">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-[#6B665F] uppercase mb-1">Codice Invito (Parola Magica)</label>
+                <input type="text" id="invite-code" placeholder="Inserisci il codice fornito su Discord" class="w-full bg-white text-[#2C2A28] border border-[#D1CBBF] rounded-lg px-4 py-2 focus:outline-none focus:border-[#E10600] font-mono font-bold uppercase" required>
+            </div>
+
+            <div id="error-msg" class="hidden bg-red-100 text-red-700 text-sm font-bold p-3 rounded-lg border border-red-300 text-center"></div>
+            <div id="success-msg" class="hidden bg-green-100 text-green-700 text-sm font-bold p-3 rounded-lg border border-green-300 text-center"></div>
+
+            <button type="submit" id="btn-register" class="w-full bg-[#E10600] hover:bg-[#b30500] text-white font-black font-racing text-xl italic px-4 py-3 rounded-lg transition-colors shadow-lg mt-4">
+                Iscriviti
+            </button>
+        </form>
+
+        <div class="text-center mt-6">
+            <a href="index-v2.html" class="text-sm font-bold text-[#6B665F] hover:text-[#E10600] transition-colors"><i class="fa-solid fa-arrow-left mr-1"></i> Torna alla Home</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. Carica la lista delle auto per la tendina
+            try {
+                const res = await apiJson('/cars');
+                const select = document.getElementById('car-id');
+                if (res.data && res.data.length > 0) {
+                    select.innerHTML = `<option value="">Scegli la tua vettura...</option>` + 
+                        res.data.map(c => `<option value="${c.id}">${c.brand} ${c.name} (${c.car_class?.name || 'N/D'})</option>`).join('');
+                } else {
+                    select.innerHTML = `<option value="">Nessuna auto disponibile</option>`;
+                }
+            } catch (e) {
+                document.getElementById('car-id').innerHTML = `<option value="">Errore caricamento auto</option>`;
+            }
+
+            // 2. Gestione Invio Form
+            const form = document.getElementById('register-form');
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const btn = document.getElementById('btn-register');
+                const errDiv = document.getElementById('error-msg');
+                const succDiv = document.getElementById('success-msg');
+                
+                errDiv.classList.add('hidden');
+                succDiv.classList.add('hidden');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Registrazione...';
+
+                // Raccogliamo i dati dai nuovi campi HTML
+                const payload = {
+                    first_name: document.getElementById('first-name').value.trim(),
+                    last_name: document.getElementById('last-name').value.trim(),
+                    ign: document.getElementById('ign').value.trim(),
+                    email: document.getElementById('email').value.trim(),
+                    password: document.getElementById('password').value,
+                    invite_code: document.getElementById('invite-code').value.trim()
+                };
+
+                try {
+                    // Chiamiamo la rotta di registrazione sul backend
+                    const res = await apiJson('/register', {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.success) {
+                        succDiv.textContent = "Registrazione completata! Ora puoi effettuare il login.";
+                        succDiv.classList.remove('hidden');
+                        form.reset();
+                        setTimeout(() => window.location.href = 'login.html', 2000);
+                    } else {
+                        errDiv.textContent = res.error || "Errore durante la registrazione.";
+                        errDiv.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    errDiv.textContent = error.message || "Errore di connessione al server.";
+                    errDiv.classList.remove('hidden');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Iscriviti';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

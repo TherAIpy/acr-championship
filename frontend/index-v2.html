@@ -17,8 +17,15 @@
                 <h1 class="text-3xl font-black text-white italic tracking-tighter">ACR <span class="text-[#E10600]">CHAMPIONSHIP</span></h1>
             </div>
             <nav class="hidden md:flex items-center gap-6 font-racing font-bold text-sm">
+                <!-- Link statici -->
                 <a href="index-v2.html" class="text-white border-b-2 border-[#E10600] pb-1"><i class="fa-solid fa-trophy mr-2"></i>Campionato</a>
                 <a href="archive-v2.html" class="text-[#A8A29A] hover:text-white transition"><i class="fa-solid fa-box-archive mr-2"></i>Archivio</a>
+                
+                <!-- Separatore verticale -->
+                <div class="h-6 w-px bg-[#3D3833] mx-2"></div>
+
+                <!-- Link dinamici (popolati da JS) -->
+                <div id="header-nav" class="flex items-center gap-4"></div>
             </nav>
         </div>
     </header>
@@ -74,6 +81,7 @@
             <!-- COLONNA CENTRALE: RALLY, LEG E CLASSIFICHE -->
             <div class="lg:col-span-4 flex flex-col gap-4">
                 
+                <div id="entry-banner-container"></div>
                 <!-- Blocco Unico: Tab Rally + Leg -->
                 <div class="card-wrc overflow-hidden flex flex-col mb-4">
                     <!-- Tab dei Rally -->
@@ -149,16 +157,28 @@
     <script src="js/api.js"></script>
 
     <script>
+        // Stato globale aggiornato
         const v2State = {
             champ: null,
             tree: null,
             selectedRally: null,
             selectedLeg: null,
-            selectedStage: null
+            selectedStage: null,
+            session: null,
+            myEntry: null
         };
 
         document.addEventListener('DOMContentLoaded', async () => {
             try {
+                // 1. Controlla se l'utente è loggato
+                const sb = window.supabaseClient || window.supabase;
+                const { data: { session } } = await sb.auth.getSession();
+                v2State.session = session;
+                
+                // Aggiorna l'header (accedi/registrati o profilo/logout)
+                renderHeader();
+
+                // 2. Carica i campionati
                 const res = await api.getChampionships();
                 if (!res.data || res.data.length === 0) return;
                 
@@ -169,24 +189,128 @@
                 document.getElementById('left-col-title').textContent = v2State.champ.name;
                 document.getElementById('champ-bg-image').src = getChampionshipBackground(v2State.champ.name);
                 
-                // Carica Classifica Generale
-                const standRes = await apiJson(`/standings/championship/${v2State.champ.id}`);
+                // 3. Se loggato, verifica l'iscrizione al campionato
+                if (session) {
+                    try {
+                        const entryRes = await apiJson(`/my-entry/${v2State.champ.id}`);
+                        v2State.myEntry = entryRes.data;
+                    } catch (err) { console.warn("Errore recupero iscrizione", err); }
+                }
+
+                // 4. Carica Classifica Generale
                 await renderChampionshipStandings();
 
-                // Carica Albero
+                // 5. Carica Albero (Rally/Leg)
                 const treeRes = await apiJson(`/tree/${v2State.champ.id}`);
                 v2State.tree = treeRes.data;
                 
-                // Seleziona il primo rally di default
+                // Seleziona il primo rally di default (e disegna i tab)
                 if (v2State.tree.rallies && v2State.tree.rallies.length > 0) {
                     selectRally(v2State.tree.rallies[0].id);
                 }
 
-                // Mostra le news di default a destra
+                // 6. Mostra il banner di iscrizione (se necessario) e le news
+                renderEntryButton();
                 renderRightDefault();
                 
             } catch (e) { console.error("Errore V2:", e); }
         });
+
+                // Disegna l'header in base allo stato di login
+        function renderHeader() {
+            const nav = document.getElementById('header-nav');
+            if (!nav) return; // Se non hai l'id, ignora
+
+            if (v2State.session) {
+                const isAdmin = v2State.session.user.app_metadata?.role === 'admin';
+                const adminBtn = isAdmin ? `<a href="dashboard.html" class="text-[#E10600] font-bold hover:underline mr-4"><i class="fa-solid fa-gear mr-1"></i>Dashboard Admin</a>` : '';
+                nav.innerHTML = `
+                    ${adminBtn}
+                    <a href="account.html" class="text-[#A8A29A] hover:text-white transition mr-4"><i class="fa-solid fa-user mr-1"></i>Il mio Profilo</a>
+                    <button onclick="logout()" class="text-[#A8A29A] hover:text-white transition"><i class="fa-solid fa-power-off mr-1"></i>Esci</button>
+                `;
+            } else {
+                nav.innerHTML = `
+                    <a href="register.html" class="text-[#A8A29A] hover:text-white transition mr-4">Registrati</a>
+                    <a href="login.html" class="bg-[#E10600] text-white px-4 py-1.5 rounded font-bold hover:bg-[#b30500] transition shadow-sm">Accedi</a>
+                `;
+            }
+        }
+
+        // Disegna il banner "Iscriviti al campionato"
+        function renderEntryButton() {
+            const container = document.getElementById('entry-banner-container');
+            if (!container) return;
+
+            if (v2State.session && !v2State.myEntry) {
+                // Loggato ma non iscritto
+                container.innerHTML = `
+                    <div class="w-full bg-[#F4F1EA] p-4 rounded-xl border border-[#D1CBBF] flex justify-between items-center mb-4 shadow-sm">
+                        <div>
+                            <h3 class="font-black italic font-racing text-xl text-[#2C2A28]">Non sei ancora iscritto!</h3>
+                            <p class="text-xs font-bold text-[#6B665F]">Scegli la tua auto per partecipare al campionato.</p>
+                        </div>
+                        <button onclick="openEntryModal()" class="bg-[#E10600] text-white px-5 py-2 rounded-lg font-bold shadow-md hover:bg-[#b30500] transition-colors shrink-0">Iscriviti Ora</button>
+                    </div>
+                `;
+            } else if (v2State.myEntry) {
+                // Iscritto
+                const carName = v2State.myEntry.car ? `${v2State.myEntry.car.brand} ${v2State.myEntry.car.name}` : 'Auto sconosciuta';
+                container.innerHTML = `
+                    <div class="w-full bg-[#1A1816]/90 p-3 rounded-xl border border-[#3D3833] flex justify-between items-center mb-4 shadow-sm backdrop-blur-sm">
+                        <div class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-check-circle text-green-500 text-lg"></i> 
+                            Iscritto con: <span class="text-[#EAB308]">${carName}</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Non loggato
+                container.innerHTML = '';
+            }
+        }
+
+        // Apre il modale per l'iscrizione
+        async function openEntryModal() {
+            document.getElementById('modal-entry').classList.replace('hidden', 'flex');
+            const select = document.getElementById('entry-car-select');
+            select.innerHTML = '<option value="">Caricamento...</option>';
+            
+            try {
+                const res = await apiJson('/cars');
+                select.innerHTML = `<option value="">Scegli l'auto...</option>` + 
+                    res.data.map(c => `<option value="${c.id}">${c.brand} ${c.name} (${c.car_class?.name || 'N/D'})</option>`).join('');
+            } catch(e) { alert("Errore caricamento auto"); }
+
+            document.getElementById('btn-confirm-entry').onclick = async () => {
+                const carId = select.value;
+                if (!carId) return alert("Scegli un'auto");
+                
+                const btn = document.getElementById('btn-confirm-entry');
+                btn.disabled = true; btn.textContent = "Invio...";
+                
+                try {
+                    const res = await apiJson('/join-championship', {
+                        method: 'POST',
+                        body: JSON.stringify({ championship_id: v2State.champ.id, car_id: parseInt(carId) })
+                    });
+                    if (res.success) {
+                        document.getElementById('modal-entry').classList.replace('flex','hidden');
+                        // Ricarica lo stato dell'iscrizione
+                        const entryRes = await apiJson(`/my-entry/${v2State.champ.id}`);
+                        v2State.myEntry = entryRes.data;
+                        renderEntryButton(); // Ridisegna il banner
+                    }
+                } catch(e) { alert("Errore: " + e.message); } 
+                finally { btn.disabled = false; btn.textContent = "Conferma Iscrizione"; }
+            };
+        }
+
+        async function logout() {
+            const sb = window.supabaseClient || window.supabase;
+            await sb.auth.signOut();
+            window.location.reload();
+        }
 
         // --- COLONNA SINISTRA ---
         async function renderChampionshipStandings() {
@@ -630,5 +754,22 @@
             return 'https://images.unsplash.com/photo-1541343672885-9be56236302a?auto=format&fit=crop&q=80'; // Default
         }
     </script>
+
+    <!-- MODALE ISCRIZIONE CAMPIONATO -->
+    <div id="modal-entry" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-[#F4F1EA] rounded-xl p-6 w-full max-w-md border border-[#D1CBBF] shadow-2xl relative">
+            <h2 class="text-2xl font-black italic font-racing text-[#2C2A28] mb-4">Iscrizione al Campionato</h2>
+            <p class="text-sm text-[#6B665F] mb-4">Scegli la vettura con cui correrai. Non potrà essere cambiata in seguito.</p>
+            
+            <select id="entry-car-select" class="w-full bg-white text-[#2C2A28] border border-[#D1CBBF] rounded-lg px-4 py-3 mb-6 focus:outline-none focus:border-[#E10600] font-bold">
+                <option value="">Caricamento auto...</option>
+            </select>
+
+            <div class="flex justify-end gap-3">
+                <button onclick="document.getElementById('modal-entry').classList.replace('flex','hidden')" class="px-4 py-2 font-bold text-[#6B665F] hover:text-[#2C2A28]">Annulla</button>
+                <button id="btn-confirm-entry" class="bg-[#E10600] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#b30500]">Conferma Iscrizione</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
