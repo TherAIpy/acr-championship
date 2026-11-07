@@ -260,10 +260,22 @@
             const container = document.getElementById('rally-tabs-container');
             container.innerHTML = v2State.tree.rallies.map(r => {
                 const isActive = v2State.selectedRally.id === r.id;
+                
+                // Formattazione date (es. 12/11 - 14/11)
+                let dateStr = '';
+                if (r.start_date && r.end_date) {
+                    const d1 = new Date(r.start_date).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'});
+                    const d2 = new Date(r.end_date).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'});
+                    dateStr = d1 === d2 ? d1 : `${d1} - ${d2}`;
+                } else if (r.start_date) {
+                    dateStr = new Date(r.start_date).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'});
+                }
+
                 return `
-                    <button onclick="selectRally(${r.id})" class="whitespace-nowrap px-4 py-3 font-racing font-bold text-lg border-b-2 transition-colors 
+                    <button onclick="selectRally(${r.id})" class="whitespace-nowrap px-4 py-2 font-racing border-b-2 transition-colors flex flex-col items-center justify-center min-w-[120px]
                         ${isActive ? 'bg-[#F4F1EA] border-[#E10600] text-[#2C2A28]' : 'bg-transparent border-transparent text-[#6B665F] hover:bg-[#E5E0D8]'}">
-                        ${r.name}
+                        <span class="font-bold text-lg leading-none">${r.name}</span>
+                        ${dateStr ? `<span class="text-[10px] font-sans font-bold opacity-70 mt-1"><i class="fa-regular fa-calendar mr-1"></i>${dateStr}</span>` : ''}
                     </button>
                 `;
             }).join('');
