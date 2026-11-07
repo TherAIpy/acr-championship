@@ -94,4 +94,10 @@ window.api = {
     
     // Dropdown
     getTracks: () => apiJson('/tracks')
+
+    // Toggle e Update
+    toggleChampionship: (id) => apiJson(`/toggle-championship/${id}`, { method: 'PUT' }),
+    updateChampionship: (id, data) => apiJson(`/update-championship/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    updateRally: (id, data) => apiJson(`/update-rally/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    updateLeg: (id, data) => apiJson(`/update-leg/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 };

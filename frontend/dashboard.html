@@ -125,6 +125,24 @@
                     </thead>
                     <tbody id="campionati-tbody" class="divide-y divide-slate-700/50">
                         <!-- Popolato via JS -->
+                         <td class="px-6 py-4 text-right">
+                        <!-- Bottone Visibilità (Occhio) -->
+                        <button onclick="event.stopPropagation(); toggleVisibility(${champ.id})" class="text-slate-500 hover:text-vrg-accent transition-colors mr-3" title="${champ.is_visible !== false ? 'Nascondi' : 'Rendi Visibile'}">
+                            <i class="fa-solid ${champ.is_visible !== false ? 'fa-eye' : 'fa-eye-slash'}"></i>
+                        </button>
+                        <!-- Bottone Modifica (Matita) -->
+                        <button onclick="event.stopPropagation(); editChamp(${champ.id}, '${champ.name}')" class="text-slate-500 hover:text-blue-400 transition-colors mr-3" title="Modifica">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <!-- Bottone Elimina (Cestino) -->
+                        <button onclick="event.stopPropagation(); deleteChampionship(${champ.id})" class="text-slate-500 hover:text-red-500 transition-colors mr-3" title="Elimina">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                        <!-- Freccia -->
+                        <button class="text-slate-500 hover:text-vrg-accent transition-colors">
+                        <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                        </td>
                     </tbody>
                 </table>
             </div>
@@ -359,6 +377,23 @@
                 await api.deleteChampionship(id);
                 loadChampionships();
             } catch (e) { alert("Errore: " + e.message); }
+        }
+
+        async function toggleVisibility(id) {
+            try {
+                await api.toggleChampionship(id);
+                loadChampionships(); // Ricarica la tabella per aggiornare l'icona
+            } catch (e) { alert("Errore: " + e.message); }
+        }
+
+        async function editChamp(id, currentName) {
+            const newName = prompt("Modifica il nome del campionato:", currentName);
+            if (newName && newName.trim() !== "" && newName !== currentName) {
+            try {
+                    await api.updateChampionship(id, { name: newName.trim() });
+                    loadChampionships();
+                } catch (e) { alert("Errore: " + e.message); }
+            }
         }
     </script>
 </body>

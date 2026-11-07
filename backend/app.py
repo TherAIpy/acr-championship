@@ -1208,8 +1208,8 @@ def delete_stage(stage_id):
 def get_championships():
     try:
         supabase = get_supabase()
-        # Prende tutti i campionati, ordinati dal più recente
-        res = supabase.table('championship').select('*').order('created_at', desc=True).execute()
+        # Filtro is_visible = True per il pubblico
+        res = supabase.table('championship').select('*').eq('is_visible', True).order('created_at', desc=True).execute()
         return jsonify({"success": True, "data": res.data}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -1528,3 +1528,50 @@ def get_rallies(champ_id):
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+
+@app.route('/api/toggle-championship/<int:champ_id>', methods=['PUT'])
+@admin_required
+def toggle_championship(champ_id):
+    try:
+        supabase = get_supabase()
+        current = supabase.table('championship').select('is_visible').eq('id', champ_id).execute()
+        if not current.data: return jsonify({"success": False, "error": "Non trovato"}), 404
+        
+        new_status = not current.data[0].get('is_visible', True)
+        supabase.table('championship').update({"is_visible": new_status}).eq('id', champ_id).execute()
+        return jsonify({"success": True, "is_visible": new_status}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/update-championship/<int:champ_id>', methods=['PUT'])
+@admin_required
+def update_championship(champ_id):
+    try:
+        data = request.json
+        supabase = get_supabase()
+        supabase.table('championship').update({"name": data['name']}).eq('id', champ_id).execute()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/update-rally/<int:rally_id>', methods=['PUT'])
+@admin_required
+def update_rally(rally_id):
+    try:
+        data = request.json
+        supabase = get_supabase()
+        supabase.table('rally').update({"name": data['name']}).eq('id', rally_id).execute()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/update-leg/<int:leg_id>', methods=['PUT'])
+@admin_required
+def update_leg(leg_id):
+    try:
+        data = request.json
+        supabase = get_supabase()
+        supabase.table('leg').update({"name": data['name']}).eq('id', leg_id).execute()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500

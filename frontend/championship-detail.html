@@ -468,7 +468,8 @@
                 const adminLegBtn = isAdmin
                     ? `<button onclick="event.stopPropagation(); openAddLeg(${rally.id})" class="text-xs bg-blue-900/50 border border-blue-700 hover:bg-blue-800 text-blue-200 px-3 py-1.5 rounded flex items-center gap-1 transition-colors"><i class="fa-solid fa-plus"></i> Leg</button>`
                     : '';
-                
+                const editRallyBtn = isAdmin ? `<button onclick="event.stopPropagation(); editRally(${rally.id}, '${rally.name}')" class="text-xs text-blue-400 hover:text-blue-300 px-2 py-1 ml-1" title="Modifica Rally"><i class="fa-solid fa-pen"></i></button>` : '';
+
                 const deleteRallyBtn = isAdmin 
                     ? `<button onclick="event.stopPropagation(); deleteRally(${rally.id})" class="text-xs bg-red-900/50 hover:bg-red-700 text-red-200 px-2 py-1.5 rounded ml-1 transition-colors" title="Elimina Rally"><i class="fa-solid fa-trash"></i></button>` 
                     : '';
@@ -499,7 +500,8 @@
                         const adminStageBtn = isAdmin
                             ? `<button onclick="event.stopPropagation(); openAddStage(${leg.id})" class="text-xs bg-emerald-900/50 border border-emerald-700 hover:bg-emerald-800 text-emerald-200 px-3 py-1.5 rounded flex items-center gap-1 transition-colors"><i class="fa-solid fa-plus"></i> Stage</button>`
                             : '';
-                        
+                        const editLegBtn = isAdmin ? `<button onclick="event.stopPropagation(); editLeg(${leg.id}, '${leg.name}')" class="text-xs text-blue-400 hover:text-blue-300 px-2 py-1 ml-1" title="Modifica Leg"><i class="fa-solid fa-pen"></i></button>` : '';
+
                         const deleteLegBtn = isAdmin 
                             ? `<button onclick="event.stopPropagation(); deleteLeg(${leg.id})" class="text-xs bg-red-900/50 hover:bg-red-700 text-red-200 px-2 py-1.5 rounded ml-1 transition-colors" title="Elimina Leg"><i class="fa-solid fa-trash"></i></button>`
                             : '';
@@ -1075,6 +1077,26 @@
             if (!confirm("Eliminare questa stage e i suoi risultati?")) return;
             try { await api.deleteStage(id); await loadTree(); } catch (e) { alert(e.message); }
         }
+
+        async function editRally(id, currentName) {
+            const newName = prompt("Modifica il nome del rally:", currentName);
+            if (newName && newName.trim() !== "" && newName !== currentName) {
+                try {
+                    await api.updateRally(id, { name: newName.trim() });
+                    await loadTree(); // Ricarica l'albero
+                } catch (e) { alert("Errore: " + e.message); }
+            }
+        }
+
+        async function editLeg(id, currentName) {
+            const newName = prompt("Modifica il nome della leg:", currentName);
+            if (newName && newName.trim() !== "" && newName !== currentName) {
+                try {
+                    await api.updateLeg(id, { name: newName.trim() });
+                    await loadTree();
+                } catch (e) { alert("Errore: " + e.message); }
+            }
+        } 
     </script>
 </body>
 </html>
