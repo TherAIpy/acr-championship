@@ -94,14 +94,16 @@
                     return;
                 }
                 
-                // Controlla se c'è un ID nell'URL (es. ?id=6)
                 const urlParams = new URLSearchParams(window.location.search);
                 const urlId = urlParams.get('id');
                 
                 if (urlId) {
+                    // Se c'è un ID nell'URL (dall'archivio), usa quello
                     v2State.champ = res.data.find(c => c.id == urlId) || res.data[0];
                 } else {
-                    v2State.champ = res.data[0]; // Prende il più recente
+                    // ALTRIMENTI: Cerca il primo campionato VISIBILE
+                    const visibleChamp = res.data.find(c => c.is_visible === true);
+                    v2State.champ = visibleChamp || res.data[0]; // Se non trova visibili, usa il primo
                 }
 
                 document.getElementById('left-col-title').textContent = v2State.champ.name;
