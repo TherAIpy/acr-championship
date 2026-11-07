@@ -370,11 +370,11 @@
             };
 
             document.getElementById('btn-salva-stage').onclick = async () => {
+                const stageId = document.getElementById('input-risultati-stage-id').value; // Se c'è, è una modifica
                 const legId = document.getElementById('input-stage-leg-id').value;
                 const trackId = document.getElementById('select-tracciato').value;
                 const trackName = document.getElementById('select-tracciato').options[document.getElementById('select-tracciato').selectedIndex].text;
                 const nome = document.getElementById('input-nome-stage').value.trim() || trackName;
-                
                 const meteo = document.getElementById('select-meteo').value;
                 const fondo = document.getElementById('select-fondo').value;
                 const temp = document.getElementById('input-temp').value;
@@ -382,17 +382,25 @@
 
                 if (!trackId) return alert("Seleziona un tracciato dal database ACR!");
 
+                const payload = { 
+                    leg_id: legId, 
+                    name: nome, 
+                    track_id: trackId,
+                    track_name: trackName,
+                    weather: meteo,
+                    surface: fondo,
+                    temperature: parseInt(temp),
+                    start_time: orario || null
+                };
+
                 try {
-                    await api.createStage({ 
-                        leg_id: legId, 
-                        name: nome, 
-                        track_id: trackId,
-                        track_name: trackName,
-                        weather: meteo,
-                        surface: fondo,
-                        temperature: parseInt(temp),
-                        start_time: orario || null
-                    });
+                    if (stageId) {
+                        // MODIFICA ESISTENTE
+                        await api.updateStage(stageId, payload);
+                    } else {
+                        // CREAZIONE NUOVA
+                        await api.createStage(payload);
+                    }
                     closeModal('modal-stage');
                     document.getElementById('input-nome-stage').value = '';
                     await loadTree();
@@ -540,13 +548,11 @@
                                             <span class="text-xs text-slate-500">(${stage.track_name || 'Tracciato'})</span>
                                         </div>
                                         <div class="flex items-center gap-1">
+                                            <button onclick="event.stopPropagation(); openEditStage(${stage.id})" class="text-xs text-blue-400 hover:text-blue-300 transition-colors px-2 py-1" title="Modifica Stage"><i class="fa-solid fa-pen"></i></button>
                                             <button onclick="event.stopPropagation(); openStageResults(${stage.id})" class="text-xs text-slate-400 hover:text-vrg-accent transition-colors px-2 py-1 bg-slate-800/50 rounded border border-slate-700 hover:border-vrg-accent" title="Visualizza/Gestisci Risultati">
                                                 <i class="fa-solid fa-list-ol"></i> Risultati
                                             </button>
                                             <button onclick="event.stopPropagation(); deleteStage(${stage.id})" class="text-xs text-red-500 hover:text-red-400 transition-colors px-2 py-1" title="Elimina Stage"><i class="fa-solid fa-trash"></i></button>
-                                            ${isAdmin && hasOfficial
-                                            ? `<button onclick="event.stopPropagation(); openDiscordPublish('stage', ${stage.id}, ${JSON.stringify(stage.name)})" class="text-xs bg-indigo-900/40 border border-indigo-700 hover:bg-indigo-800 text-indigo-300 px-2 py-1 rounded transition-colors" title="Pubblica risultati stage su Discord"><i class="fa-brands fa-discord"></i></button>`
-                                            : ''}
                                         </div>
                                     </div>
                                 `;
@@ -578,29 +584,48 @@
             openModal('modal-leg');
         }
 
+                // Sostituisci openAddStage con queste due:
         function openAddStage(legId) {
             document.getElementById('input-stage-leg-id').value = legId;
+            document.getElementById('input-risultati-stage-id').value = ''; // Svuota l'ID (indica che è nuova)
+            document.querySelector('#modal-stage h2').textContent = 'Nuova Stage';
+            
+            // Svuota i campi
+            document.getElementById('select-tracciato').value = '';
+            document.getElementById('input-nome-stage').value = '';
+            document.getElementById('select-meteo').value = 'Sereno';
+            document.getElementById('select-fondo').value = 'Asfalto Asciutto';
+            document.getElementById('input-temp').value = '20';
+            document.getElementById('input-orario').value = '';
+            
             openModal('modal-stage');
         }
 
-        async function openStageResults(stageId) {
-            let stageName = 'Stage';
-            if (treeData && treeData.rallies) {
-                for (const rally of treeData.rallies) {
-                    if (rally.legs) {
-                        for (const leg of rally.legs) {
-                            if (leg.stages) {
-                                const s = leg.stages.find(st => st.id === stageId);
-                                if (s) { stageName = s.name; break; }
-                            }
-                        }
-                    }
+        function openEditStage(stageId) {
+            let stageData = null;
+            // Cerca la stage nell'albero
+            for (const rally of treeData.rallies) {
+                for (const leg of rally.legs) {
+                    const found = leg.stages.find(s => s.id === stageId);
+                    if (found) { stageData = found; break; }
                 }
             }
+            if (!stageData) return;
 
-            document.getElementById('input-risultati-stage-id').value = stageId;
-            document.getElementById('modal-risultati-title').textContent = stageName;
-            document.getElementById('risultati-tbody').innerHTML = '';
+            document.getElementById('input-stage-leg-id').value = stageData.leg_id;
+            document.getElementById('input-risultati-stage-id').value = stageId; // Imposta l'ID per la modifica
+            document.querySelector('#modal-stage h2').textContent = 'Modifica Stage';
+            
+            // Popola i campi
+            document.getElementById('select-tracciato').value = stageData.track_id || '';
+            document.getElementById('input-nome-stage').value = stageData.name || '';
+            document.getElementById('select-meteo').value = stageData.weather || 'Sereno';
+            document.getElementById('select-fondo').value = stageData.surface || 'Asfalto Asciutto';
+            document.getElementById('input-temp').value = stageData.temperature || 20;
+            document.getElementById('input-orario').value = stageData.start_time || '';
+
+            openModal('modal-stage');
+        }
 
             // Controlli admin
             const adminControls = document.getElementById('ocr-container');

@@ -425,7 +425,6 @@ def get_legs(rally_id):
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-
 @app.route('/api/create-stage', methods=['POST'])
 @admin_required
 def create_stage():
@@ -433,24 +432,26 @@ def create_stage():
         data = request.json or {}
         leg_id = data.get('leg_id')
         name = (data.get('name') or '').strip()
-        track_name = (data.get('track_name') or '').strip() or None
+        
         if not leg_id or not name:
             return jsonify({"success": False, "error": "leg_id e name obbligatori"}), 400
 
         supabase = get_supabase()
-        leg = supabase.table('leg').select('id').eq('id', leg_id).execute()
-        if not leg.data:
-            return jsonify({"success": False, "error": "Leg non trovato"}), 404
-
+        
         res = supabase.table('stage').insert({
             "leg_id": leg_id,
             "name": name,
-            "track_name": track_name or name
+            "track_id": data.get('track_id'),
+            "track_name": data.get('track_name') or name,
+            "weather": data.get('weather', 'Sereno'),
+            "surface": data.get('surface', 'Asfalto'),
+            "temperature": data.get('temperature', 20),
+            "start_time": data.get('start_time') if data.get('start_time') else None
         }).execute()
+        
         return jsonify({"success": True, "data": res.data[0]}), 201
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
-
 
 @app.route('/api/stages/<int:leg_id>', methods=['GET'])
 def get_stages(leg_id):
@@ -492,6 +493,28 @@ def get_stage_results_draft(stage_id):
             .execute()
         )
         return jsonify({"success": True, "data": res.data}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/update-stage/<int:stage_id>', methods=['PUT'])
+@admin_required
+def update_stage(stage_id):
+    try:
+        data = request.json or {}
+        supabase = get_supabase()
+        
+        update_data = {
+            "name": data.get('name'),
+            "track_id": data.get('track_id'),
+            "track_name": data.get('track_name'),
+            "weather": data.get('weather'),
+            "surface": data.get('surface'),
+            "temperature": data.get('temperature'),
+            "start_time": data.get('start_time') if data.get('start_time') else None
+        }
+        
+        res = supabase.table('stage').update(update_data).eq('id', stage_id).execute()
+        return jsonify({"success": True, "data": res.data[0]}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 

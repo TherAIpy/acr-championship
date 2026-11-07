@@ -59,6 +59,7 @@ window.api = {
     
     createStage: (data) => apiJson('/create-stage', { method: 'POST', body: JSON.stringify(data) }),
     deleteStage: (id) => apiJson(`/delete-stage/${id}`, { method: 'DELETE' }),
+    updateStage: (id, data) => apiJson(/update-stage/${id}, { method: 'PUT', body: JSON.stringify(data) })
     saveStage: (data) => apiJson('/save-stage', { method: 'POST', body: JSON.stringify(data) }),
     publishStage: (id) => apiJson(`/publish-stage/${id}`, { method: 'POST' }),
     
