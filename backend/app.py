@@ -437,16 +437,26 @@ def create_stage():
             return jsonify({"success": False, "error": "leg_id e name obbligatori"}), 400
 
         supabase = get_supabase()
+        track_id = data.get('track_id')
         
+        # 1. Recupera i km dal database in base al track_id
+        distance_km = data.get('distance_km', 0)
+        if track_id:
+            track_res = supabase.table('track').select('length_km').eq('id', track_id).execute()
+            if track_res.data and track_res.data[0].get('length_km'):
+                distance_km = track_res.data[0]['length_km']
+
+        # 2. Inserisci la stage con i km calcolati
         res = supabase.table('stage').insert({
             "leg_id": leg_id,
             "name": name,
-            "track_id": data.get('track_id'),
+            "track_id": track_id,
             "track_name": data.get('track_name') or name,
             "weather": data.get('weather', 'Sereno'),
             "surface": data.get('surface', 'Asfalto'),
             "temperature": data.get('temperature', 20),
-            "start_time": data.get('start_time') if data.get('start_time') else None
+            "start_time": data.get('start_time') if data.get('start_time') else None,
+            "distance_km": distance_km # <-- Aggiunto qui!
         }).execute()
         
         return jsonify({"success": True, "data": res.data[0]}), 201
@@ -512,6 +522,12 @@ def update_stage(stage_id):
             "temperature": data.get('temperature'),
             "start_time": data.get('start_time') if data.get('start_time') else None
         }
+        
+        # Recupera i km dal database in base al track_id
+        if data.get('track_id'):
+            track_res = supabase.table('track').select('length_km').eq('id', data.get('track_id')).execute()
+            if track_res.data and track_res.data[0].get('length_km'):
+                update_data['distance_km'] = track_res.data[0]['length_km']
         
         res = supabase.table('stage').update(update_data).eq('id', stage_id).execute()
         return jsonify({"success": True, "data": res.data[0]}), 200

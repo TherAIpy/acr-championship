@@ -217,17 +217,23 @@
         // --- COLONNA CENTRALE ---
         function selectRally(rallyId) {
             v2State.selectedRally = v2State.tree.rallies.find(r => r.id === rallyId);
-            v2State.selectedLeg = null; // Reset leg
-            v2State.selectedStage = null; // Reset stage
+            v2State.selectedLeg = null; 
+            v2State.selectedStage = null;
 
             renderRallyTabs();
+            
+            // --- AGGIUNGI QUESTE RIGHE ---
+            const legsContainer = document.getElementById('legs-container');
+            const bgUrl = getRallyBackground(v2State.selectedRally.name);
+            legsContainer.style.backgroundImage = `linear-gradient(rgba(244, 241, 234, 0.9), rgba(244, 241, 234, 0.9)), url('${bgUrl}')`;
+            legsContainer.style.backgroundSize = 'cover';
+            legsContainer.style.backgroundPosition = 'center';
+            // -----------------------------
+
             renderLegs();
             loadRallyStandings(rallyId);
             
-            // Nascondi classifica leg (perché non c'è leg selezionata)
             document.getElementById('leg-standings-container').classList.add('hidden');
-            
-            // Riporta la colonna destra alle news
             renderRightDefault();
         }
 
@@ -327,13 +333,18 @@
         // --- COLONNA DESTRA ---
         function renderRightDefault() {
             const container = document.getElementById('right-col-container');
+            const bgUrl = v2State.selectedRally ? getRallyBackground(v2State.selectedRally.name) : 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80';
+            
             container.innerHTML = `
-                <div class="card-wrc p-8 flex flex-col items-center justify-center min-h-[500px] text-center bg-[url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80')] bg-cover bg-center relative overflow-hidden">
-                    <div class="absolute inset-0 bg-[#23211F] opacity-80"></div>
+                <div class="card-wrc p-8 flex flex-col items-center justify-center min-h-[500px] text-center relative overflow-hidden rounded-xl border border-[#D1CBBF]">
+                    <!-- Sfondo dinamico -->
+                    <div class="absolute inset-0 bg-cover bg-center transition-all duration-500" style="background-image: url('${bgUrl}');"></div>
+                    <div class="absolute inset-0 bg-[#23211F] opacity-75"></div>
+                    
                     <div class="relative z-10 text-white">
                         <h2 class="text-4xl font-black font-racing mb-4 text-[#EAB308]">${v2State.champ.name}</h2>
-                        <p class="text-lg font-medium opacity-80 mb-6">Benvenuti all'evento. Seleziona una Leg dalla colonna centrale per visualizzare le Stage e i risultati.</p>
-                        <div class="flex justify-center gap-4 text-sm font-bold bg-[#1A1816] p-4 rounded-lg border border-[#3D3833]">
+                        <p class="text-lg font-medium opacity-80 mb-6">Seleziona una Leg dalla colonna centrale per visualizzare le Stage e i risultati.</p>
+                        <div class="flex justify-center gap-4 text-sm font-bold bg-[#1A1816]/80 backdrop-blur-sm p-4 rounded-lg border border-[#3D3833]">
                             <span><i class="fa-solid fa-flag-checkered text-[#E10600] mr-1"></i> ${v2State.selectedRally?.total_stages || 0} Stage Totali</span>
                             <span><i class="fa-solid fa-road text-[#E10600] mr-1"></i> ${v2State.selectedRally?.total_km || 0} km</span>
                         </div>
@@ -454,6 +465,17 @@
             } catch (e) {
                 container.innerHTML = `<div class="card-wrc p-4 text-red-500">Errore: ${e.message}</div>`;
             }
+        }
+
+        function getRallyBackground(rallyName) {
+            const n = rallyName.toLowerCase();
+            if (n.includes('monte') || n.includes('turini') || n.includes('alsazia')) 
+                return 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80'; // Montagne
+            if (n.includes('galles') || n.includes('foresta')) 
+                return 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&q=80'; // Foresta
+            if (n.includes('grecia') || n.includes('sterrato')) 
+                return 'https://images.unsplash.com/photo-1505993597083-3bd19eb4596b?auto=format&fit=crop&q=80'; // Sterrato/Terra
+            return 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80'; // Default
         }
     </script>
 </body>
