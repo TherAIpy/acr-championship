@@ -22,6 +22,7 @@
             
             <nav class="hidden md:flex items-center gap-6 font-racing font-bold text-sm">
                 <a href="#" class="text-white border-b-2 border-[#E10600] pb-1"><i class="fa-solid fa-trophy mr-2"></i>Campionato</a>
+                <a href="archive-v2.html" class="text-[#A8A29A] hover:text-white transition"><i class="fa-solid fa-box-archive mr-2"></i>Archivio</a>
                 <a href="index.html" class="text-[#A8A29A] hover:text-white transition"><i class="fa-solid fa-ranking-star mr-2"></i>Torna alla V1</a>
             </nav>
         </div>
@@ -36,10 +37,8 @@
                 <div class="bg-[#23211F] text-white p-3 flex justify-between items-center">
                     <h2 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-trophy text-[#E10600]"></i> Classifica</h2>
                 </div>
-                <div class="p-3 border-b border-[#D1CBBF] bg-[#EBE6DC]">
-                    <select id="select-champ" onchange="changeChampionship(this.value)" class="w-full bg-white text-[#2C2A28] text-sm font-bold border border-[#D1CBBF] rounded p-2 focus:outline-none cursor-pointer">
-                        <option value="">Caricamento...</option>
-                    </select>
+                    <div id="left-col-title" class="p-3 border-b border-[#D1CBBF] bg-[#EBE6DC] text-lg font-bold text-[#2C2A28] text-center font-racing">
+                    Caricamento...
                 </div>
                 <table class="w-full table-wrc text-sm">
                     <thead>
@@ -85,49 +84,43 @@
     <script src="js/api.js"></script>
 
     <script>
-        // Stato globale della V2
-        const v2State = {
-            champ: null,
-            tree: null,
-            selectedLegId: null
-        };
+        const v2State = { champ: null, tree: null, selectedLegId: null };
 
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                // 1. Prendi i campionati visibili
                 const res = await api.getChampionships();
                 if (!res.data || res.data.length === 0) {
-                    document.getElementById('select-champ').innerHTML = `<option>Nessun campionato</option>`;
+                    document.getElementById('left-col-title').textContent = "Nessun campionato";
                     return;
                 }
                 
-                // Popola la tendina
-                const select = document.getElementById('select-champ');
-                select.innerHTML = res.data.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                // Controlla se c'è un ID nell'URL (es. ?id=6)
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlId = urlParams.get('id');
                 
-                // Seleziona il primo campionato e carica i dati
-                v2State.champ = res.data[0];
-                select.value = v2State.champ.id;
+                if (urlId) {
+                    v2State.champ = res.data.find(c => c.id == urlId) || res.data[0];
+                } else {
+                    v2State.champ = res.data[0]; // Prende il più recente
+                }
+
+                document.getElementById('left-col-title').textContent = v2State.champ.name;
                 await loadTreeAndStandings();
                 
-            } catch (e) {
-                console.error("Errore inizializzazione V2:", e);
-            }
+            } catch (e) { console.error("Errore V2:", e); }
         });
 
-        async function changeChampionship(id) {
-            if (!id) return;
-            const res = await api.getChampionships();
-            v2State.champ = res.data.find(c => c.id == id);
-            if (v2State.champ) {
-                await loadTreeAndStandings();
-                // Svuota la colonna di destra quando cambi campionato
-                document.getElementById('right-col-container').innerHTML = `
-                    <div class="card-wrc p-12 text-center text-gray-500 h-full flex flex-col justify-center items-center min-h-[400px]">
-                        <i class="fa-solid fa-mouse-pointer text-4xl mb-4 opacity-50"></i>
-                        <p>Seleziona una Leg dalla colonna centrale<br>per visualizzare i tempi.</p>
-                    </div>`;
-            }
+        async function loadTreeAndStandings() {
+            try {
+                const standRes = await apiJson(`/standings/championship/${v2State.champ.id}`);
+                renderChampionshipStandings(standRes.data);
+            } catch (e) { console.error("Errore classifica", e); }
+
+            try {
+                const treeRes = await apiJson(`/tree/${v2State.champ.id}`);
+                v2State.tree = treeRes.data;
+                renderRallies();
+            } catch (e) { console.error("Errore albero", e); }
         }
 
         async function loadTreeAndStandings() {
