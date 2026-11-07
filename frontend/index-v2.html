@@ -433,34 +433,35 @@
                 container.innerHTML = `
                     <div class="card-wrc overflow-hidden">
                         <div class="relative p-5 border-b border-[#D1CBBF] overflow-hidden">
-                            <!-- Sfondo Dinamico con opacità ridotta -->
+                            <!-- Sfondo Dinamico -->
                             <div class="absolute inset-0 bg-cover bg-center transition-all duration-700" style="background-image: url('${getTrackBackground(v2State.selectedStage.track_name)}');"></div>
                             <div class="absolute inset-0 bg-[#F4F1EA]/60 backdrop-blur-[2px]"></div>
 
                             <div class="relative z-10 flex justify-between items-start">
                                 <div>
-                                    <!-- Nome Stage -->
+                                    <!-- Badge Stage (Mantenuto identico) -->
                                     <div class="flex items-center gap-2 mb-1">
                                         <span class="bg-[#23211F] text-white text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded shadow-sm">Stage</span>
                                     </div>
-                                    <h2 class="text-3xl font-black italic text-[#2C2A28] drop-shadow-sm leading-tight mb-2">
-                                        ${v2State.selectedStage.name}
-                                    </h2>
                                     
-                                    <!-- Link Tracciato: Testo più piccolo, su una riga, opacità ridotta -->
-                                    <a href="track-detail.html?id=${v2State.selectedStage.track_id}" target="_blank" class="inline-flex items-center gap-2 text-sm font-bold text-[#E10600] hover:text-[#2C2A28] transition-colors bg-white/50 hover:bg-white/80 px-3 py-1 rounded-md shadow-sm border border-white/40 backdrop-blur-sm group whitespace-nowrap">
-                                        <i class="fa-solid fa-map-location-dot"></i> 
-                                        ${v2State.selectedStage.track_name || 'Tracciato Sconosciuto'}
-                                        <i class="fa-solid fa-up-right-from-square text-[10px] opacity-50 group-hover:opacity-100 transition-opacity ml-1"></i>
-                                    </a>
+                                    <!-- Nome Stage e Tracciato di fianco -->
+                                    <div class="flex items-baseline gap-3 flex-wrap mb-2">
+                                        <h2 class="text-3xl font-black italic text-[#2C2A28] drop-shadow-sm leading-tight">
+                                            ${v2State.selectedStage.name}
+                                        </h2>
+                                        <span class="text-sm font-bold text-[#6B665F]">
+                                            ${v2State.selectedStage.track_name || 'Tracciato Sconosciuto'}
+                                        </span>
+                                    </div>
                                 </div>
                                 
+                                <!-- Pulsante Torna alle Stage (Mantenuto identico) -->
                                 <button onclick="renderRightStages()" class="bg-[#23211F] hover:bg-[#E10600] text-white px-4 py-2 text-xs font-bold rounded transition-colors shadow-md shrink-0">
                                     <i class="fa-solid fa-arrow-left mr-1"></i> Torna alle Stage
                                 </button>
                             </div>
                             
-                            <!-- Box Meteo: Opacità ridotta -->
+                            <!-- Box Meteo (Mantenuto identico) -->
                             <div class="relative z-10 flex gap-4 text-xs font-bold text-[#2C2A28] mt-4 bg-white/40 p-2 rounded-lg backdrop-blur-md w-fit border border-white/30 shadow-sm">
                                 <span class="flex items-center gap-1.5"><i class="fa-solid ${getWeatherIcon(v2State.selectedStage.weather)} text-base"></i> ${v2State.selectedStage.weather}</span>
                                 <span class="flex items-center gap-1.5"><i class="fa-solid ${getSurfaceIcon(v2State.selectedStage.surface)} text-base"></i> ${v2State.selectedStage.surface}</span>
