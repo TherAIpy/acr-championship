@@ -74,8 +74,11 @@
                     document.getElementById('track-header-container').innerHTML = `
                         <div class="bg-[#F4F1EA] border border-[#D1CBBF] rounded-lg p-6 shadow-sm flex items-center justify-between">
                             <div>
-                                <h1 class="text-4xl font-black font-racing italic text-[#2C2A28]">${res.track_info.name}</h1>
-                                <p class="text-[#6B665F] font-bold text-sm mt-1"><i class="fa-solid fa-route mr-1"></i> Lunghezza: ${res.track_info.distance_km || '-'} km</p>
+                                <h1 class="text-4xl font-black font-racing italic text-[#2C2A28]">
+                                    ${res.track_info.name} 
+                                    <span class="text-xl text-[#6B665F] font-bold not-italic">(${res.track_info.location})</span>
+                                </h1>
+                                <p class="text-[#6B665F] font-bold text-sm mt-1"><i class="fa-solid fa-route mr-1"></i> Lunghezza: ${res.track_info.length_km || '-'} km</p>
                             </div>
                         </div>
                     `;

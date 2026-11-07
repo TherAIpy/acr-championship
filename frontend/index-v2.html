@@ -367,8 +367,8 @@
                     <div>
                         <h3 class="text-lg font-black font-racing text-[#2C2A28] group-hover:text-[#E10600]">${s.name}</h3>
                         <div class="flex gap-4 text-xs font-bold text-[#6B665F] mt-1">
-                            <span><i class="fa-solid fa-sun text-[#EAB308] mr-1"></i> ${s.weather}</span>
-                            <span><i class="fa-solid fa-road mr-1"></i> ${s.surface}</span>
+                            <span><i class="fa-solid ${getWeatherIcon(s.weather)} mr-1"></i> ${s.weather}</span>
+                            <span><i class="fa-solid ${getSurfaceIcon(s.surface)} mr-1"></i> ${s.surface}</span>
                             <span><i class="fa-solid fa-temperature-half text-[#E10600] mr-1"></i> ${s.temperature}°C</span>
                         </div>
                     </div>
@@ -385,7 +385,7 @@
             `;
         }
 
-        async function selectStage(stageId) {
+                async function selectStage(stageId) {
             let stageData = null;
             for (const leg of v2State.selectedRally.legs) {
                 const s = leg.stages.find(st => st.id === stageId);
@@ -395,7 +395,7 @@
             v2State.selectedStage = stageData;
 
             const container = document.getElementById('right-col-container');
-            container.innerHTML = `<div class="card-wrc p-12 text-center"><i class="fa-solid fa-spinner fa-spin text-3xl text-[#E10600] mb-4"></i><p>Caricamento risultati...</p></div>`;
+            container.innerHTML = `<div class="card-wrc p-12 text-center"><i class="fa-solid fa-spinner fa-spin text-3xl text-[#E10600] mb-4"></i><p>Caricamento...</p></div>`;
 
             try {
                 const res = await apiJson(`/standings/stage/${stageId}`);
@@ -403,11 +403,9 @@
                 const leaderTimeMs = data.length > 0 ? data[0].time_ms : 0;
 
                 let rowsHtml = data.map((r, i) => {
-                    // Calcolo Gap dal 1°
                     const gapToFirstMs = r.time_ms - leaderTimeMs;
                     const gapToFirstStr = gapToFirstMs === 0 ? '-' : `+${(gapToFirstMs/1000).toFixed(2)}`;
 
-                    // Calcolo Gap dal precedente
                     let gapToPrevStr = '-';
                     if (i > 0) {
                         const prevMs = data[i-1].time_ms;
@@ -431,50 +429,48 @@
                     rowsHtml = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Nessun risultato ufficiale per questa Stage.</td></tr>`;
                 }
 
+                // Blocco HTML pulito con i tag correttamente chiusi
                 container.innerHTML = `
-                    <div class="card-wrc overflow-hidden relative">
-                        <div class="p-4 border-b border-[#D1CBBF] bg-[#F4F1EA] flex justify-between items-start">
-                            <div>
-                                <h2 class="text-3xl font-black italic mb-2 text-[#2C2A28] flex items-center gap-3">
-                                    <i class="fa-solid fa-stopwatch text-[#E10600]"></i>
-                                    <a href="stage-detail.html?id=${v2State.selectedStage.id}" target="_blank" class="hover:text-[#E10600] transition-colors flex items-center gap-2">
-                                    ${v2State.selectedStage.name}
-                                        <i class="fa-solid fa-up-right-from-square text-sm opacity-50"></i>
+                    <div class="card-wrc overflow-hidden">
+                        <div class="p-4 border-b border-[#D1CBBF] bg-[#F4F1EA]">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h2 class="text-3xl font-black italic text-[#2C2A28]">
+                                        <i class="fa-solid fa-stopwatch text-[#E10600] mr-2"></i>${v2State.selectedStage.name}
+                                    </h2>
+                                    <a href="track-detail.html?id=${v2State.selectedStage.track_id}" target="_blank" class="inline-flex items-center gap-1 text-sm font-bold text-[#6B665F] hover:text-[#E10600] mt-1 transition-colors">
+                                        <i class="fa-solid fa-up-right-from-square"></i> Vedi Leaderboard Tracciato
                                     </a>
-                                </h2>
-                            <div>
-                                <h2 class="text-3xl font-black italic mb-2 text-[#2C2A28] flex items-center gap-3">
-                                    <i class="fa-solid fa-stopwatch text-[#E10600]"></i>
-                                    <!-- LINK AL TRACCIATO (track_id) -->
-                                    <a href="track-detail.html?id=${v2State.selectedStage.track_id}" target="_blank" class="hover:text-[#E10600] transition-colors flex items-center gap-2">
-                                        ${v2State.selectedStage.name}
-                                        <i class="fa-solid fa-up-right-from-square text-sm opacity-50" title="Vedi Leaderboard Tracciato"></i>
-                                    </a>
-                                </h2>
-                                <div class="flex gap-4 text-sm font-bold text-[#6B665F]">
-                                    <span><i class="fa-solid ${getWeatherIcon(v2State.selectedStage.weather)} mr-1"></i> ${v2State.selectedStage.weather}</span>
-                                    <span><i class="fa-solid ${getSurfaceIcon(v2State.selectedStage.surface)} mr-1"></i> ${v2State.selectedStage.surface}</span>
-                                    <span><i class="fa-solid fa-temperature-half text-[#E10600] mr-1"></i> ${v2State.selectedStage.temperature}°C</span>
                                 </div>
+                                <button onclick="renderRightStages()" class="bg-[#23211F] hover:bg-[#3D3833] text-white px-3 py-1.5 text-xs font-bold rounded transition-colors shadow-sm shrink-0">
+                                    <i class="fa-solid fa-arrow-left mr-1"></i> Indietro
+                                </button>
                             </div>
-                            <button onclick="renderRightStages()" class="bg-[#23211F] hover:bg-[#3D3833] text-white px-3 py-1 text-xs font-bold rounded transition-colors"><i class="fa-solid fa-arrow-left mr-1"></i> Torna alle Stage</button>
+                            
+                            <div class="flex gap-6 text-sm font-bold text-[#6B665F] mt-3">
+                                <span class="flex items-center gap-2"><i class="fa-solid ${getWeatherIcon(v2State.selectedStage.weather)} text-lg"></i> ${v2State.selectedStage.weather}</span>
+                                <span class="flex items-center gap-2"><i class="fa-solid ${getSurfaceIcon(v2State.selectedStage.surface)} text-lg"></i> ${v2State.selectedStage.surface}</span>
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-temperature-half text-[#E10600] text-lg"></i> ${v2State.selectedStage.temperature}°C</span>
+                            </div>
                         </div>
                         
-                        <table class="w-full table-wrc text-sm">
-                            <thead>
-                                <tr>
-                                    <th class="w-10 text-center">Pos</th>
-                                    <th>Pilota</th>
-                                    <th>Vettura</th>
-                                    <th class="text-right">Tempo</th>
-                                    <th class="text-right text-[#E10600]">Dist. Prec.</th>
-                                    <th class="text-right text-[#6B665F]">Dist. 1°</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${rowsHtml}
-                            </tbody>
-                        </table>
+                        <div class="max-h-[500px] overflow-y-auto custom-scrollbar">
+                            <table class="w-full table-wrc text-sm">
+                                <thead class="sticky top-0 z-10">
+                                    <tr>
+                                        <th class="w-10 text-center">Pos</th>
+                                        <th>Pilota</th>
+                                        <th>Vettura</th>
+                                        <th class="text-right">Tempo</th>
+                                        <th class="text-right text-[#E10600]">Dist. Prec.</th>
+                                        <th class="text-right text-[#6B665F]">Dist. 1°</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${rowsHtml}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 `;
             } catch (e) {

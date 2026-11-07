@@ -538,32 +538,33 @@ def update_stage(stage_id):
 def get_track_results(track_id):
     try:
         supabase = get_supabase()
-        # 1. Trova tutte le stage associate a questo tracciato
-        stages = supabase.table('stage').select('id, name, weather, surface, temperature, distance_km').eq('track_id', track_id).execute().data
+        
+        # 1. Prendi le info del TRACCIATO (non dello stage)
+        track_res = supabase.table('track').select('name, location, length_km').eq('id', track_id).execute()
+        track_info = track_res.data[0] if track_res.data else {"name": "Tracciato Sconosciuto", "location": "", "length_km": 0}
+        
+        # 2. Trova tutte le stage (sessioni) che usano questo tracciato
+        stages = supabase.table('stage').select('id').eq('track_id', track_id).execute().data
         if not stages:
-            return jsonify({"success": True, "data": [], "track_info": None}), 200
+            return jsonify({"success": True, "data": [], "track_info": track_info}), 200
 
         stage_ids = [s['id'] for s in stages]
-        stage_meta = {s['id']: s for s in stages}
 
-        # 2. Prendi i risultati ufficiali
+        # 3. Prendi i risultati ufficiali di tutte quelle stage
         results = supabase.table('stage_result').select('*').in_('stage_id', stage_ids).eq('is_official', True).execute().data
 
-        # 3. Arricchisci i risultati con i dati meteo dello stage specifico
-        for r in results:
-            meta = stage_meta.get(r['stage_id'], {})
-            r['weather'] = meta.get('weather')
-            r['surface'] = meta.get('surface')
-            r['temperature'] = meta.get('temperature')
+        # 4. Aggiungi i metadati meteo per contestualizzare i tempi
+        stages_meta = supabase.table('stage').select('id, weather, surface, temperature').in_('id', stage_ids).execute().data
+        meta_dict = {s['id']: s for s in stages_meta}
 
-        # 4. Ordina per tempo (dal più veloce al più lento)
+        for r in results:
+            m = meta_dict.get(r['stage_id'], {})
+            r['weather'] = m.get('weather')
+            r['surface'] = m.get('surface')
+            r['temperature'] = m.get('temperature')
+
+        # 5. Ordina per tempo
         results.sort(key=lambda x: x['time_ms'])
-        
-        # Prendi le info del tracciato (la prima stage andrà bene come riferimento per il nome)
-        track_info = {
-            "name": stages[0].get('name') if len(stages) == 1 else "Tracciato Multiplo",
-            "distance_km": stages[0].get('distance_km')
-        }
 
         return jsonify({"success": True, "data": results, "track_info": track_info}), 200
     except Exception as e:
