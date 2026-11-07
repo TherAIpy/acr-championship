@@ -433,26 +433,25 @@
                 container.innerHTML = `
                     <div class="card-wrc overflow-hidden">
                         <div class="relative p-5 border-b border-[#D1CBBF] overflow-hidden">
-                            <!-- Sfondo Dinamico con effetto patinato -->
+                            <!-- Sfondo Dinamico con opacità ridotta -->
                             <div class="absolute inset-0 bg-cover bg-center transition-all duration-700" style="background-image: url('${getTrackBackground(v2State.selectedStage.track_name)}');"></div>
-                            <!-- Overlay Sabbia/Patina -->
-                            <div class="absolute inset-0 bg-[#F4F1EA]/85 backdrop-blur-[3px]"></div>
+                            <div class="absolute inset-0 bg-[#F4F1EA]/60 backdrop-blur-[2px]"></div>
 
                             <div class="relative z-10 flex justify-between items-start">
                                 <div>
-                                    <!-- Nome Stage (Etichetta) -->
+                                    <!-- Nome Stage -->
                                     <div class="flex items-center gap-2 mb-1">
                                         <span class="bg-[#23211F] text-white text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded shadow-sm">Stage</span>
                                     </div>
-                                    <h2 class="text-4xl font-black italic text-[#2C2A28] drop-shadow-sm leading-tight mb-2">
+                                    <h2 class="text-3xl font-black italic text-[#2C2A28] drop-shadow-sm leading-tight mb-2">
                                         ${v2State.selectedStage.name}
                                     </h2>
                                     
-                                    <!-- Link Figo al Tracciato -->
-                                    <a href="track-detail.html?id=${v2State.selectedStage.track_id}" target="_blank" class="inline-flex items-center gap-2 text-lg font-black text-[#E10600] hover:text-[#2C2A28] transition-colors bg-white/70 px-4 py-1.5 rounded-lg shadow-sm border border-white/50 backdrop-blur-sm group">
+                                    <!-- Link Tracciato: Testo più piccolo, su una riga, opacità ridotta -->
+                                    <a href="track-detail.html?id=${v2State.selectedStage.track_id}" target="_blank" class="inline-flex items-center gap-2 text-sm font-bold text-[#E10600] hover:text-[#2C2A28] transition-colors bg-white/50 hover:bg-white/80 px-3 py-1 rounded-md shadow-sm border border-white/40 backdrop-blur-sm group whitespace-nowrap">
                                         <i class="fa-solid fa-map-location-dot"></i> 
                                         ${v2State.selectedStage.track_name || 'Tracciato Sconosciuto'}
-                                        <i class="fa-solid fa-up-right-from-square text-xs opacity-50 group-hover:opacity-100 transition-opacity"></i>
+                                        <i class="fa-solid fa-up-right-from-square text-[10px] opacity-50 group-hover:opacity-100 transition-opacity ml-1"></i>
                                     </a>
                                 </div>
                                 
@@ -461,11 +460,11 @@
                                 </button>
                             </div>
                             
-                            <!-- Meteo e info -->
-                            <div class="relative z-10 flex gap-6 text-sm font-bold text-[#2C2A28] mt-4 bg-white/60 p-2.5 rounded-lg backdrop-blur-md w-fit border border-white/60 shadow-sm">
-                                <span class="flex items-center gap-2"><i class="fa-solid ${getWeatherIcon(v2State.selectedStage.weather)} text-lg"></i> ${v2State.selectedStage.weather}</span>
-                                <span class="flex items-center gap-2"><i class="fa-solid ${getSurfaceIcon(v2State.selectedStage.surface)} text-lg"></i> ${v2State.selectedStage.surface}</span>
-                                <span class="flex items-center gap-2"><i class="fa-solid fa-temperature-half text-[#E10600] text-lg"></i> ${v2State.selectedStage.temperature}°C</span>
+                            <!-- Box Meteo: Opacità ridotta -->
+                            <div class="relative z-10 flex gap-4 text-xs font-bold text-[#2C2A28] mt-4 bg-white/40 p-2 rounded-lg backdrop-blur-md w-fit border border-white/30 shadow-sm">
+                                <span class="flex items-center gap-1.5"><i class="fa-solid ${getWeatherIcon(v2State.selectedStage.weather)} text-base"></i> ${v2State.selectedStage.weather}</span>
+                                <span class="flex items-center gap-1.5"><i class="fa-solid ${getSurfaceIcon(v2State.selectedStage.surface)} text-base"></i> ${v2State.selectedStage.surface}</span>
+                                <span class="flex items-center gap-1.5"><i class="fa-solid fa-temperature-half text-[#E10600] text-base"></i> ${v2State.selectedStage.temperature}°C</span>
                             </div>
                         </div>
                         
