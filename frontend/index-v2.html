@@ -299,10 +299,19 @@
 
                 // Calcolo stato risultati (Pallino)
                 let statusDot = `<span class="w-2 h-2 rounded-full bg-gray-300 shadow-sm" title="Nessun risultato"></span>`;
-                if (l.stages && l.stages.some(s => s.has_official_results)) {
-                    statusDot = `<span class="w-2 h-2 rounded-full bg-green-500 shadow-sm shadow-green-500/50" title="Risultati ufficiali"></span>`;
-                } else if (l.stages && l.stages.some(s => s.has_draft_results)) {
-                    statusDot = `<span class="w-2 h-2 rounded-full bg-yellow-400 shadow-sm shadow-yellow-400/50" title="Bozza in attesa"></span>`;
+                
+                if (l.stages && l.stages.length > 0) {
+                    const allOfficial = l.stages.every(s => s.has_official_results);
+                    const hasAnyDraft = l.stages.some(s => s.has_draft_results);
+                    const hasAnyOfficial = l.stages.some(s => s.has_official_results);
+
+                    if (allOfficial) {
+                        // Tutti gli stage hanno risultati ufficiali -> VERDE
+                        statusDot = `<span class="w-2 h-2 rounded-full bg-green-500 shadow-sm shadow-green-500/50" title="Tutti i risultati sono ufficiali"></span>`;
+                    } else if (hasAnyDraft || hasAnyOfficial) {
+                        // C'è almeno una bozza o qualche ufficiale ma mancano pezzi -> ARANCIONE
+                        statusDot = `<span class="w-2 h-2 rounded-full bg-yellow-400 shadow-sm shadow-yellow-400/50" title="In corso / Bozza in attesa"></span>`;
+                    }
                 }
 
                 return `
