@@ -288,11 +288,11 @@
                     const gapStr = gapMs === 0 ? '-' : `+${(gapMs/1000).toFixed(2)}`;
                     
                     return `
-                        <tr class="border-b border-[#3D3833] last:border-0 ${i === 0 ? 'bg-[#EAB308] text-[#2C2A28] font-bold' : ''}">
+                        <tr class="border-b border-[#3D3833] last:border-0 ${i === 0 ? 'bg-[#3B82F6] text-white font-bold' : ''}">
                             <td class="p-2 text-center">${r.position}</td>
                             <td class="p-2 truncate">${r.driver}</td>
                             <td class="p-2 text-right font-mono">${r.total_str}</td>
-                            <td class="p-2 text-right font-mono ${i === 0 ? '' : 'text-[#E10600]'}">${gapStr}</td>
+                            <td class="p-2 text-right font-mono ${i === 0 ? 'text-white' : 'text-[#60A5FA]'}">${gapStr}</td>
                         </tr>
                     `;
                 }).join('');
