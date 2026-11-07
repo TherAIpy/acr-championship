@@ -1,11 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap');
 
 :root {
-    --wrc-bg: #F3F4F6;
-    --wrc-card: #FFFFFF;
-    --wrc-text: #1F2937;
-    --wrc-accent: #E10600;
-    --wrc-gold: #FDE047;
+    --wrc-bg: #E5E0D8;           /* Sfondo generale sabbia */
+    --wrc-card: #F4F1EA;         /* Card color avorio/bianco sporco */
+    --wrc-text: #2C2A28;         /* Testo antracite caldo */
+    --wrc-text-muted: #6B665F;   /* Testo secondario */
+    --wrc-dark: #23211F;         /* Intestazioni scure carbone */
+    --wrc-accent: #E10600;       /* Rosso Racing */
+    --wrc-gold: #EAB308;         /* Giallo/Oro */
+    --wrc-border: #D1CBBF;       /* Bordi sabbiosi */
 }
 
 body {
@@ -24,14 +27,14 @@ h1, h2, h3, h4, .font-racing {
 .card-wrc {
     background-color: var(--wrc-card);
     border-radius: 0.5rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    border: 1px solid #E5E7EB;
+    box-shadow: 0 4px 6px -1px rgba(44, 42, 40, 0.1), 0 2px 4px -1px rgba(44, 42, 40, 0.06);
+    border: 1px solid var(--wrc-border);
 }
 
-/* Effetto tabella stile WRC */
+/* Effetto tabella stile WRC su sfondo sabbia */
 .table-wrc th {
-    background-color: #374151;
-    color: white;
+    background-color: var(--wrc-dark);
+    color: #F4F1EA;
     text-transform: uppercase;
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 0.85rem;
@@ -40,8 +43,15 @@ h1, h2, h3, h4, .font-racing {
 }
 .table-wrc td {
     padding: 0.5rem;
-    border-bottom: 1px solid #F3F4F6;
+    border-bottom: 1px solid var(--wrc-border);
+    color: var(--wrc-text);
 }
 .table-wrc tr:nth-child(even) {
-    background-color: #F9FAFB;
+    background-color: #EBE6DC; /* Riga beige alternata */
+}
+
+/* Prima posizione evidenziata in oro/sabbia */
+.row-first {
+    background-color: #F3E5AB !important; /* Giallo sabbia */
+    font-weight: bold;
 }
