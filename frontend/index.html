@@ -93,6 +93,7 @@
             const sb = window.supabaseClient || window.supabase;
             const { data: { session } } = await sb.auth.getSession();
             const nav = document.getElementById('header-nav');
+            
             if (session) {
                 const isAdmin = session.user.app_metadata?.role === 'admin';
                 
@@ -102,14 +103,14 @@
                             <i class="fa-solid fa-gear"></i> Gestione
                         </a>
                         <span class="text-sm text-slate-400 hidden md:block">${session.user.email}</span>
-                        <button onclick="window.supabaseClient.auth.signOut().then(()=>window.location.reload())" class="text-slate-400 hover:text-red-400 ml-2" title="Logout">
+                        <button onclick="logout()" class="text-slate-400 hover:text-red-400 ml-2 relative z-50 cursor-pointer" title="Logout">
                             <i class="fa-solid fa-power-off"></i>
                         </button>
                     `;
                 } else {
                     nav.innerHTML = `
                         <span class="text-sm text-slate-400 hidden md:block">${session.user.email}</span>
-                        <button onclick="window.supabaseClient.auth.signOut().then(()=>window.location.reload())" class="text-slate-400 hover:text-red-400 ml-2" title="Logout">
+                        <button onclick="logout()" class="text-slate-400 hover:text-red-400 ml-2 relative z-50 cursor-pointer" title="Logout">
                             <i class="fa-solid fa-power-off"></i>
                         </button>
                     `;
@@ -601,7 +602,7 @@
             return html;
         }
 
-                function getWeatherIcon(weather) {
+        function getWeatherIcon(weather) {
             if (!weather) return `<i class="fa-solid fa-sun text-yellow-400"></i>`;
             const w = weather.toLowerCase();
             if (w.includes('pioggia intensa')) return `<i class="fa-solid fa-cloud-showers-water text-blue-500"></i>`;
@@ -619,6 +620,17 @@
             if (s.includes('fango')) return `<i class="fa-solid fa-mound text-amber-700"></i>`;
             if (s.includes('sterrato')) return `<i class="fa-solid fa-mountain text-amber-600"></i>`;
             return `<i class="fa-solid fa-road text-slate-400"></i>`; // Default Asfalto
+        }
+
+        async function logout() {
+            try {
+                const sb = window.supabaseClient || window.supabase;
+                if (sb) await sb.auth.signOut();
+                window.location.href = '/'; 
+            } catch (e) {
+                console.error("Errore logout:", e);
+                window.location.reload();
+            }
         }
     </script>
 </body>
