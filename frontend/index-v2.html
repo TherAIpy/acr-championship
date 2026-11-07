@@ -30,28 +30,29 @@
             <!-- COLONNA SINISTRA: CLASSIFICA GENERALE CAMPIONATO -->
             <div class="lg:col-span-4 card-wrc overflow-hidden h-fit sticky top-6">
                 
-                <!-- NUOVO HEADER CON IMMAGINE AUTO E NOME CAMPIONATO -->
-                <div class="relative h-36 overflow-hidden bg-[#23211F]">
-                    <!-- Immagine di sfondo dell'auto -->
-                    <img id="champ-bg-image" src="https://images.unsplash.com/photo-1541343672885-9be56236302a?auto=format&fit=crop&q=80" alt="Rally Car" class="absolute inset-0 w-full h-full object-cover opacity-60">
-                    <!-- Gradiente per far leggere il testo (scuro in basso, trasparente in alto) -->
-                    <div class="absolute inset-0 bg-gradient-to-t from-[#23211F] via-[#23211F]/40 to-transparent"></div>
+                <!-- HEADER CON IMMAGINE AUTO (Altezza ridotta a h-24) -->
+                <div class="relative h-24 overflow-hidden bg-[#23211F]">
+                    <!-- Immagine di sfondo (Auto da rally) -->
+                    <img id="champ-bg-image" src="https://images.unsplash.com/photo-1541343672885-9be56236302a?auto=format&fit=crop&q=80" alt="Rally Car" class="absolute inset-0 w-full h-full object-cover opacity-80">
                     
-                    <!-- Titolo del Campionato -->
-                    <div class="absolute bottom-3 left-4 right-4 flex justify-between items-end">
-                        <h2 class="text-3xl font-black italic font-racing text-white drop-shadow-lg flex items-center gap-2">
-                            <i class="fa-solid fa-trophy text-[#E10600]"></i> 
+                    <!-- PATINA: Overlay scuro e sfumatura dal basso -->
+                    <div class="absolute inset-0 bg-black/30"></div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#23211F] via-transparent to-transparent"></div>
+                    
+                    <!-- Titolo del Campionato (Senza icona) -->
+                    <div class="absolute bottom-2 left-4 right-4 flex justify-between items-end">
+                        <h2 class="text-3xl font-black italic font-racing text-white drop-shadow-md">
                             <span id="left-col-title">Caricamento...</span>
                         </h2>
                     </div>
                 </div>
                 
-                <!-- SOTTO-HEADER CHIARO: Classifica Generale -->
-                <div class="p-2 border-b border-[#D1CBBF] bg-[#EBE6DC] text-xs font-bold text-[#6B665F] text-center uppercase tracking-widest">
-                    Classifica Generale
+                <!-- SOTTO-HEADER SCURO: Classifica Generale (Con Trofeo) -->
+                <div class="p-3 bg-[#23211F] border-b border-[#3D3833] text-sm font-bold text-white text-center uppercase tracking-widest flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-trophy text-[#E10600]"></i> Classifica Generale
                 </div>
 
-                <!-- Tabella (Rimane identica) -->
+                <!-- Tabella -->
                 <div class="w-full overflow-x-auto">
                     <table class="w-full table-wrc text-xs whitespace-nowrap">
                         <thead class="sticky top-0">
