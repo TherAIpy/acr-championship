@@ -385,7 +385,7 @@
             `;
         }
 
-                async function selectStage(stageId) {
+        async function selectStage(stageId) {
             let stageData = null;
             for (const leg of v2State.selectedRally.legs) {
                 const s = leg.stages.find(st => st.id === stageId);
@@ -435,7 +435,13 @@
                     <div class="card-wrc overflow-hidden relative">
                         <div class="p-4 border-b border-[#D1CBBF] bg-[#F4F1EA] flex justify-between items-start">
                             <div>
-                                <h2 class="text-3xl font-black italic mb-2 text-[#2C2A28]"><i class="fa-solid fa-stopwatch text-[#E10600] mr-2"></i>${v2State.selectedStage.name}</h2>
+                                <h2 class="text-3xl font-black italic mb-2 text-[#2C2A28] flex items-center gap-3">
+                                    <i class="fa-solid fa-stopwatch text-[#E10600]"></i>
+                                    <a href="stage-detail.html?id=${v2State.selectedStage.id}" target="_blank" class="hover:text-[#E10600] transition-colors flex items-center gap-2">
+                                    ${v2State.selectedStage.name}
+                                        <i class="fa-solid fa-up-right-from-square text-sm opacity-50"></i>
+                                    </a>
+                                </h2>
                                 <div class="flex gap-4 text-sm font-bold text-[#6B665F]">
                                     <span><i class="fa-solid fa-sun text-[#EAB308] mr-1"></i> ${v2State.selectedStage.weather}</span>
                                     <span><i class="fa-solid fa-road mr-1"></i> ${v2State.selectedStage.surface}</span>

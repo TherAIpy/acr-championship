@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dettaglio Stage - ACR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/v2-style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="min-h-screen pb-10">
+
+    <!-- HEADER -->
+    <header class="bg-[#23211F] text-white shadow-lg border-b-4 border-[#E10600]">
+        <div class="max-w-[1200px] mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <h1 class="text-2xl font-black text-white italic tracking-tighter">ACR <span class="text-[#E10600]">STAGE INFO</span></h1>
+            </div>
+            <button onclick="window.close()" class="text-[#A8A29A] hover:text-white transition font-racing font-bold text-sm">
+                <i class="fa-solid fa-xmark mr-2"></i>Chiudi Scheda
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-[1200px] mx-auto px-4 mt-8">
+        <div id="stage-header-container" class="mb-6">
+            <div class="text-center py-10 text-gray-500"><i class="fa-solid fa-spinner fa-spin text-3xl mb-4"></i><p>Caricamento dati stage...</p></div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- INFO TECNICHE -->
+            <div class="lg:col-span-1">
+                <div class="card-wrc p-6 sticky top-6">
+                    <h3 class="text-xl font-black font-racing text-[#2C2A28] mb-4 border-b border-[#D1CBBF] pb-2">Scheda Tecnica</h3>
+                    
+                    <!-- Placeholder Mappa -->
+                    <div class="w-full h-40 bg-[#EBE6DC] rounded-lg mb-4 flex items-center justify-center border border-[#D1CBBF] relative overflow-hidden group">
+                        <div class="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80')] bg-cover"></div>
+                        <span class="text-[#6B665F] font-bold text-sm z-10"><i class="fa-solid fa-map-location-dot mr-1"></i> Mappa del Tracciato</span>
+                    </div>
+
+                    <ul class="space-y-3 text-sm font-medium text-[#2C2A28]">
+                        <li class="flex justify-between border-b border-[#F3F4F6] pb-2">
+                            <span class="text-[#6B665F]">Lunghezza:</span> 
+                            <span id="info-length" class="font-bold">-</span>
+                        </li>
+                        <li class="flex justify-between border-b border-[#F3F4F6] pb-2">
+                            <span class="text-[#6B665F]">Dislivello:</span> 
+                            <span class="font-bold">+ 350 m</span> <!-- Placeholder -->
+                        </li>
+                        <li class="flex justify-between border-b border-[#F3F4F6] pb-2">
+                            <span class="text-[#6B665F]">Fondo:</span> 
+                            <span id="info-surface" class="font-bold">-</span>
+                        </li>
+                        <li class="flex justify-between border-b border-[#F3F4F6] pb-2">
+                            <span class="text-[#6B665F]">Meteo:</span> 
+                            <span id="info-weather" class="font-bold">-</span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="text-[#6B665F]">Difficoltà:</span> 
+                            <span class="font-bold text-[#E10600]">Alta</span> <!-- Placeholder -->
+                        </li>
+                    </ul>
+
+                    <div class="mt-6">
+                        <h4 class="text-sm font-bold text-[#2C6A28] mb-2">Descrizione</h4>
+                        <p class="text-xs text-[#6B665F] leading-relaxed">Un mix di tornanti stretti e tratti veloci. Attenzione al ghiaccio nelle zone in ombra durante le prime ore del mattino.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RISULTATI E CLASSIFICHE -->
+            <div class="lg:col-span-2">
+                <div class="card-wrc overflow-hidden">
+                    <div class="bg-[#1E2532] text-white p-3 flex justify-between items-center">
+                        <h2 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-stopwatch text-[#E10600]"></i> Risultati Ufficiali</h2>
+                        
+                        <!-- Filtro Classi -->
+                        <select id="class-filter" onchange="filterStandings(this.value)" class="text-xs bg-[#3D3833] text-white border-none rounded p-1 cursor-pointer focus:outline-none">
+                            <option value="all">Tutte le Classi</option>
+                            <option value="R5">Solo R5</option>
+                            <option value="R4">Solo R4</option>
+                        </select>
+                    </div>
+                    
+                    <div class="max-h-[600px] overflow-y-auto custom-scrollbar">
+                        <table class="w-full table-wrc text-sm">
+                            <thead class="sticky top-0 z-10">
+                                <tr>
+                                    <th class="w-12 text-center">Pos</th>
+                                    <th>Pilota</th>
+                                    <th>Vettura</th>
+                                    <th class="text-right">Tempo</th>
+                                    <th class="text-right text-[#E10600]">Dist. Prec.</th>
+                                    <th class="text-right text-[#A8A29A]">Dist. 1°</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stage-results-tbody">
+                                <tr><td colspan="6" class="text-center py-8"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- API & Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const stageId = urlParams.get('id');
+        let allResultsData = []; // Per memorizzare i dati e filtrare senza richiamare l'API ogni volta
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!stageId) {
+                document.getElementById('stage-header-container').innerHTML = `<div class="text-red-500 text-center">ID Stage non fornito nell'URL.</div>`;
+                return;
+            }
+
+            try {
+                // 1. Carica risultati stage
+                const res = await apiJson(`/standings/stage/${stageId}`);
+                allResultsData = res.data || [];
+
+                // 2. Trova le info dello stage (usando l'API dell'albero non va bene perché non abbiamo l'ID del campionato)
+                // Al momento, prendiamo i dati di base dal primo risultato (se esiste) e dall'API di setup (che però non filtra per stage).
+                // Dato che non abbiamo una rotta diretta per i metadati dello stage, usiamo i dati che abbiamo.
+                // (Nota: per un'implementazione perfetta, servirebbe una rotta /api/stage/<id> nel backend. Per ora usiamo un placeholder per i metadati o li ricaviamo).
+                
+                // Per semplificare, se non abbiamo i metadati, li mostriamo come "Dati non disponibili" o placeholder.
+                // Ma possiamo provare a recuperarli dall'API /api/setup se necessario, anche se è pesante.
+                
+                renderHeaderPlaceholder();
+                renderTable(allResultsData);
+
+            } catch (e) {
+                document.getElementById('stage-results-tbody').innerHTML = `<tr><td colspan="6" class="text-center text-red-500 p-4">Errore: ${e.message}</td></tr>`;
+            }
+        });
+
+        function renderHeaderPlaceholder() {
+            // Poiché non abbiamo una rotta specifica per i metadati dello stage, mostriamo dei placeholder generici.
+            // In futuro, se aggiungiamo una rotta /api/stage/<id>, possiamo popolare questi campi.
+            document.getElementById('stage-header-container').innerHTML = `
+                <div class="bg-[#F4F1EA] border border-[#D1CBBF] rounded-lg p-6 shadow-sm flex items-center justify-between">
+                    <div>
+                        <h1 class="text-4xl font-black font-racing italic text-[#2C2A28]">Risultati Stage</h1>
+                        <p class="text-[#6B665F] font-bold text-sm mt-1"><i class="fa-solid fa-circle-info mr-1"></i> ID Stage: ${stageId}</p>
+                    </div>
+                    <div class="flex gap-4 text-sm font-bold">
+                        <div class="text-center bg-white border border-[#D1CBBF] rounded px-4 py-2 shadow-sm">
+                            <i class="fa-solid fa-sun text-[#EAB308] text-xl mb-1"></i>
+                            <div>Sereno</div>
+                        </div>
+                        <div class="text-center bg-white border border-[#D1CBBF] rounded px-4 py-2 shadow-sm">
+                            <i class="fa-solid fa-road text-[#2C2A28] text-xl mb-1"></i>
+                            <div>Asfalto</div>
+                        </div>
+                        <div class="text-center bg-white border border-[#D1CBBF] rounded px-4 py-2 shadow-sm">
+                            <i class="fa-solid fa-temperature-half text-[#E10600] text-xl mb-1"></i>
+                            <div>20°C</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('stage-results-tbody');
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">Nessun risultato registrato.</td></tr>`;
+                return;
+            }
+
+            const leaderTimeMs = data[0].time_ms;
+
+            tbody.innerHTML = data.map((r, i) => {
+                // Gap dal 1°
+                const gapToFirstMs = r.time_ms - leaderTimeMs;
+                const gapToFirstStr = gapToFirstMs === 0 ? '-' : `+${(gapToFirstMs/1000).toFixed(2)}`;
+
+                // Gap dal precedente
+                let gapToPrevStr = '-';
+                if (i > 0) {
+                    const prevMs = data[i-1].time_ms;
+                    const gapToPrevMs = r.time_ms - prevMs;
+                    gapToPrevStr = `+${(gapToPrevMs/1000).toFixed(2)}`;
+                }
+
+                return `
+                    <tr class="${i === 0 ? 'row-first' : ''}">
+                        <td class="text-center font-bold">${r.position}</td>
+                        <td>${r.driver_name}</td>
+                        <td class="text-xs font-semibold text-[#6B665F]">${r.car_model}</td>
+                        <td class="text-right font-mono font-bold">${r.time_str}</td>
+                        <td class="text-right text-[#E10600] font-mono">${gapToPrevStr}</td>
+                        <td class="text-right text-[#6B665F] font-mono">${gapToFirstStr}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Funzione per filtrare per classe (basata sul nome dell'auto per semplicità, es. se contiene "Skoda" o "Toyota")
+        function filterStandings(classFilter) {
+            if (classFilter === 'all') {
+                renderTable(allResultsData);
+                return;
+            }
+
+            // Nota: per far funzionare questo filtro al 100%, il backend dovrebbe restituire l'ID della classe (car_class_id) e noi dovremmo sapere l'ID della classe R5.
+            // Poiché non abbiamo ancora quel dato nei risultati di /standings/stage, filtriamo per stringa (es. cerchiamo "R5" nel nome della vettura o assumiamo che tutte le auto siano R5 per ora).
+            // Come workaround temporaneo, filtriamo se il nome della vettura contiene la stringa della classe (es. "R5").
+            // In futuro, quando avremo una rotta corretta, questo filtro sarà preciso.
+            
+            const filtered = allResultsData.filter(r => {
+                // Se abbiamo il campo car_class_id e sappiamo l'ID della classe R5, possiamo usare:
+                // return r.car_class_id === 1;
+                
+                // Workaround basato sulle classi conosciute:
+                if (classFilter === 'R5' && (r.car_model?.includes('Skoda') || r.car_model?.includes('Toyota') || r.car_model?.includes('Hyundai'))) return true;
+                if (classFilter === 'R4' && (r.car_model?.includes('Ford') || r.car_model?.includes('Citroen'))) return true;
+                return false;
+            });
+
+            // Ricalcoliamo le posizioni e i gap per il sottoinsieme filtrato
+            const sortedFiltered = [...filtered].sort((a, b) => a.time_ms - b.time_ms);
+            
+            const dataWithGaps = sortedFiltered.map((r, i) => {
+                const leaderMs = sortedFiltered.length > 0 ? sortedFiltered[0].time_ms : 0;
+                const gapToFirstMs = r.time_ms - leaderMs;
+                const gapToFirstStr = gapToFirstMs === 0 ? '-' : `+${(gapToFirstMs/1000).toFixed(2)}`;
+                
+                let gapToPrevStr = '-';
+                if (i > 0) {
+                    const prevMs = sortedFiltered[i-1].time_ms;
+                    gapToPrevStr = `+${((r.time_ms - prevMs)/1000).toFixed(2)}`;
+                }
+
+                return { ...r, position: i + 1, gapFirst: gapToFirstStr, gapPrev: gapToPrevStr };
+            });
+
+            const tbody = document.getElementById('stage-results-tbody');
+            if (dataWithGaps.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">Nessun pilota di questa classe.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = dataWithGaps.map((r, i) => `
+                <tr class="${i === 0 ? 'row-first' : ''}">
+                    <td class="text-center font-bold">${r.position}</td>
+                    <td>${r.driver_name}</td>
+                    <td class="text-xs font-semibold text-[#6B665F]">${r.car_model}</td>
+                    <td class="text-right font-mono font-bold">${r.time_str}</td>
+                    <td class="text-right text-[#E10600] font-mono">${r.gapPrev}</td>
+                    <td class="text-right text-[#6B665F] font-mono">${r.gapFirst}</td>
+                </tr>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
