@@ -869,7 +869,7 @@
                     btnPublish.disabled = true;
                     btnPublish.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Pubblicazione...';
                     try {
-                        const res = await apiJson(`/publish-stage/${stageId}`, 'POST', {});
+                        const res = await apiJson(`/publish-stage/${stageId}`, { method: 'POST' });
                         if (res.success) {
                             await loadTree();
                             await openStageResults(stageId);
