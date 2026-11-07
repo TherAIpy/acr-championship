@@ -36,8 +36,10 @@
                 <div class="bg-[#23211F] text-white p-3 flex justify-between items-center">
                     <h2 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-trophy text-[#E10600]"></i> Classifica</h2>
                 </div>
-                <div id="left-col-title" class="p-3 border-b border-[#D1CBBF] bg-[#EBE6DC] text-sm font-bold text-[#2C2A28] text-center">
-                    Caricamento...
+                <div class="p-3 border-b border-[#D1CBBF] bg-[#EBE6DC]">
+                    <select id="select-champ" onchange="changeChampionship(this.value)" class="w-full bg-white text-[#2C2A28] text-sm font-bold border border-[#D1CBBF] rounded p-2 focus:outline-none cursor-pointer">
+                        <option value="">Caricamento...</option>
+                    </select>
                 </div>
                 <table class="w-full table-wrc text-sm">
                     <thead>
@@ -95,21 +97,38 @@
                 // 1. Prendi i campionati visibili
                 const res = await api.getChampionships();
                 if (!res.data || res.data.length === 0) {
-                    document.getElementById('left-col-title').textContent = "Nessun campionato";
+                    document.getElementById('select-champ').innerHTML = `<option>Nessun campionato</option>`;
                     return;
                 }
                 
-                // Prendi il primo campionato (il più recente)
+                // Popola la tendina
+                const select = document.getElementById('select-champ');
+                select.innerHTML = res.data.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                
+                // Seleziona il primo campionato e carica i dati
                 v2State.champ = res.data[0];
-                document.getElementById('left-col-title').textContent = v2State.champ.name;
-
-                // 2. Carica l'albero del campionato e la classifica
+                select.value = v2State.champ.id;
                 await loadTreeAndStandings();
                 
             } catch (e) {
                 console.error("Errore inizializzazione V2:", e);
             }
         });
+
+        async function changeChampionship(id) {
+            if (!id) return;
+            const res = await api.getChampionships();
+            v2State.champ = res.data.find(c => c.id == id);
+            if (v2State.champ) {
+                await loadTreeAndStandings();
+                // Svuota la colonna di destra quando cambi campionato
+                document.getElementById('right-col-container').innerHTML = `
+                    <div class="card-wrc p-12 text-center text-gray-500 h-full flex flex-col justify-center items-center min-h-[400px]">
+                        <i class="fa-solid fa-mouse-pointer text-4xl mb-4 opacity-50"></i>
+                        <p>Seleziona una Leg dalla colonna centrale<br>per visualizzare i tempi.</p>
+                    </div>`;
+            }
+        }
 
         async function loadTreeAndStandings() {
             // Carica Classifica Campionato (Colonna Sinistra)
