@@ -11,18 +11,35 @@
 <body class="min-h-screen pb-10">
 
     <!-- HEADER -->
-    <header class="bg-[#23211F] text-white shadow-lg relative overflow-hidden border-b-4 border-[#E10600]">
-        <div class="relative max-w-[1600px] mx-auto px-4 py-4 flex items-center justify-between">
+        <!-- HEADER -->
+    <header class="relative bg-[#23211F] shadow-lg border-b-4 border-[#E10600] overflow-hidden h-32 md:h-40">
+        
+        <!-- Immagine di sfondo (Crop centrato sull'auto) -->
+        <div class="absolute inset-0 bg-[url('assets/background/vrg_banner.png')] bg-cover bg-[center_30%]"></div>
+        
+        <!-- Fading ai lati (sfuma nel colore #23211F del sito) -->
+        <div class="absolute inset-0 bg-gradient-to-r from-[#23211F] via-transparent to-[#23211F]"></div>
+        
+        <!-- Overlay scuro leggero per far risaltare i testi e i menu -->
+        <div class="absolute inset-0 bg-black/20"></div>
+
+        <div class="relative max-w-[1600px] mx-auto px-4 h-full flex items-center justify-between z-10">
+            
+            <!-- Logo a sinistra (puoi usare l'immagine del logo o del testo) -->
             <div class="flex items-center gap-4">
-                <h1 class="text-3xl font-black text-white italic tracking-tighter">ACR <span class="text-[#E10600]">CHAMPIONSHIP</span></h1>
+                <h1 class="text-3xl font-black text-white italic tracking-tighter drop-shadow-lg">
+                    ACR <span class="text-[#E10600]">CHAMPIONSHIP</span>
+                </h1>
             </div>
-            <nav class="hidden md:flex items-center gap-6 font-racing font-bold text-sm">
+            
+            <!-- Nav a destra -->
+            <nav class="hidden md:flex items-center gap-6 font-racing font-bold text-sm drop-shadow-md">
                 <!-- Link statici -->
-                <a href="index-v2.html" class="text-white border-b-2 border-[#E10600] pb-1"><i class="fa-solid fa-trophy mr-2"></i>Campionato</a>
-                <a href="archive-v2.html" class="text-[#A8A29A] hover:text-white transition"><i class="fa-solid fa-box-archive mr-2"></i>Archivio</a>
+                <a href="index-v2.html" class="text-white border-b-2 border-[#E10600] pb-1"><i class="fa-solid fa-trophy mr-2 text-[#E10600]"></i>Campionato</a>
+                <a href="archive-v2.html" class="text-[#E8E8E8] hover:text-white transition"><i class="fa-solid fa-box-archive mr-2"></i>Archivio</a>
                 
                 <!-- Separatore verticale -->
-                <div class="h-6 w-px bg-[#3D3833] mx-2"></div>
+                <div class="h-6 w-px bg-white/30 mx-2"></div>
 
                 <!-- Link dinamici (popolati da JS) -->
                 <div id="header-nav" class="flex items-center gap-4"></div>
