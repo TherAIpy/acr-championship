@@ -1762,3 +1762,80 @@ def update_leg(leg_id):
         return jsonify({"success": True}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/championship/<int:champ_id>/entries', methods=['GET'])
+def get_championship_entries(champ_id):
+    try:
+        supabase = get_supabase()
+        # Unisce championship_entry con profiles e car
+        res = supabase.table('championship_entry') \
+            .select('*, profiles(first_name, last_name, ign, driver_name), car(brand, name, car_class(name))') \
+            .eq('championship_id', champ_id) \
+            .execute()
+        
+        return jsonify({"success": True, "data": res.data}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/user/<string:user_id>/stats', methods=['GET'])
+def get_user_stats(user_id):
+    try:
+        supabase = get_supabase()
+        
+        # 1. Recupera il profilo dell'utente
+        profile_res = supabase.table('profiles').select('*').eq('id', user_id).execute()
+        if not profile_res.data:
+            return jsonify({"success": False, "error": "Profilo non trovato"}), 404
+        
+        profile = profile_res.data[0]
+        driver_name = profile.get('driver_name') # Usiamo il nome per cercare i risultati
+        
+        # 2. Campionati a cui è iscritto
+        entries_res = supabase.table('championship_entry').select('id').eq('user_id', user_id).execute()
+        total_championships = len(entries_res.data)
+
+        # 3. Stage completate e Km totali
+        # Cerchiamo tutti i risultati ufficiali associati a questo nome pilota
+        results = supabase.table('stage_result').select('*').eq('driver_name', driver_name).eq('is_official', True).execute().data
+        
+        total_stages = 0
+        total_km = 0.0
+        
+        if results:
+            total_stages = len([r for r in results if r['status'] == 'completed'])
+            
+            # Recuperiamo i km delle stage in cui ha corso
+            stage_ids = list(set([r['stage_id'] for r in results]))
+            if stage_ids:
+                stages_res = supabase.table('stage').select('distance_km').in_('id', stage_ids).execute()
+                total_km = sum([s.get('distance_km', 0) or 0 for s in stages_res.data])
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "total_championships": total_championships,
+                "total_stages": total_stages,
+                "total_km": round(total_km, 2)
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/championship/<int:champ_id>/ranking', methods=['GET'])
+def get_championship_ranking(champ_id):
+    try:
+        # Riusa la logica della classifica generale già esistente
+        # (Se hai una funzione _compute_points_for_championship, usala qui)
+        supabase = get_supabase()
+        
+        # Chiamata interna alla logica di /standings/championship (o rifai il calcolo)
+        # Per non duplicare codice, estraiamo i punti in modo semplice
+        points = _compute_points_for_championship(champ_id)
+        
+        # Prendiamo solo i primi 3
+        top3 = points[:3]
+        
+        return jsonify({"success": True, "data": top3}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
