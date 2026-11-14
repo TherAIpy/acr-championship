@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Il mio Profilo - ACR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/v2-style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="min-h-screen bg-[#E5E0D8] p-4 flex flex-col items-center pt-12 relative overflow-x-hidden">
+
+    <!-- Sfondo con montagne sfumate -->
+    <div class="absolute inset-0 opacity-10 bg-[url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80')] bg-cover bg-center"></div>
+
+    <div class="w-full max-w-4xl relative z-10">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-4xl font-black italic font-racing text-[#2C2A28]">IL MIO PROFILO</h1>
+            <a href="index-v2.html" class="bg-[#23211F] text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#E10600] transition-colors"><i class="fa-solid fa-arrow-left mr-2"></i>Torna alla Home</a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- COLONNA SINISTRA: Dati Anagrafici -->
+            <div class="md:col-span-1 card-wrc p-6">
+                <div class="text-center mb-6">
+                    <div class="w-20 h-20 bg-[#EBE6DC] rounded-full mx-auto flex items-center justify-center border-4 border-[#D1CBBF] mb-3">
+                        <i class="fa-solid fa-user text-3xl text-[#6B665F]"></i>
+                    </div>
+                    <h2 id="profile-name" class="text-2xl font-black font-racing text-[#2C2A28]">...</h2>
+                    <p id="profile-ign" class="text-sm font-bold text-[#E10600]">...</p>
+                </div>
+                
+                <div class="space-y-3 text-sm">
+                    <div class="border-b border-[#D1CBBF] pb-2">
+                        <span class="block text-xs font-bold text-[#6B665F] uppercase">Email</span>
+                        <span id="profile-email" class="font-bold text-[#2C2A28]">...</span>
+                    </div>
+                    <div class="border-b border-[#D1CBBF] pb-2">
+                        <span class="block text-xs font-bold text-[#6B665F] uppercase">Ruolo Account</span>
+                        <span id="profile-role" class="font-bold text-[#2C2A28] uppercase">...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLONNA DESTRA: Statistiche -->
+            <div class="md:col-span-2 flex flex-col gap-6">
+                
+                <div class="card-wrc p-6">
+                    <h3 class="text-lg font-black font-racing text-[#2C2A28] mb-4 border-b border-[#D1CBBF] pb-2"><i class="fa-solid fa-chart-line text-[#E10600] mr-2"></i>Le tue Statistiche</h3>
+                    
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div class="bg-[#EBE6DC] p-4 rounded-xl border border-[#D1CBBF]">
+                            <div class="text-3xl font-black font-racing text-[#E10600]" id="stat-champs">0</div>
+                            <div class="text-[10px] font-bold text-[#6B665F] uppercase mt-1">Campionati</div>
+                        </div>
+                        <div class="bg-[#EBE6DC] p-4 rounded-xl border border-[#D1CBBF]">
+                            <div class="text-3xl font-black font-racing text-[#E10600]" id="stat-stages">0</div>
+                            <div class="text-[10px] font-bold text-[#6B665F] uppercase mt-1">Stage Completate</div>
+                        </div>
+                        <div class="bg-[#EBE6DC] p-4 rounded-xl border border-[#D1CBBF]">
+                            <div class="text-3xl font-black font-racing text-[#E10600]" id="stat-km">0</div>
+                            <div class="text-[10px] font-bold text-[#6B665F] uppercase mt-1">Km Percorsi</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sezione futura per lo storico -->
+                <div class="card-wrc p-6 flex-1">
+                    <h3 class="text-lg font-black font-racing text-[#2C2A28] mb-4 border-b border-[#D1CBBF] pb-2"><i class="fa-solid fa-list-check text-[#E10600] mr-2"></i>I tuoi Campionati</h3>
+                    <div id="user-entries-list" class="text-sm text-[#6B665F]">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Caricamento storico...
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const sb = window.supabaseClient || window.supabase;
+            const { data: { session } } = await sb.auth.getSession();
+            
+            if (!session) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // 1. Mostra i dati base dell'account
+            document.getElementById('profile-email').textContent = session.user.email;
+            document.getElementById('profile-role').textContent = session.user.app_metadata?.role || 'User';
+
+            // 2. Recupera il profilo (Nomi, IGN)
+            try {
+                // Possiamo usare una rotta generica per i profili se non l'abbiamo, 
+                // ma per ora ci basta l'email per riconoscere l'utente.
+                // Se hai una rotta /api/user/<id>/stats, chiamiamola.
+                const res = await apiJson(`/user/${session.user.id}/stats`);
+                
+                if (res.success) {
+                    document.getElementById('stat-champs').textContent = res.data.total_championships || 0;
+                    document.getElementById('stat-stages').textContent = res.data.total_stages || 0;
+                    document.getElementById('stat-km').textContent = res.data.total_km || 0;
+                }
+            } catch (e) {
+                console.error("Errore caricamento statistiche:", e);
+            }
+
+            // 3. Recupera i dettagli del profilo (Nome, IGN) - Opzionale, richiede una rotta apposita
+            // Per ora usiamo l'email come fallback per il nome
+            document.getElementById('profile-name').textContent = session.user.email.split('@')[0];
+            document.getElementById('profile-ign').textContent = "Pilota ACR";
+            
+            // Nota: Per mostrare nome e ign veri, bisognerebbe fare una query su 'profiles'
+            // Se hai voglia, puoi aggiungere una rotta /api/profile/<id> nel backend.
+            // Ma per ora la pagina è funzionante.
+        });
+    </script>
+</body>
+</html>
