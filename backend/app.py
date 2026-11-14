@@ -1839,3 +1839,43 @@ def get_championship_ranking(champ_id):
         return jsonify({"success": True, "data": top3}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/users', methods=['GET'])
+@admin_required
+def get_all_users():
+    try:
+        supabase = get_supabase()
+        
+        # 1. Prendi tutti gli utenti da Supabase Auth (per l'email)
+        auth_users = supabase.auth.admin.list_users()
+        # 2. Prendi tutti i profili
+        profiles = supabase.table('profiles').select('*').execute().data
+        # 3. Prendi tutte le iscrizioni ai campionati
+        entries = supabase.table('championship_entry').select('user_id').execute().data
+
+        # Creiamo delle mappe per unire i dati velocemente
+        user_email_map = {u.id: u.email for u in auth_users}
+        profile_map = {p['id']: p for p in profiles}
+        entry_counts = {}
+        for e in entries:
+            uid = e['user_id']
+            entry_counts[uid] = entry_counts.get(uid, 0) + 1
+
+        result = []
+        # Uniamo i dati
+        for uid, email in user_email_map.items():
+            p = profile_map.get(uid, {})
+            result.append({
+                "id": uid,
+                "email": email,
+                "first_name": p.get('first_name', ''),
+                "last_name": p.get('last_name', ''),
+                "ign": p.get('ign', ''),
+                "entries_count": entry_counts.get(uid, 0)
+            })
+            
+        # Ordina per data di creazione (se presente) o per nome
+        result.sort(key=lambda x: x['last_name'])
+        return jsonify({"success": True, "data": result}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
