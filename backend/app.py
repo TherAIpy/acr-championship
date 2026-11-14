@@ -1800,7 +1800,12 @@ def update_championship(champ_id):
     try:
         data = request.json
         supabase = get_supabase()
-        supabase.table('championship').update({"name": data['name']}).eq('id', champ_id).execute()
+        
+        update_data = {"name": data['name']}
+        if 'allowed_classes' in data:
+            update_data['allowed_classes'] = data['allowed_classes']
+            
+        supabase.table('championship').update(update_data).eq('id', champ_id).execute()
         return jsonify({"success": True}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

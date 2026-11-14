@@ -131,7 +131,7 @@
                                 <i class="fa-solid ${champ.is_visible !== false ? 'fa-eye' : 'fa-eye-slash'}"></i>
                         </button>
                         <!-- Bottone Modifica (Matita) -->
-                        <button onclick="event.stopPropagation(); editChamp(${champ.id}, '${champ.name}')" class="text-slate-500 hover:text-blue-400 transition-colors mr-3" title="Modifica">
+                        <button onclick="event.stopPropagation(); editChamp(${champ.id})" class="text-slate-500 hover:text-blue-400 transition-colors mr-3" title="Modifica">
                             <i class="fa-solid fa-pen"></i>
                         </button>
                         <!-- Bottone Elimina (Cestino) -->
@@ -170,6 +170,34 @@
                 <button id="btn-annulla" class="px-5 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">Annulla</button>
                 <button id="btn-salva" class="bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-yellow-500/20">
                     <i class="fa-solid fa-floppy-disk"></i> Salva
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE MODIFICA CAMPIONATO -->
+    <div id="modal-edit-campionato" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-vrg-card p-8 rounded-xl w-full max-w-md border border-slate-700 shadow-2xl">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-pen text-vrg-accent"></i> Modifica Campionato
+            </h2>
+            <input type="hidden" id="edit-champ-id">
+            <div class="mb-4">
+                <label class="block text-sm text-slate-400 mb-2">Nome Campionato</label>
+                <input type="text" id="edit-nome-campionato" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm text-slate-400 mb-2">Classi Ammesse</label>
+                <div id="edit-class-checkboxes" class="space-y-2 max-h-40 overflow-y-auto bg-slate-800 p-3 rounded border border-slate-700">
+                    <!-- Popolato via JS -->
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-8">
+                <button onclick="document.getElementById('modal-edit-campionato').classList.replace('flex','hidden')" class="px-5 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">Annulla</button>
+                <button id="btn-update-champ" class="bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-yellow-500/20">
+                    <i class="fa-solid fa-floppy-disk"></i> Salva Modifiche
                 </button>
             </div>
         </div>
@@ -312,6 +340,51 @@
                     }
                 });
             }
+
+            // =========================================================
+            // LOGICA SALVATAGGIO MODIFICA CAMPIONATO (Nuovo Modale)
+            // =========================================================
+            const btnUpdateChamp = document.getElementById('btn-update-champ');
+            
+            if (btnUpdateChamp) {
+                btnUpdateChamp.addEventListener('click', async () => {
+                    // 1. Recupera i dati inseriti nel modale di modifica
+                    const id = document.getElementById('edit-champ-id').value;
+                    const nome = document.getElementById('edit-nome-campionato').value.trim();
+                    
+                    // 2. Recupera le classi spuntate (usa la classe .edit-class-checkbox)
+                    const selectedClasses = Array.from(document.querySelectorAll('.edit-class-checkbox:checked')).map(cb => parseInt(cb.value));
+
+                    if (!nome) return alert("Inserisci un nome per il campionato");
+
+                    // 3. Mostra il caricamento sul bottone
+                    btnUpdateChamp.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvataggio...';
+                    btnUpdateChamp.disabled = true;
+
+                    try {
+                        // 4. Invia i dati al backend
+                        const res = await api.updateChampionship(id, { 
+                            name: nome,
+                            allowed_classes: selectedClasses
+                        });
+                        
+                        if (res.success) {
+                            // 5. Se va a buon fine, chiudi il modale e ricarica la tabella
+                            document.getElementById('modal-edit-campionato').classList.replace('flex', 'hidden');
+                            loadChampionships(); 
+                        } else {
+                            alert("Errore: " + res.error);
+                        }
+                    } catch (e) {
+                        alert("Errore di connessione: " + e.message);
+                    } finally {
+                        // 6. Ripristina il bottone
+                        btnUpdateChamp.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salva Modifiche';
+                        btnUpdateChamp.disabled = false;
+                    }
+                });
+            }    
+
         });
 
         // Funzione per caricare la tabella
@@ -424,14 +497,49 @@
             } catch (e) { alert("Errore: " + e.message); }
         }
 
-        async function editChamp(id, currentName) {
-            const newName = prompt("Modifica il nome del campionato:", currentName);
-            if (newName && newName.trim() !== "" && newName !== currentName) {
+        async function editChamp(id) {
             try {
-                    await api.updateChampionship(id, { name: newName.trim() });
-                    loadChampionships();
-                } catch (e) { alert("Errore: " + e.message); }
-            }
+                // 1. Recupera i dati attuali del campionato
+                const res = await apiJson(`/championship/${id}`);
+                if (!res.success) throw new Error("Campionato non trovato");
+                const champ = res.data;
+                const currentClasses = champ.allowed_classes || [];
+
+                // 2. Popola i campi
+                document.getElementById('edit-champ-id').value = id;
+                document.getElementById('edit-nome-campionato').value = champ.name;
+
+                // 3. Popola le classi (usiamo le stesse classi caricate per il modale "Nuovo")
+                const container = document.getElementById('edit-class-checkboxes');
+                const allClasses = Array.from(document.querySelectorAll('#class-checkboxes input')).map(input => ({
+                    id: parseInt(input.value),
+                    name: input.nextSibling.textContent.trim() // Prende il nome accanto alla checkbox
+                }));
+                
+                // Se per qualche motivo non ci sono (modale nuovo mai aperto), le carichiamo al volo
+                if (allClasses.length === 0) {
+                    const classesRes = await apiJson('/car-classes');
+                    const classes = classesRes.data || [];
+                    container.innerHTML = classes.map(c => `
+                        <label class="flex items-center gap-2 text-sm text-white cursor-pointer">
+                            <input type="checkbox" value="${c.id}" class="edit-class-checkbox form-checkbox text-vrg-accent bg-slate-700 border-slate-600 rounded" ${currentClasses.includes(c.id) ? 'checked' : ''}>
+                            ${c.name}
+                        </label>
+                    `).join('');
+                } else {
+                    // Usa quelle già presenti nel DOM
+                    container.innerHTML = allClasses.map(c => `
+                        <label class="flex items-center gap-2 text-sm text-white cursor-pointer">
+                            <input type="checkbox" value="${c.id}" class="edit-class-checkbox form-checkbox text-vrg-accent bg-slate-700 border-slate-600 rounded" ${currentClasses.includes(c.id) ? 'checked' : ''}>
+                            ${c.name}
+                        </label>
+                    `).join('');
+                }
+
+                // 4. Mostra il modale
+                document.getElementById('modal-edit-campionato').classList.replace('hidden', 'flex');
+
+            } catch (e) { alert("Errore caricamento campionato: " + e.message); }
         }
     </script>
 </body>
