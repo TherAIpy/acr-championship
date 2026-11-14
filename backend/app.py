@@ -1879,3 +1879,68 @@ def get_all_users():
         return jsonify({"success": True, "data": result}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+# --- GESTIONE UTENTI GLOBALE ---
+@app.route('/api/user/<string:user_id>/ban', methods=['PUT'])
+@admin_required
+def toggle_ban(user_id):
+    try:
+        supabase = get_supabase()
+        current = supabase.table('profiles').select('is_banned').eq('id', user_id).execute()
+        if not current.data: return jsonify({"success": False, "error": "Utente non trovato"}), 404
+        
+        new_status = not current.data[0].get('is_banned', False)
+        supabase.table('profiles').update({"is_banned": new_status}).eq('id', user_id).execute()
+        return jsonify({"success": True, "is_banned": new_status}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/user/<string:user_id>/warn', methods=['PUT'])
+@admin_required
+def add_warning(user_id):
+    try:
+        supabase = get_supabase()
+        current = supabase.table('profiles').select('warnings').eq('id', user_id).execute()
+        if not current.data: return jsonify({"success": False, "error": "Utente non trovato"}), 404
+        
+        new_warnings = (current.data[0].get('warnings') or 0) + 1
+        supabase.table('profiles').update({"warnings": new_warnings}).eq('id', user_id).execute()
+        return jsonify({"success": True, "warnings": new_warnings}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/user/<string:user_id>', methods=['DELETE'])
+@admin_required
+def delete_user(user_id):
+    try:
+        supabase = get_supabase()
+        # Elimina l'utente da Auth (cancellerà a cascata profilo e iscrizioni)
+        supabase.auth.admin.delete_user(user_id)
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# --- GESTIONE ISCRITTI AL CAMPIONATO ---
+@app.route('/api/entry/<int:entry_id>/disqualify', methods=['PUT'])
+@admin_required
+def toggle_disqualify(entry_id):
+    try:
+        supabase = get_supabase()
+        current = supabase.table('championship_entry').select('is_disqualified').eq('id', entry_id).execute()
+        if not current.data: return jsonify({"success": False, "error": "Iscrizione non trovata"}), 404
+        
+        new_status = not current.data[0].get('is_disqualified', False)
+        supabase.table('championship_entry').update({"is_disqualified": new_status}).eq('id', entry_id).execute()
+        return jsonify({"success": True, "is_disqualified": new_status}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/entry/<int:entry_id>', methods=['DELETE'])
+@admin_required
+def remove_entry(entry_id):
+    try:
+        supabase = get_supabase()
+        supabase.table('championship_entry').delete().eq('id', entry_id).execute()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500

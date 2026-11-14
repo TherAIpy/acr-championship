@@ -114,7 +114,8 @@
                                 <th class="px-6 py-4">Pilota</th>
                                 <th class="px-6 py-4">IGN (In-Game)</th>
                                 <th class="px-6 py-4">Auto Dichiarata</th>
-                                <th class="px-6 py-4">Data Iscrizione</th>
+                                <th class="px-6 py-4">Stato</th>
+                                <th class="px-6 py-4 text-right">Azioni</th>
                             </tr>
                         </thead>
                         <tbody id="entries-tbody" class="divide-y divide-slate-700/50">
@@ -1197,7 +1198,6 @@
                     const profile = e.profiles || {};
                     const car = e.car || {};
                     const carName = car.brand ? `${car.brand} ${car.name}` : 'Auto non specificata';
-                    const dateStr = new Date(e.created_at).toLocaleDateString('it-IT');
                     const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.driver_name || 'Sconosciuto';
 
                     return `
@@ -1205,7 +1205,13 @@
                             <td class="px-6 py-4 font-bold text-white">${fullName}</td>
                             <td class="px-6 py-4 text-vrg-accent">${profile.ign || '-'}</td>
                             <td class="px-6 py-4">${carName} <span class="text-xs bg-slate-800 px-2 py-0.5 rounded border border-slate-600">${car.car_class?.name || '-'}</span></td>
-                            <td class="px-6 py-4 text-slate-500">${dateStr}</td>
+                            <td class="px-6 py-4">
+                                ${e.is_disqualified ? '<span class="text-xs font-bold text-red-500"><i class="fa-solid fa-ban"></i> Squalificato</span>' : '<span class="text-xs text-green-500">Regolare</span>'}
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <button onclick="toggleDsq(${e.id})" class="text-orange-500 hover:text-orange-400 p-1" title="Squalifica/Riammetti"><i class="fa-solid fa-gavel"></i></button>
+                                <button onclick="removeEntry(${e.id})" class="text-red-500 hover:text-red-400 p-1 ml-2" title="Rimuovi Iscrizione"><i class="fa-solid fa-trash"></i></button>
+                            </td>
                         </tr>
                     `;
                 }).join('');
@@ -1235,6 +1241,17 @@
             } catch (e) {
                 rankContainer.innerHTML = `<div class="text-center py-2 text-red-400">Errore: ${e.message}</div>`;
             }
+        }
+
+        async function toggleDsq(entryId) {
+            if (!confirm("Squalificare/Riammettere questo pilota?")) return;
+            try { await apiJson(`/entry/${entryId}/disqualify`, { method: 'PUT' }); loadEntriesData(); } 
+            catch (e) { alert(e.message); }
+        }
+        async function removeEntry(entryId) {
+            if (!confirm("Rimuovere questa iscrizione al campionato?")) return;
+            try { await apiJson(`/entry/${entryId}`, { method: 'DELETE' }); loadEntriesData(); } 
+            catch (e) { alert(e.message); }
         }
     </script>
 </body>
