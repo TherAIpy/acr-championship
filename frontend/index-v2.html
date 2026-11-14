@@ -297,28 +297,66 @@
                             <i class="fa-solid fa-check-circle text-green-500 text-lg"></i> 
                             Iscritto con: <span class="text-[#EAB308]">${carName}</span>
                         </div>
+                        <div class="flex gap-2">
+                            <button onclick="openEntryModal()" class="text-xs bg-[#3D3833] hover:bg-[#E10600] text-white px-3 py-1.5 rounded transition-colors font-bold" title="Cambia Auto">Cambia</button>
+                            <button onclick="leaveChampionship()" class="text-xs bg-[#3D3833] hover:bg-red-600 text-white px-3 py-1.5 rounded transition-colors font-bold" title="Ritirati">Ritirati</button>
+                        </div>
                     </div>
                 `;
-            } else {
-                // Non loggato
-                container.innerHTML = '';
             }
         }
 
         // Apre il modale per l'iscrizione
         async function openEntryModal() {
             document.getElementById('modal-entry').classList.replace('hidden', 'flex');
-            const select = document.getElementById('entry-car-select');
-            select.innerHTML = '<option value="">Caricamento...</option>';
+            const selectClass = document.getElementById('entry-class-select');
+            const selectCar = document.getElementById('entry-car-select');
             
+            selectClass.innerHTML = '<option value="">Caricamento classi...</option>';
+            selectCar.innerHTML = '<option value="">Scegli prima la classe</option>';
+            selectCar.disabled = true;
+
             try {
-                const res = await apiJson('/cars');
-                select.innerHTML = `<option value="">Scegli l'auto...</option>` + 
-                    res.data.map(c => `<option value="${c.id}">${c.brand} ${c.name} (${c.car_class?.name || 'N/D'})</option>`).join('');
-            } catch(e) { alert("Errore caricamento auto"); }
+                // 1. Carica classi ammesse nel campionato
+                const champRes = await apiJson(`/championship/${v2State.champ.id}`);
+                const allowedClassIds = champRes.data.allowed_classes || [];
+                
+                const classesRes = await apiJson('/car-classes');
+                const allowedClasses = classesRes.data.filter(c => allowedClassIds.includes(c.id));
+                
+                if (allowedClasses.length === 0) {
+                    selectClass.innerHTML = '<option value="">Nessuna classe ammessa</option>';
+                    return;
+                }
+
+                selectClass.innerHTML = `<option value="">Scegli la classe...</option>` + 
+                    allowedClasses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+                // 2. Quando si sceglie la classe, carica le auto corrispondenti
+                selectClass.onchange = async (e) => {
+                    const classId = parseInt(e.target.value);
+                    if (!classId) {
+                        selectCar.innerHTML = '<option value="">Scegli prima la classe</option>';
+                        selectCar.disabled = true;
+                        return;
+                    }
+
+                    selectCar.innerHTML = '<option value="">Caricamento auto...</option>';
+                    const carsRes = await apiJson('/cars');
+                    const allowedCars = carsRes.data.filter(c => c.class_id === classId);
+
+                    if (allowedCars.length === 0) {
+                        selectCar.innerHTML = '<option value="">Nessuna auto in questa classe</option>';
+                    } else {
+                        selectCar.innerHTML = `<option value="">Scegli l'auto...</option>` + 
+                            allowedCars.map(c => `<option value="${c.id}">${c.brand} ${c.name}</option>`).join('');
+                        selectCar.disabled = false;
+                    }
+                };
+            } catch(e) { alert("Errore caricamento classi/auto"); }
 
             document.getElementById('btn-confirm-entry').onclick = async () => {
-                const carId = select.value;
+                const carId = selectCar.value;
                 if (!carId) return alert("Scegli un'auto");
                 
                 const btn = document.getElementById('btn-confirm-entry');
@@ -331,10 +369,9 @@
                     });
                     if (res.success) {
                         document.getElementById('modal-entry').classList.replace('flex','hidden');
-                        // Ricarica lo stato dell'iscrizione
                         const entryRes = await apiJson(`/my-entry/${v2State.champ.id}`);
                         v2State.myEntry = entryRes.data;
-                        renderEntryButton(); // Ridisegna il banner
+                        renderEntryButton(); 
                     }
                 } catch(e) { alert("Errore: " + e.message); } 
                 finally { btn.disabled = false; btn.textContent = "Conferma Iscrizione"; }
@@ -787,6 +824,19 @@
             if (n.includes('alsazia') || n.includes('montecarlo')) 
                 return 'assets/backgrounds/vrg_banner.png'; // Auto da rally asfalto
             return 'assets/backgrounds/vrg_banner.png'; // Default
+        }
+
+                async function leaveChampionship() {
+            if (!confirm("Sei sicuro di voler annullare la tua iscrizione a questo campionato?")) return;
+            try {
+                const res = await apiJson(`/leave-championship/${v2State.champ.id}`, { method: 'DELETE' });
+                if (res.success) {
+                    v2State.myEntry = null;
+                    renderEntryButton();
+                }
+            } catch (e) {
+                alert(e.message);
+            }
         }
     </script>
 

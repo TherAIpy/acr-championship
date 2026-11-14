@@ -414,10 +414,16 @@ def get_my_entry(champ_id):
 @app.route('/api/create-championship', methods=['POST'])
 @admin_required
 def create_championship():
-    data = request.json
-    supabase = get_supabase()
-    res = supabase.table('championship').insert({"name": data['name']}).execute()
-    return jsonify({"success": True, "championship": res.data[0]})
+    try:
+        data = request.json
+        supabase = get_supabase()
+        res = supabase.table('championship').insert({
+            "name": data['name'],
+            "allowed_classes": data.get('allowed_classes', []) # Es. [1, 2] per H1 e H2
+        }).execute()
+        return jsonify({"success": True, "championship": res.data[0]})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/delete-championship/<int:champ_id>', methods=['DELETE'])
 @admin_required
@@ -2130,5 +2136,45 @@ def get_my_profile():
 
         profile = supabase.table('profiles').select('*').eq('id', user_res.user.id).execute()
         return jsonify({"success": True, "data": profile.data[0] if profile.data else {}}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/leave-championship/<int:champ_id>', methods=['DELETE'])
+def leave_championship(champ_id):
+    try:
+        auth_header = request.headers.get('Authorization')
+        token = auth_header.split(' ')[1]
+        supabase = get_supabase()
+        user_id = supabase.auth.get_user(token).user.id
+
+        # Controllo: ci sono risultati ufficiali per questo utente nel campionato?
+        # Dobbiamo trovare i risultati con il suo IGN o driver_name
+        profile = supabase.table('profiles').select('ign, driver_name').eq('id', user_id).execute().data
+        if profile:
+            user_names = [profile[0].get('ign'), profile[0].get('driver_name')]
+            user_names = [n for n in user_names if n] # Rimuovi i None
+            
+            # Trova tutte le stage del campionato
+            rallies = supabase.table('rally').select('id').eq('championship_id', champ_id).execute().data
+            rally_ids = [r['id'] for r in rallies]
+            legs = supabase.table('leg').select('id').in_('rally_id', rally_ids).execute().data
+            leg_ids = [l['id'] for l in legs]
+            stages = supabase.table('stage').select('id').in_('leg_id', leg_ids).execute().data
+            stage_ids = [s['id'] for s in stages]
+
+            if stage_ids:
+                # Controlla se esiste un risultato ufficiale con il suo nome
+                check_results = supabase.table('stage_result').select('id') \
+                    .in_('stage_id', stage_ids) \
+                    .in_('driver_name', user_names) \
+                    .eq('is_official', True) \
+                    .execute()
+                
+                if check_results.data:
+                    return jsonify({"success": False, "error": "Impossibile modificare l'iscrizione: hai già dei tempi ufficiali registrati in questo campionato."}), 400
+
+        # Se non ha risultati, procedi con l'eliminazione
+        supabase.table('championship_entry').delete().eq('championship_id', champ_id).eq('user_id', user_id).execute()
+        return jsonify({"success": True, "message": "Iscrizione annullata."}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

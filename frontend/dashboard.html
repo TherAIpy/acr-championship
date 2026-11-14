@@ -160,6 +160,12 @@
                 <label class="block text-sm text-slate-400 mb-2">Nome Campionato</label>
                 <input type="text" id="input-nome-campionato" placeholder="Es. VRG Summer Cup" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
             </div>
+            <div class="mb-4">
+                <label class="block text-sm text-slate-400 mb-2">Classi Ammesse</label>
+                <div id="class-checkboxes" class="space-y-2 max-h-40 overflow-y-auto bg-slate-800 p-3 rounded border border-slate-700">
+                    <!-- Popolato via JS -->
+                </div>
+            </div>
             <div class="flex justify-end gap-3 mt-8">
                 <button id="btn-annulla" class="px-5 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">Annulla</button>
                 <button id="btn-salva" class="bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-yellow-500/20">
@@ -175,7 +181,7 @@
     <script src="js/api.js"></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
+    document.addEventListener('DOMContentLoaded', async () => {
     // 1. Recupero la sessione
     const { data: { session } } = await supabase.auth.getSession();
 
@@ -220,7 +226,7 @@
             }
         });
     }
-
+    
     // 3. Logout
     const btnLogout = document.getElementById('btn-logout');
             if (btnLogout) {
@@ -232,6 +238,27 @@
 
             // 4. Carica i Campionati
             loadChampionships();
+
+                        // Carica le classi e le auto per il modale
+            try {
+                const [classRes, carRes] = await Promise.all([apiJson('/car-classes'), apiJson('/cars')]);
+                const cars = carRes.data || [];
+                const classes = classRes.data || [];
+                
+                const container = document.getElementById('class-checkboxes');
+                if (container) {
+                    container.innerHTML = classes.map(c => {
+                        // Trova le auto di questa classe per il tooltip
+                        const carsInClass = cars.filter(car => car.class_id === c.id).map(car => `${car.brand} ${car.name}`).join(', ');
+                        return `
+                            <label class="flex items-center gap-2 text-sm text-white cursor-pointer" title="Auto: ${carsInClass || 'Nessuna'}">
+                                <input type="checkbox" value="${c.id}" class="class-checkbox form-checkbox text-vrg-accent bg-slate-700 border-slate-600 rounded">
+                                ${c.name}
+                            </label>
+                        `;
+                    }).join('');
+                }
+            } catch (e) { console.error("Errore caricamento classi/auto", e); }
 
             // 5. Logica Modale Nuovo Campionato
             const btnNuovo = document.getElementById('btn-nuovo-campionato');
@@ -258,12 +285,16 @@
                 btnSalva.addEventListener('click', async () => {
                     const nome = inputNome.value.trim();
                     if (!nome) return alert('Inserisci un nome per il campionato');
+                    const selectedClasses = Array.from(document.querySelectorAll('.class-checkbox:checked')).map(cb => parseInt(cb.value));
 
                     btnSalva.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvataggio...';
                     btnSalva.disabled = true;
 
                     try {
-                        const res = await api.saveChampionship({ name: nome });
+                        const res = await api.saveChampionship({ 
+                            name: nome,
+                            allowed_classes: selectedClasses 
+                        });
                         if (res.success) {
                             modal.classList.add('hidden');
                             modal.classList.remove('flex');
