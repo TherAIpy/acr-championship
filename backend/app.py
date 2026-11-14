@@ -792,6 +792,12 @@ class SaveStageIn(BaseModel):
 
 @app.route('/api/save-stage', methods=['POST'])
 @admin_required
+def _normalize_name(name):
+    """Pulisce il nome per renderlo confrontabile."""
+    if not name: return ""
+    # Rimuove spazi, underscore, trattini e porta tutto in minuscolo
+    return re.sub(r'[\s_\-\.]+', '', name).lower()
+
 def save_stage():
     try:
         try:
@@ -868,6 +874,54 @@ def save_stage():
 
         if payload.results:
             insert_data = []
+
+                    # ... (dentro save_stage, dopo aver ottenuto stage_meta e prima del ciclo results)
+
+        # Recupera tutti i profili utente per il matching
+        profiles_res = supabase.table('profiles').select('id, driver_name, ign').execute().data
+        
+        # Crea una mappa per il matching veloce
+        name_to_profile = {}
+        for p in profiles_res:
+            if p.get('driver_name'):
+                name_to_profile[_normalize_name(p['driver_name'])] = p
+            if p.get('ign'):
+                name_to_profile[_normalize_name(p['ign'])] = p
+
+        insert_data = []
+        for r in payload.results:
+            # ... (codice esistente per t_ms, p_sec, is_dsq)
+            
+            # MATCHING OCR / IGN
+            driver_input = r.driver or "Sconosciuto"
+            matched_profile = name_to_profile.get(_normalize_name(driver_input))
+            
+            # Se troviamo una corrispondenza, usiamo l'IGN canonico, altrimenti il nome letto
+            if matched_profile:
+                # Se l'utente ha un IGN, usiamo quello come identificatore univoco
+                canonical_name = matched_profile.get('ign') or matched_profile.get('driver_name')
+            else:
+                canonical_name = driver_input
+
+            # Aggiungiamo il nome canonico ai dati da salvare
+            insert_data.append({
+                "stage_id": stage_id,
+                "position": r.position,
+                "driver_name": canonical_name, # <-- QUI USIAMO IL NOME NORMALIZZATO
+                "car_model": r.car or "Sconosciuta",
+                "time_str": r.time or "00:00.000",
+                "penalty": r.penalty or "-",
+                "gap": r.gap or "-",
+                "car_id": r.car_id,
+                "car_class_id": r.car_class_id,
+                "is_disqualified": is_dsq,
+                "time_ms": t_ms,
+                "penalty_sec": p_sec,
+                "status": "dsq" if is_dsq else "completed",
+                "is_official": False,
+                "version": next_version
+            })
+
             for r in payload.results:
                 t_ms = time_str_to_ms(r.time)
                 p_sec = 0.0
