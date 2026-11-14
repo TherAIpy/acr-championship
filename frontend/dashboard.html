@@ -268,6 +268,7 @@
             loadChampionships();
 
                         // Carica le classi e le auto per il modale
+                        // Carica le classi e le auto per il modale
             try {
                 const [classRes, carRes] = await Promise.all([apiJson('/car-classes'), apiJson('/cars')]);
                 const cars = carRes.data || [];
@@ -276,12 +277,17 @@
                 const container = document.getElementById('class-checkboxes');
                 if (container) {
                     container.innerHTML = classes.map(c => {
-                        // Trova le auto di questa classe per il tooltip
+                        // Trova le auto di questa classe
                         const carsInClass = cars.filter(car => car.class_id === c.id).map(car => `${car.brand} ${car.name}`).join(', ');
                         return `
-                            <label class="flex items-center gap-2 text-sm text-white cursor-pointer" title="Auto: ${carsInClass || 'Nessuna'}">
-                                <input type="checkbox" value="${c.id}" class="class-checkbox form-checkbox text-vrg-accent bg-slate-700 border-slate-600 rounded">
-                                ${c.name}
+                            <label class="flex flex-col gap-1 p-2 hover:bg-slate-700/50 rounded cursor-pointer transition-colors group border-b border-slate-700/50 last:border-0">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" value="${c.id}" class="class-checkbox form-checkbox text-vrg-accent bg-slate-700 border-slate-600 rounded">
+                                    <span class="text-sm text-white font-bold">${c.name}</span>
+                                </div>
+                                <div class="text-[10px] text-slate-400 pl-6 group-hover:text-slate-300">
+                                    <i class="fa-solid fa-car mr-1"></i> ${carsInClass || 'Nessuna auto registrata'}
+                                </div>
                             </label>
                         `;
                     }).join('');
@@ -509,31 +515,51 @@
                 document.getElementById('edit-champ-id').value = id;
                 document.getElementById('edit-nome-campionato').value = champ.name;
 
-                // 3. Popola le classi (usiamo le stesse classi caricate per il modale "Nuovo")
+                // 3. Popola le classi
                 const container = document.getElementById('edit-class-checkboxes');
-                const allClasses = Array.from(document.querySelectorAll('#class-checkboxes input')).map(input => ({
-                    id: parseInt(input.value),
-                    name: input.nextSibling.textContent.trim() // Prende il nome accanto alla checkbox
-                }));
+                const carsRes = await apiJson('/cars'); // Recuperiamo le auto
+                const cars = carsRes.data || [];
                 
-                // Se per qualche motivo non ci sono (modale nuovo mai aperto), le carichiamo al volo
+                const allClasses = Array.from(document.querySelectorAll('#class-checkboxes input')).map(input => {
+                    // Recupera l'ID e il nome dal checkbox esistente
+                    const classId = parseInt(input.value);
+                    const className = input.parentElement.nextElementSibling.textContent.trim(); // Nome della classe
+                    return { id: classId, name: className };
+                });
+                
                 if (allClasses.length === 0) {
                     const classesRes = await apiJson('/car-classes');
                     const classes = classesRes.data || [];
-                    container.innerHTML = classes.map(c => `
-                        <label class="flex items-center gap-2 text-sm text-white cursor-pointer">
-                            <input type="checkbox" value="${c.id}" class="edit-class-checkbox form-checkbox text-vrg-accent bg-slate-700 border-slate-600 rounded" ${currentClasses.includes(c.id) ? 'checked' : ''}>
-                            ${c.name}
-                        </label>
-                    `).join('');
+                    container.innerHTML = classes.map(c => {
+                        const carsInClass = cars.filter(car => car.class_id === c.id).map(car => `${car.brand} ${car.name}`).join(', ');
+                        return `
+                            <label class="flex flex-col gap-1 p-2 hover:bg-slate-700/50 rounded cursor-pointer transition-colors group border-b border-slate-700/50 last:border-0">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" value="${c.id}" class="edit-class-checkbox form-checkbox text-vrg-accent bg-slate-700 border-slate-600 rounded" ${currentClasses.includes(c.id) ? 'checked' : ''}>
+                                    <span class="text-sm text-white font-bold">${c.name}</span>
+                                </div>
+                                <div class="text-[10px] text-slate-400 pl-6 group-hover:text-slate-300">
+                                    <i class="fa-solid fa-car mr-1"></i> ${carsInClass || 'Nessuna auto registrata'}
+                                </div>
+                            </label>
+                        `;
+                    }).join('');
                 } else {
                     // Usa quelle già presenti nel DOM
-                    container.innerHTML = allClasses.map(c => `
-                        <label class="flex items-center gap-2 text-sm text-white cursor-pointer">
-                            <input type="checkbox" value="${c.id}" class="edit-class-checkbox form-checkbox text-vrg-accent bg-slate-700 border-slate-600 rounded" ${currentClasses.includes(c.id) ? 'checked' : ''}>
-                            ${c.name}
-                        </label>
-                    `).join('');
+                    container.innerHTML = allClasses.map(c => {
+                        const carsInClass = cars.filter(car => car.class_id === c.id).map(car => `${car.brand} ${car.name}`).join(', ');
+                        return `
+                            <label class="flex flex-col gap-1 p-2 hover:bg-slate-700/50 rounded cursor-pointer transition-colors group border-b border-slate-700/50 last:border-0">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" value="${c.id}" class="edit-class-checkbox form-checkbox text-vrg-accent bg-slate-700 border-slate-600 rounded" ${currentClasses.includes(c.id) ? 'checked' : ''}>
+                                    <span class="text-sm text-white font-bold">${c.name}</span>
+                                </div>
+                                <div class="text-[10px] text-slate-400 pl-6 group-hover:text-slate-300">
+                                    <i class="fa-solid fa-car mr-1"></i> ${carsInClass || 'Nessuna auto registrata'}
+                                </div>
+                            </label>
+                        `;
+                    }).join('');
                 }
 
                 // 4. Mostra il modale
