@@ -69,18 +69,20 @@
 
             <!-- TOOLBAR VISTA -->
             <div class="flex justify-between items-center mb-6">
-                <div class="flex gap-2">
+                <div class="flex gap-2 items-center">
                     <button onclick="switchView('tree')" id="btn-view-tree" class="bg-[#23211F] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors border border-transparent">
                         <i class="fa-solid fa-sitemap mr-2"></i> Struttura
                     </button>
                     <button onclick="switchView('entries')" id="btn-view-entries" class="bg-slate-800 text-slate-400 hover:text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors border border-slate-700">
                         <i class="fa-solid fa-users mr-2"></i> Piloti Iscritti
                     </button>
+
+                    <!-- TASTO AGGIUNGI RALLY SPOSTATO QUI -->
+                    <div class="h-6 w-px bg-slate-700 mx-2"></div> <!-- Separatore -->
+                    <button id="btn-add-rally" class="admin-only bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg hidden" onclick="openModal('modal-rally')">
+                        <i class="fa-solid fa-plus"></i> Aggiungi Rally
+                    </button>
                 </div>
-                
-                <button id="btn-add-rally" class="admin-only bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg hidden" onclick="openModal('modal-rally')">
-                    <i class="fa-solid fa-plus"></i> Aggiungi Rally
-                </button>
             </div>
 
             <!-- VISTA ALBERO (Quella che hai già) -->

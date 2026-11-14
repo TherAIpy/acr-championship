@@ -478,17 +478,16 @@ def delete_rally(rally_id):
 @admin_required
 def create_rally():
     try:
-        start_date = data.get('start_date')
-        end_date = data.get('end_date')
-        if start_date == "": start_date = None
-        if end_date == "": end_date = None
-
+        # QUESTA È LA RIGA CHE MANCAVA
+        data = request.json 
+        
+        supabase = get_supabase()
         res = supabase.table('rally').insert({
             "championship_id": data['championship_id'],
             "name": data['name'],
             "discord_webhook_url": data.get('discord_webhook_url', ''),
-            "start_date": start_date,
-            "end_date": end_date
+            "start_date": data.get('start_date'),
+            "end_date": data.get('end_date')
         }).execute()
         return jsonify({"success": True, "data": res.data[0]}), 201
     except Exception as e:
