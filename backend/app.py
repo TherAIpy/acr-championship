@@ -310,6 +310,11 @@ def register_user():
 
         supabase = get_supabase()
 
+        # CONTROLLO UNICITÀ IGN
+        existing_ign = supabase.table('profiles').select('id').ilike('ign', ign).execute()
+        if existing_ign.data:
+            return jsonify({"success": False, "error": "Questo Nome in Game (IGN) è già in uso. Scegline un altro."}), 400
+
         # Crea l'utente con ruolo FORZATO a 'user'
         auth_res = supabase.auth.admin.create_user({
             "email": email,
@@ -329,7 +334,7 @@ def register_user():
             "first_name": first_name,
             "last_name": last_name,
             "ign": ign,
-            "driver_name": f"{first_name} {last_name}" # Opzionale per retrocompatibilità
+            "driver_name": f"{first_name} {last_name}"
         }).execute()
 
         return jsonify({"success": True, "message": "Registrazione completata!"}), 201
@@ -337,7 +342,7 @@ def register_user():
     except Exception as e:
         error_msg = str(e)
         if "already registered" in error_msg.lower() or "unique" in error_msg.lower():
-            return jsonify({"success": False, "error": "Questa email è già registrata."}), 400
+            return jsonify({"success": False, "error": "Questa email o IGN è già registrata."}), 400
         return jsonify({"success": False, "error": error_msg}), 500
 
 @app.route('/api/join-championship', methods=['POST'])
@@ -1971,5 +1976,81 @@ def get_user_entries(user_id):
             .eq('user_id', user_id) \
             .execute()
         return jsonify({"success": True, "data": res.data}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# --- AGGIORNAMENTO PROFILO UTENTE ---
+@app.route('/api/user/profile', methods=['PUT'])
+def update_my_profile():
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header: return jsonify({"success": False, "error": "Non autorizzato"}), 401
+        token = auth_header.split(' ')[1]
+        supabase = get_supabase()
+        user_res = supabase.auth.get_user(token)
+        if not user_res.user: return jsonify({"success": False, "error": "Sessione scaduta"}), 401
+
+        user_id = user_res.user.id
+        data = request.json
+        
+        update_data = {
+            "first_name": data.get('first_name'),
+            "last_name": data.get('last_name'),
+            "driver_name": f"{data.get('first_name')} {data.get('last_name')}"
+        }
+
+        new_ign = data.get('ign', '').strip()
+        current_profile = supabase.table('profiles').select('ign, pending_ign').eq('id', user_id).execute().data[0]
+        
+        if new_ign and new_ign != current_profile.get('ign'):
+            # CONTROLLO UNICITÀ SUL NUOVO IGN
+            check_ign = supabase.table('profiles') \
+                .select('id') \
+                .or_(f'ign.ilike.{new_ign},pending_ign.ilike.{new_ign}') \
+                .neq('id', user_id) \
+                .execute()
+                
+            if check_ign.data:
+                return jsonify({"success": False, "error": "Questo IGN è già in uso o in attesa di approvazione da parte di un altro utente."}), 400
+                
+            update_data['pending_ign'] = new_ign
+
+        supabase.table('profiles').update(update_data).eq('id', user_id).execute()
+        return jsonify({"success": True, "message": "Profilo aggiornato"}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# --- APPROVAZIONE IGN (ADMIN) ---
+@app.route('/api/user/<string:user_id>/approve-ign', methods=['PUT'])
+@admin_required
+def approve_ign(user_id):
+    try:
+        supabase = get_supabase()
+        profile = supabase.table('profiles').select('pending_ign').eq('id', user_id).execute().data
+        if profile and profile[0].get('pending_ign'):
+            pending = profile[0]['pending_ign']
+            
+            # Ricontrollo di sicurezza
+            check = supabase.table('profiles').select('id').ilike('ign', pending).neq('id', user_id).execute()
+            if check.data:
+                return jsonify({"success": False, "error": "Impossibile approvare: questo IGN è stato appena preso da un altro utente."}), 400
+
+            supabase.table('profiles').update({
+                "ign": pending,
+                "pending_ign": None
+            }).eq('id', user_id).execute()
+            return jsonify({"success": True}), 200
+        return jsonify({"success": False, "error": "Nessuna richiesta in sospeso"}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# --- RIFIUTO IGN (ADMIN) ---
+@app.route('/api/user/<string:user_id>/reject-ign', methods=['PUT'])
+@admin_required
+def reject_ign(user_id):
+    try:
+        supabase = get_supabase()
+        supabase.table('profiles').update({"pending_ign": None}).eq('id', user_id).execute()
+        return jsonify({"success": True}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

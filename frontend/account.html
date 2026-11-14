@@ -28,6 +28,7 @@
                         <i class="fa-solid fa-user text-3xl text-[#6B665F]"></i>
                     </div>
                     <h2 id="profile-name" class="text-2xl font-black font-racing text-[#2C2A28]">...</h2>
+                    <button onclick="openEditProfile()" class="mt-2 text-xs font-bold text-[#E10600] hover:text-[#2C2A28] bg-[#F4F1EA] px-3 py-1 rounded border border-[#D1CBBF] transition-colors"><i class="fa-solid fa-pen mr-1"></i> Modifica Dati</button>
                     <p id="profile-ign" class="text-sm font-bold text-[#E10600]">...</p>
                 </div>
                 
@@ -150,8 +151,83 @@
                 console.error("Errore caricamento storico", e);
                 document.getElementById('user-entries-list').innerHTML = `<div class="text-red-500">Errore nel caricamento dello storico.</div>`;
             }
+
+        async function openEditProfile() {
+            const sb = window.supabaseClient || window.supabase;
+            const { data: { session } } = await sb.auth.getSession();
+            
+            document.getElementById('edit-first-name').value = document.getElementById('profile-name').textContent.split(' ')[0] || '';
+            document.getElementById('edit-last-name').value = document.getElementById('profile-name').textContent.split(' ')[1] || '';
+            document.getElementById('edit-ign').value = document.getElementById('profile-ign').textContent || '';
+            document.getElementById('edit-email').value = session.user.email;
+            
+            document.getElementById('modal-edit-profile').classList.replace('hidden', 'flex');
+        }
+
+        async function saveProfile() {
+            const sb = window.supabaseClient || window.supabase;
+            const { data: { session } } = await sb.auth.getSession();
+            
+            const newEmail = document.getElementById('edit-email').value.trim();
+            const payload = {
+                first_name: document.getElementById('edit-first-name').value.trim(),
+                last_name: document.getElementById('edit-last-name').value.trim(),
+                ign: document.getElementById('edit-ign').value.trim()
+            };
+
+            try {
+                await apiJson('/user/profile', {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+
+                if (newEmail !== session.user.email) {
+                    const { error } = await sb.auth.updateUser({ email: newEmail });
+                    if (error) throw error;
+                    alert("Ti è stata inviata una mail per confermare il nuovo indirizzo.");
+                }
+
+                alert("Dati salvati! Se hai cambiato l'IGN, attendi l'approvazione di un admin.");
+                document.getElementById('modal-edit-profile').classList.replace('flex','hidden');
+                window.location.reload();
+
+            } catch (e) {
+                alert("Errore: " + e.message);
+            }
+        }
             
         });
     </script>
+        <!-- MODALE MODIFICA PROFILO -->
+    <div id="modal-edit-profile" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-[#F4F1EA] rounded-xl p-6 w-full max-w-md border border-[#D1CBBF] shadow-2xl relative">
+            <h2 class="text-2xl font-black italic font-racing text-[#2C2A28] mb-4">Modifica Profilo</h2>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-[#6B665F] uppercase mb-1">Nome</label>
+                    <input type="text" id="edit-first-name" class="w-full bg-white text-[#2C2A28] border border-[#D1CBBF] rounded-lg px-4 py-2 font-bold focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#6B665F] uppercase mb-1">Cognome</label>
+                    <input type="text" id="edit-last-name" class="w-full bg-white text-[#2C2A28] border border-[#D1CBBF] rounded-lg px-4 py-2 font-bold focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#6B665F] uppercase mb-1">Nome in Game (IGN)</label>
+                    <input type="text" id="edit-ign" class="w-full bg-white text-[#2C2A28] border border-[#D1CBBF] rounded-lg px-4 py-2 font-bold focus:outline-none">
+                    <p class="text-[10px] text-[#E10600] mt-1 font-bold"><i class="fa-solid fa-info-circle"></i> La modifica dell'IGN richiede l'approvazione di un Admin.</p>
+                </div>
+                <div class="pt-2 border-t border-[#D1CBBF]">
+                    <label class="block text-xs font-bold text-[#6B665F] uppercase mb-1">Email</label>
+                    <input type="email" id="edit-email" class="w-full bg-white text-[#2C2A28] border border-[#D1CBBF] rounded-lg px-4 py-2 font-bold focus:outline-none">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="document.getElementById('modal-edit-profile').classList.replace('flex','hidden')" class="px-4 py-2 font-bold text-[#6B665F] hover:text-[#2C2A28]">Annulla</button>
+                <button onclick="saveProfile()" class="bg-[#E10600] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#b30500]">Salva Modifiche</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
