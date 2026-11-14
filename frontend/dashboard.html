@@ -503,7 +503,7 @@
             } catch (e) { alert("Errore: " + e.message); }
         }
 
-                async function editChamp(id) {
+        async function editChamp(id) {
             try {
                 // 1. Recupera i dati attuali del campionato
                 const res = await apiJson(`/championship/${id}`);
@@ -520,16 +520,29 @@
                     apiJson('/car-classes'),
                     apiJson('/cars')
                 ]);
+                
                 const classes = classesRes.data || [];
                 const cars = carsRes.data || [];
 
-                // 4. Costruisci la lista delle classi con le auto sotto
+                // Debug in console per capire cosa arriva
+                console.log("Classi ricevute:", classes);
+                console.log("Auto ricevute:", cars);
+
+                // 4. Costruisci la lista delle classi
                 const container = document.getElementById('edit-class-checkboxes');
+                
+                if (classes.length === 0) {
+                    container.innerHTML = `<div class="text-red-400 text-sm p-2">Errore: Nessuna classe trovata nel database.</div>`;
+                    return;
+                }
+
                 container.innerHTML = classes.map(c => {
-                    // Filtra le auto per questa classe
-                    const carsInClass = cars.filter(car => car.class_id === c.id)
-                                            .map(car => `${car.brand} ${car.name}`)
-                                            .join(', ');
+                    // Trova le auto che appartengono a questa classe
+                    const carsInClass = cars
+                        .filter(car => car.class_id === c.id)
+                        .map(car => car.name) // Mostriamo solo il nome dell'auto per evitare "Lancia Lancia"
+                        .join(', ');
+                        
                     const isChecked = currentClasses.includes(c.id) ? 'checked' : '';
 
                     return `
