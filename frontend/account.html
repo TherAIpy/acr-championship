@@ -22,25 +22,33 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             
             <!-- COLONNA SINISTRA: Dati Anagrafici -->
-            <div class="md:col-span-1 card-wrc p-6">
-                <div class="text-center mb-6">
-                    <div class="w-20 h-20 bg-[#EBE6DC] rounded-full mx-auto flex items-center justify-center border-4 border-[#D1CBBF] mb-3">
-                        <i class="fa-solid fa-user text-3xl text-[#6B665F]"></i>
+            <div class="md:col-span-1 card-wrc p-6 flex flex-col justify-between">
+                <div>
+                    <div class="text-center mb-6">
+                        <div class="w-20 h-20 bg-[#EBE6DC] rounded-full mx-auto flex items-center justify-center border-4 border-[#D1CBBF] mb-3">
+                            <i class="fa-solid fa-user text-3xl text-[#6B665F]"></i>
+                        </div>
+                        <h2 id="profile-name" class="text-2xl font-black font-racing text-[#2C2A28]">...</h2>
+                        <p class="text-sm font-bold text-[#E10600]">In Game Name: <span id="profile-ign">...</span></p>
                     </div>
-                    <h2 id="profile-name" class="text-2xl font-black font-racing text-[#2C2A28]">...</h2>
-                    <button onclick="openEditProfile()" class="mt-2 text-xs font-bold text-[#E10600] hover:text-[#2C2A28] bg-[#F4F1EA] px-3 py-1 rounded border border-[#D1CBBF] transition-colors"><i class="fa-solid fa-pen mr-1"></i> Modifica Dati</button>
-                    <p id="profile-ign" class="text-sm font-bold text-[#E10600]">...</p>
+                    
+                    <div class="space-y-3 text-sm mb-6">
+                        <div class="border-b border-[#D1CBBF] pb-2">
+                            <span class="block text-xs font-bold text-[#6B665F] uppercase">Email</span>
+                            <span id="profile-email" class="font-bold text-[#2C2A28]">...</span>
+                        </div>
+                        <div class="border-b border-[#D1CBBF] pb-2">
+                            <span class="block text-xs font-bold text-[#6B665F] uppercase">Ruolo Account</span>
+                            <span id="profile-role" class="font-bold text-[#2C2A28] uppercase">...</span>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="space-y-3 text-sm">
-                    <div class="border-b border-[#D1CBBF] pb-2">
-                        <span class="block text-xs font-bold text-[#6B665F] uppercase">Email</span>
-                        <span id="profile-email" class="font-bold text-[#2C2A28]">...</span>
-                    </div>
-                    <div class="border-b border-[#D1CBBF] pb-2">
-                        <span class="block text-xs font-bold text-[#6B665F] uppercase">Ruolo Account</span>
-                        <span id="profile-role" class="font-bold text-[#2C2A28] uppercase">...</span>
-                    </div>
+
+                <!-- TASTO MODIFICA DATI IN FONDO -->
+                <div class="mt-auto pt-4 border-t border-[#D1CBBF]">
+                    <button onclick="openEditProfile()" class="w-full text-sm font-bold text-[#F4F1EA] bg-[#2C2A28] hover:bg-[#E10600] px-4 py-2 rounded-lg transition-colors shadow-md">
+                        <i class="fa-solid fa-pen mr-1"></i> Modifica Dati Profilo
+                    </button>
                 </div>
             </div>
 
@@ -132,7 +140,7 @@
                 if (profileRes.success && profileRes.data) {
                     userProfileData = profileRes.data;
                     document.getElementById('profile-name').textContent = `${userProfileData.first_name} ${userProfileData.last_name}`;
-                    document.getElementById('profile-ign').textContent = userProfileData.ign || 'Nessun IGN';
+                    document.getElementById('profile-ign').textContent = userProfileData.ign || 'Non impostato';
                 }
 
                 const statsRes = await apiJson(`/user/${session.user.id}/stats`);
