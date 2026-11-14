@@ -1441,27 +1441,25 @@ def get_championships():
     try:
         supabase = get_supabase()
         
-        # 1. Controlliamo se chi fa la richiesta è un admin
-        auth_header = request.headers.get('Authorization')
-        is_admin = False
-        if auth_header and auth_header.startswith('Bearer '):
-            token = auth_header.split(' ')[1]
-            try:
-                user = supabase.auth.get_user(token)
-                if user and user.user.app_metadata.get('role') == 'admin':
-                    is_admin = True
-            except:
-                pass # Se il token è scaduto, lo trattiamo come anonimo
+        # Prende i campionati
+        res = supabase.table('championship').select('*').order('created_at', desc=True).execute()
+        champs = res.data
         
-        # 2. Prepariamo la query
-        query = supabase.table('championship').select('*')
-        
-        # 3. Filtriamo SOLO se non è admin
-        if not is_admin:
-            query = query.eq('is_visible', True)
+        # Per ogni campionato, calcola il numero di rally e i nomi delle classi
+        for c in champs:
+            # Conta i Rally
+            rallies = supabase.table('rally').select('id', count='exact').eq('championship_id', c['id']).execute()
+            c['rally_count'] = rallies.count if rallies.count else 0
             
-        res = query.order('created_at', desc=True).execute()
-        return jsonify({"success": True, "data": res.data}), 200
+            # Prendi i nomi delle classi ammesse
+            class_names = []
+            allowed = c.get('allowed_classes') or []
+            if allowed:
+                classes_res = supabase.table('car_class').select('name').in_('id', allowed).execute()
+                class_names = [cl['name'] for cl in classes_res.data]
+            c['class_names_str'] = ", ".join(class_names) if class_names else "-"
+
+        return jsonify({"success": True, "data": champs}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 

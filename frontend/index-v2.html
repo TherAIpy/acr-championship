@@ -162,6 +162,36 @@
             </div>
 
         </div>
+    <!-- MODALE ISCRIZIONE CAMPIONATO -->
+    <div id="modal-entry" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-[#F4F1EA] rounded-xl p-6 w-full max-w-md border border-[#D1CBBF] shadow-2xl relative">
+            <h2 class="text-2xl font-black italic font-racing text-[#2C2A28] mb-2">Iscrizione al Campionato</h2>
+            <p class="text-sm text-[#6B665F] mb-6 font-bold">Scegli la classe e la vettura con cui correrai.</p>
+            
+            <div class="space-y-4 mb-6">
+                <!-- 1. SELEZIONE CLASSE -->
+                <div>
+                    <label class="block text-xs font-bold text-[#6B665F] uppercase mb-1">1. Classe</label>
+                    <select id="entry-class-select" class="w-full bg-white text-[#2C2A28] border border-[#D1CBBF] rounded-lg px-4 py-3 focus:outline-none focus:border-[#E10600] font-bold cursor-pointer">
+                        <option value="">Caricamento classi...</option>
+                    </select>
+                </div>
+                
+                <!-- 2. SELEZIONE VETTURA -->
+                <div>
+                    <label class="block text-xs font-bold text-[#6B665F] uppercase mb-1">2. Vettura</label>
+                    <select id="entry-car-select" class="w-full bg-white text-[#2C2A28] border border-[#D1CBBF] rounded-lg px-4 py-3 focus:outline-none focus:border-[#E10600] font-bold cursor-pointer" disabled>
+                        <option value="">Scegli prima la classe</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3">
+                <button onclick="document.getElementById('modal-entry').classList.replace('flex','hidden')" class="px-4 py-2 font-bold text-[#6B665F] hover:text-[#2C2A28] transition-colors">Annulla</button>
+                <button id="btn-confirm-entry" class="bg-[#E10600] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#b30500] transition-colors">Conferma Iscrizione</button>
+            </div>
+        </div>
+    </div>
     </main>
 
     <!-- API & Scripts -->
@@ -317,22 +347,25 @@
             selectCar.disabled = true;
 
             try {
-                // 1. Carica classi ammesse nel campionato
+                // 1. Prendi il campionato per sapere le classi ammesse
                 const champRes = await apiJson(`/championship/${v2State.champ.id}`);
                 const allowedClassIds = champRes.data.allowed_classes || [];
+                console.log("Classi ammesse (ID):", allowedClassIds);
+
+                if (allowedClassIds.length === 0) {
+                    selectClass.innerHTML = `<option value="">Nessuna classe impostata dall'Admin</option>`;
+                    return; // Blocca qui se non ci sono classi
+                }
                 
+                // 2. Prendi tutte le classi e filtrala
                 const classesRes = await apiJson('/car-classes');
                 const allowedClasses = classesRes.data.filter(c => allowedClassIds.includes(c.id));
+                console.log("Classi ammesse (Oggetti):", allowedClasses);
                 
-                if (allowedClasses.length === 0) {
-                    selectClass.innerHTML = '<option value="">Nessuna classe ammessa</option>';
-                    return;
-                }
-
                 selectClass.innerHTML = `<option value="">Scegli la classe...</option>` + 
                     allowedClasses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 
-                // 2. Quando si sceglie la classe, carica le auto corrispondenti
+                // 3. Quando si sceglie la classe, carica le auto
                 selectClass.onchange = async (e) => {
                     const classId = parseInt(e.target.value);
                     if (!classId) {
@@ -353,7 +386,10 @@
                         selectCar.disabled = false;
                     }
                 };
-            } catch(e) { alert("Errore caricamento classi/auto"); }
+            } catch(e) { 
+                console.error("Errore Iscrizione:", e); 
+                selectClass.innerHTML = '<option value="">Errore di caricamento</option>';
+            }
 
             document.getElementById('btn-confirm-entry').onclick = async () => {
                 const carId = selectCar.value;
@@ -840,21 +876,5 @@
         }
     </script>
 
-    <!-- MODALE ISCRIZIONE CAMPIONATO -->
-    <div id="modal-entry" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
-        <div class="bg-[#F4F1EA] rounded-xl p-6 w-full max-w-md border border-[#D1CBBF] shadow-2xl relative">
-            <h2 class="text-2xl font-black italic font-racing text-[#2C2A28] mb-4">Iscrizione al Campionato</h2>
-            <p class="text-sm text-[#6B665F] mb-4">Scegli la vettura con cui correrai. Non potrà essere cambiata in seguito.</p>
-            
-            <select id="entry-car-select" class="w-full bg-white text-[#2C2A28] border border-[#D1CBBF] rounded-lg px-4 py-3 mb-6 focus:outline-none focus:border-[#E10600] font-bold">
-                <option value="">Caricamento auto...</option>
-            </select>
-
-            <div class="flex justify-end gap-3">
-                <button onclick="document.getElementById('modal-entry').classList.replace('flex','hidden')" class="px-4 py-2 font-bold text-[#6B665F] hover:text-[#2C2A28]">Annulla</button>
-                <button id="btn-confirm-entry" class="bg-[#E10600] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#b30500]">Conferma Iscrizione</button>
-            </div>
-        </div>
-    </div>
 </body>
 </html>
