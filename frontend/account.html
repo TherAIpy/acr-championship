@@ -118,6 +118,39 @@
             // Nota: Per mostrare nome e ign veri, bisognerebbe fare una query su 'profiles'
             // Se hai voglia, puoi aggiungere una rotta /api/profile/<id> nel backend.
             // Ma per ora la pagina è funzionante.
+        
+            // 4. Carica lo storico iscrizioni
+            try {
+                const entriesRes = await apiJson(`/user/${session.user.id}/entries`);
+                const list = document.getElementById('user-entries-list');
+                const entries = entriesRes.data || [];
+
+                if (entries.length === 0) {
+                    list.innerHTML = `<div class="text-center py-4 bg-[#EBE6DC] rounded border border-[#D1CBBF]">Non sei ancora iscritto a nessun campionato.</div>`;
+                } else {
+                    list.innerHTML = entries.map(e => {
+                        const champName = e.championship ? e.championship.name : 'Campionato Sconosciuto';
+                        const carName = e.car ? `${e.car.brand} ${e.car.name}` : 'Auto non specificata';
+                        const isDsq = e.is_disqualified;
+                        
+                        return `
+                            <div class="flex justify-between items-center p-3 mb-2 bg-[#EBE6DC] rounded-lg border border-[#D1CBBF]">
+                                <div>
+                                    <div class="font-bold text-[#2C2A28] font-racing text-lg">${champName}</div>
+                                    <div class="text-xs text-[#6B665F] font-bold"><i class="fa-solid fa-car mr-1"></i> ${carName}</div>
+                                </div>
+                                ${isDsq 
+                                    ? '<span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded border border-red-300">Squalificato</span>' 
+                                    : '<span class="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded border border-green-300">Regolare</span>'}
+                            </div>
+                        `;
+                    }).join('');
+                }
+            } catch (e) {
+                console.error("Errore caricamento storico", e);
+                document.getElementById('user-entries-list').innerHTML = `<div class="text-red-500">Errore nel caricamento dello storico.</div>`;
+            }
+            
         });
     </script>
 </body>

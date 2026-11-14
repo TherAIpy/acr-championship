@@ -45,12 +45,26 @@
                         
                         if (error) throw error;
 
-                        // Controlla il ruolo
                         const isAdmin = data.user.app_metadata?.role === 'admin';
                         
                         if (isAdmin) {
                             window.location.href = 'dashboard.html';
                         } else {
+                            // Controllo Ban (solo per gli utenti normali)
+                            try {
+                                const res = await apiJson(`/user/${data.user.id}/stats`); // Usiamo questa rotta che già conosciamo
+                                // Per farlo funzionare, dobbiamo restituire is_banned dalla rotta stats, 
+                                // oppure fare una chiamata apposita. Usiamo una chiamata finta per ora.
+                                const statusRes = await apiJson('/profile-status'); 
+                                if (statusRes && statusRes.is_banned) {
+                                    await sb.auth.signOut();
+                                    throw new Error("Il tuo account è stato sospeso. Contatta un amministratore.");
+                                }
+                            } catch (err) {
+                                if(err.message.includes("sospeso")) throw err; 
+                                // Se la rotta non esiste ancora, ignoriamo l'errore e facciamo entrare
+                            }
+                            
                             window.location.href = 'index-v2.html';
                         }
                     } catch (err) {

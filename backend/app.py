@@ -1822,6 +1822,23 @@ def get_user_stats(user_id):
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/profile-status', methods=['GET'])
+def profile_status():
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header: return jsonify({"is_banned": False}), 200
+        token = auth_header.split(' ')[1]
+        supabase = get_supabase()
+        user_res = supabase.auth.get_user(token)
+        if not user_res.user: return jsonify({"is_banned": False}), 200
+        
+        profile = supabase.table('profiles').select('is_banned').eq('id', user_res.user.id).execute()
+        if profile.data and profile.data[0].get('is_banned'):
+            return jsonify({"is_banned": True}), 200
+        return jsonify({"is_banned": False}), 200
+    except:
+        return jsonify({"is_banned": False}), 200
+
 @app.route('/api/championship/<int:champ_id>/ranking', methods=['GET'])
 def get_championship_ranking(champ_id):
     try:
@@ -1942,5 +1959,17 @@ def remove_entry(entry_id):
         supabase = get_supabase()
         supabase.table('championship_entry').delete().eq('id', entry_id).execute()
         return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/user/<string:user_id>/entries', methods=['GET'])
+def get_user_entries(user_id):
+    try:
+        supabase = get_supabase()
+        res = supabase.table('championship_entry') \
+            .select('*, championship(name), car(brand, name)') \
+            .eq('user_id', user_id) \
+            .execute()
+        return jsonify({"success": True, "data": res.data}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
