@@ -2054,3 +2054,18 @@ def reject_ign(user_id):
         return jsonify({"success": True}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/user/profile', methods=['GET'])
+def get_my_profile():
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header: return jsonify({"success": False}), 401
+        token = auth_header.split(' ')[1]
+        supabase = get_supabase()
+        user_res = supabase.auth.get_user(token)
+        if not user_res.user: return jsonify({"success": False}), 401
+
+        profile = supabase.table('profiles').select('*').eq('id', user_res.user.id).execute()
+        return jsonify({"success": True, "data": profile.data[0] if profile.data else {}}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500

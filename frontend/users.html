@@ -70,7 +70,7 @@
     <script src="js/api.js"></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
+                document.addEventListener('DOMContentLoaded', async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session || session.user.app_metadata?.role !== 'admin') {
                 window.location.href = '/';
@@ -82,72 +82,75 @@
                 const tbody = document.getElementById('users-tbody');
                 
                 if (!res.data || res.data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-500">Nessun utente registrato.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500">Nessun utente registrato.</td></tr>`;
                     return;
                 }
 
                 tbody.innerHTML = res.data.map(u => `
                     <tr class="hover:bg-slate-800/30 transition-colors">
                         <td class="px-6 py-4 font-bold text-white">${u.first_name} ${u.last_name}</td>
+                        
                         <td class="px-6 py-4 text-vrg-accent">
                             ${u.ign || '-'}
-                            ${u.pending_ign ? `<br><span class="text-[10px] text-yellow-500 bg-yellow-900/30 px-2 py-0.5 rounded border border-yellow-700">In attesa: ${u.pending_ign}</span>` : ''}
+                            ${u.pending_ign ? `<br><span class="text-[10px] text-yellow-500 bg-yellow-900/30 px-2 py-0.5 rounded border border-yellow-700 block mt-1 w-fit">Richiesta: ${u.pending_ign}</span>` : ''}
                         </td>
-                        <!-- ... -->
-                        <td class="px-6 py-4 text-right flex justify-end gap-2">
-                            ${u.pending_ign ? `
-                                <button onclick="approveIgn('${u.id}')" class="text-green-500 hover:text-green-400 p-1" title="Approva IGN"><i class="fa-solid fa-check-circle"></i></button>
-                                <button onclick="rejectIgn('${u.id}')" class="text-red-500 hover:text-red-400 p-1" title="Rifiuta IGN"><i class="fa-solid fa-times-circle"></i></button>
-                            ` : ''}
-                            <button onclick="warnUser('${u.id}')" class="text-yellow-500 hover:text-yellow-400 p-1" title="Aggiungi Warning"><i class="fa-solid fa-triangle-exclamation"></i></button>
-                            <button onclick="toggleBan('${u.id}')" class="text-orange-500 hover:text-orange-400 p-1" title="Ban/Unban"><i class="fa-solid fa-ban"></i></button>
-                            <button onclick="deleteUser('${u.id}')" class="text-red-500 hover:text-red-400 p-1" title="Elimina Utente"><i class="fa-solid fa-trash"></i></button>
-                        </td>
+                        
                         <td class="px-6 py-4 text-slate-400">${u.email}</td>
+                        
                         <td class="px-6 py-4 text-center font-bold">
                             <span class="bg-slate-700 px-3 py-1 rounded-full text-xs">${u.entries_count}</span>
                         </td>
+                        
                         <td class="px-6 py-4 text-center">
                             ${u.is_banned ? '<span class="text-xs font-bold text-red-500 bg-red-900/30 px-2 py-1 rounded"><i class="fa-solid fa-ban mr-1"></i>Bannato</span>' : '<span class="text-xs text-green-500">Attivo</span>'}
                             ${u.warnings > 0 ? `<span class="text-xs font-bold text-yellow-500 ml-2" title="${u.warnings} richiami"><i class="fa-solid fa-triangle-exclamation"></i> x${u.warnings}</span>` : ''}
                         </td>
-                        <td class="px-6 py-4 text-right flex justify-end gap-2">
-                            <button onclick="warnUser('${u.id}')" class="text-yellow-500 hover:text-yellow-400 p-1" title="Aggiungi Warning"><i class="fa-solid fa-triangle-exclamation"></i></button>
-                            <button onclick="toggleBan('${u.id}')" class="text-orange-500 hover:text-orange-400 p-1" title="Ban/Unban"><i class="fa-solid fa-ban"></i></button>
-                            <button onclick="deleteUser('${u.id}')" class="text-red-500 hover:text-red-400 p-1" title="Elimina Utente"><i class="fa-solid fa-trash"></i></button>
+                        
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex justify-end gap-2 items-center">
+                                ${u.pending_ign ? `
+                                    <button onclick="approveIgn('${u.id}')" class="text-green-500 hover:text-green-400 p-1" title="Approva IGN"><i class="fa-solid fa-check-circle"></i></button>
+                                    <button onclick="rejectIgn('${u.id}')" class="text-red-500 hover:text-red-400 p-1" title="Rifiuta IGN"><i class="fa-solid fa-times-circle"></i></button>
+                                ` : ''}
+                                <button onclick="warnUser('${u.id}')" class="text-yellow-500 hover:text-yellow-400 p-1" title="Aggiungi Warning"><i class="fa-solid fa-triangle-exclamation"></i></button>
+                                <button onclick="toggleBan('${u.id}')" class="text-orange-500 hover:text-orange-400 p-1" title="Ban/Unban"><i class="fa-solid fa-ban"></i></button>
+                                <button onclick="deleteUser('${u.id}')" class="text-red-500 hover:text-red-400 p-1" title="Elimina Utente"><i class="fa-solid fa-trash"></i></button>
+                            </div>
                         </td>
                     </tr>
                 `).join('');
             } catch (e) {
-                document.getElementById('users-tbody').innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-400">Errore: ${e.message}</td></tr>`;
+                document.getElementById('users-tbody').innerHTML = `<tr><td colspan="6" class="text-center py-8 text-red-400">Errore: ${e.message}</td></tr>`;
             }
-
-        async function toggleBan(id) {
-            if (!confirm("Sei sicuro di voler cambiare lo stato di ban di questo utente?")) return;
-            try { await apiJson(`/user/${id}/ban`, { method: 'PUT' }); location.reload(); } 
-            catch (e) { alert(e.message); }
-        }
-        async function warnUser(id) {
-            if (!confirm("Vuoi aggiungere un warning a questo utente?")) return;
-            try { await apiJson(`/user/${id}/warn`, { method: 'PUT' }); location.reload(); } 
-            catch (e) { alert(e.message); }
-        }
-        async function deleteUser(id) {
-            if (!confirm("ATTENZIONE: Eliminare l'utente cancellerà tutti i suoi dati. Continuare?")) return;
-            try { await apiJson(`/user/${id}`, { method: 'DELETE' }); location.reload(); } 
-            catch (e) { alert(e.message); }
-        }
+        });
 
         async function approveIgn(id) {
             try { await apiJson(`/user/${id}/approve-ign`, { method: 'PUT' }); location.reload(); } 
             catch (e) { alert(e.message); }
         }
+        
         async function rejectIgn(id) {
             try { await apiJson(`/user/${id}/reject-ign`, { method: 'PUT' }); location.reload(); } 
             catch (e) { alert(e.message); }
         }
-    
-    });
+        
+        async function toggleBan(id) {
+            if (!confirm("Sei sicuro di voler cambiare lo stato di ban di questo utente?")) return;
+            try { await apiJson(`/user/${id}/ban`, { method: 'PUT' }); location.reload(); } 
+            catch (e) { alert(e.message); }
+        }
+        
+        async function warnUser(id) {
+            if (!confirm("Vuoi aggiungere un warning a questo utente?")) return;
+            try { await apiJson(`/user/${id}/warn`, { method: 'PUT' }); location.reload(); } 
+            catch (e) { alert(e.message); }
+        }
+        
+        async function deleteUser(id) {
+            if (!confirm("ATTENZIONE: Eliminare l'utente cancellerà tutti i suoi dati. Continuare?")) return;
+            try { await apiJson(`/user/${id}`, { method: 'DELETE' }); location.reload(); } 
+            catch (e) { alert(e.message); }
+        }
     </script>
 </body>
 </html>
