@@ -1999,6 +1999,17 @@ def update_my_profile():
             "driver_name": f"{data.get('first_name')} {data.get('last_name')}"
         }
 
+        # 1. Controlla se il profilo esiste (per evitare il list index out of range)
+        profile_check = supabase.table('profiles').select('id').eq('id', user_id).execute()
+        
+        if not profile_check.data:
+            # Se non esiste, crealo (utile per utenti creati manualmente da Supabase)
+            update_data['id'] = user_id
+            if data.get('ign'): update_data['ign'] = data.get('ign')
+            supabase.table('profiles').insert(update_data).execute()
+            return jsonify({"success": True, "message": "Profilo creato con successo"}), 200
+
+        # 2. Se esiste, controlla l'IGN e aggiorna
         new_ign = data.get('ign', '').strip()
         current_profile = supabase.table('profiles').select('ign, pending_ign').eq('id', user_id).execute().data[0]
         
