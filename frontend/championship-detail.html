@@ -67,12 +67,61 @@
             </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-8">
+            <!-- TOOLBAR VISTA -->
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-bold text-white">Struttura Campionato</h2>
+                <div class="flex gap-2">
+                    <button onclick="switchView('tree')" id="btn-view-tree" class="bg-[#23211F] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors border border-transparent">
+                        <i class="fa-solid fa-sitemap mr-2"></i> Struttura
+                    </button>
+                    <button onclick="switchView('entries')" id="btn-view-entries" class="bg-slate-800 text-slate-400 hover:text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors border border-slate-700">
+                        <i class="fa-solid fa-users mr-2"></i> Piloti Iscritti
+                    </button>
+                </div>
+                
                 <button id="btn-add-rally" class="admin-only bg-vrg-accent hover:bg-yellow-500 text-black px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg hidden" onclick="openModal('modal-rally')">
                     <i class="fa-solid fa-plus"></i> Aggiungi Rally
                 </button>
+            </div>
+
+            <!-- VISTA ALBERO (Quella che hai già) -->
+            <div id="view-tree" class="space-y-4">
+                <div id="tree-container" class="space-y-4">
+                    <!-- Popolato via JS -->
+                </div>
+            </div>
+
+            <!-- VISTA ISCRITTI (Nuova) -->
+            <div id="view-entries" class="hidden space-y-6">
+                <!-- Statistiche e Ranking -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-vrg-card p-4 rounded-xl border border-slate-700">
+                        <h3 class="text-sm font-bold text-slate-400 uppercase mb-3"><i class="fa-solid fa-trophy text-vrg-accent mr-2"></i>Top 3 Ranking</h3>
+                        <div id="top-ranking-container" class="space-y-2 text-sm text-slate-300">
+                            <div class="text-center py-2"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                        </div>
+                    </div>
+                    <div class="bg-vrg-card p-4 rounded-xl border border-slate-700 flex flex-col justify-center">
+                        <h3 class="text-sm font-bold text-slate-400 uppercase mb-1">Totale Iscritti</h3>
+                        <div id="total-entries-count" class="text-4xl font-black text-white">0</div>
+                    </div>
+                </div>
+
+                <!-- Tabella Iscritti -->
+                <div class="bg-vrg-card rounded-xl border border-slate-700 overflow-hidden">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="text-xs uppercase bg-slate-800 text-slate-400 border-b border-slate-700">
+                            <tr>
+                                <th class="px-6 py-4">Pilota</th>
+                                <th class="px-6 py-4">IGN (In-Game)</th>
+                                <th class="px-6 py-4">Auto Dichiarata</th>
+                                <th class="px-6 py-4">Data Iscrizione</th>
+                            </tr>
+                        </thead>
+                        <tbody id="entries-tbody" class="divide-y divide-slate-700/50">
+                            <tr><td colspan="4" class="text-center py-8"><i class="fa-solid fa-spinner fa-spin"></i> Caricamento iscritti...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
         <a id="btn-public-standings" href="/" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors">
@@ -1099,7 +1148,94 @@
                     await loadTree();
                 } catch (e) { alert("Errore: " + e.message); }
             }
-        } 
+        }
+        
+            // Funzione per cambiare vista
+        function switchView(viewName) {
+            const btnTree = document.getElementById('btn-view-tree');
+            const btnEntries = document.getElementById('btn-view-entries');
+            const viewTree = document.getElementById('view-tree');
+            const viewEntries = document.getElementById('view-entries');
+            const btnAddRally = document.getElementById('btn-add-rally');
+
+            if (viewName === 'tree') {
+                btnTree.className = "bg-[#23211F] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors border border-transparent";
+                btnEntries.className = "bg-slate-800 text-slate-400 hover:text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors border border-slate-700";
+                viewTree.classList.remove('hidden');
+                viewEntries.classList.add('hidden');
+                btnAddRally.classList.remove('hidden');
+            } else {
+                btnEntries.className = "bg-[#23211F] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors border border-transparent";
+                btnTree.className = "bg-slate-800 text-slate-400 hover:text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors border border-slate-700";
+                viewEntries.classList.remove('hidden');
+                viewTree.classList.add('hidden');
+                btnAddRally.classList.add('hidden'); // Nascondiamo il bottone aggiungi rally
+                
+                // Carica i dati solo quando si clicca per la prima volta
+                loadEntriesData();
+            }
+        }
+
+        // Carica la lista iscritti e il ranking
+        async function loadEntriesData() {
+            if (!champId) return;
+
+            // 1. Carica Iscritti
+            const tbody = document.getElementById('entries-tbody');
+            try {
+                const res = await apiJson(`/championship/${champId}/entries`);
+                const entries = res.data || [];
+                
+                document.getElementById('total-entries-count').textContent = entries.length;
+
+                if (entries.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-500">Nessun pilota iscritto a questo campionato.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = entries.map(e => {
+                    const profile = e.profiles || {};
+                    const car = e.car || {};
+                    const carName = car.brand ? `${car.brand} ${car.name}` : 'Auto non specificata';
+                    const dateStr = new Date(e.created_at).toLocaleDateString('it-IT');
+                    const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.driver_name || 'Sconosciuto';
+
+                    return `
+                        <tr class="hover:bg-slate-800/30">
+                            <td class="px-6 py-4 font-bold text-white">${fullName}</td>
+                            <td class="px-6 py-4 text-vrg-accent">${profile.ign || '-'}</td>
+                            <td class="px-6 py-4">${carName} <span class="text-xs bg-slate-800 px-2 py-0.5 rounded border border-slate-600">${car.car_class?.name || '-'}</span></td>
+                            <td class="px-6 py-4 text-slate-500">${dateStr}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-red-400">Errore: ${e.message}</td></tr>`;
+            }
+
+            // 2. Carica Ranking
+            const rankContainer = document.getElementById('top-ranking-container');
+            try {
+                const rankRes = await apiJson(`/championship/${champId}/ranking`);
+                const top3 = rankRes.data || [];
+                
+                if (top3.length === 0) {
+                    rankContainer.innerHTML = `<div class="text-center py-2 text-slate-500">Nessun punto assegnato.</div>`;
+                } else {
+                    rankContainer.innerHTML = top3.map((r, i) => `
+                        <div class="flex justify-between items-center bg-slate-800/50 p-2 rounded border border-slate-700 ${i===0 ? 'border-vrg-accent/50' : ''}">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">${["🥇", "🥈", "🥉"][i]}</span>
+                                <span class="font-bold text-white">${r.driver}</span>
+                            </div>
+                            <span class="font-black text-vrg-accent">${r.points} pt</span>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) {
+                rankContainer.innerHTML = `<div class="text-center py-2 text-red-400">Errore: ${e.message}</div>`;
+            }
+        }
     </script>
 </body>
 </html>
