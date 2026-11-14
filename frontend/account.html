@@ -78,127 +78,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase.js"></script>
-    <script src="js/api.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            const sb = window.supabaseClient || window.supabase;
-            const { data: { session } } = await sb.auth.getSession();
-            
-            if (!session) {
-                window.location.href = 'login.html';
-                return;
-            }
-
-            // 1. Mostra i dati base dell'account
-            document.getElementById('profile-email').textContent = session.user.email;
-            document.getElementById('profile-role').textContent = session.user.app_metadata?.role || 'User';
-
-            // 2. Recupera il profilo (Nomi, IGN)
-            try {
-                // Possiamo usare una rotta generica per i profili se non l'abbiamo, 
-                // ma per ora ci basta l'email per riconoscere l'utente.
-                // Se hai una rotta /api/user/<id>/stats, chiamiamola.
-                const res = await apiJson(`/user/${session.user.id}/stats`);
-                
-                if (res.success) {
-                    document.getElementById('stat-champs').textContent = res.data.total_championships || 0;
-                    document.getElementById('stat-stages').textContent = res.data.total_stages || 0;
-                    document.getElementById('stat-km').textContent = res.data.total_km || 0;
-                }
-            } catch (e) {
-                console.error("Errore caricamento statistiche:", e);
-            }
-
-            // 3. Recupera i dettagli del profilo (Nome, IGN) - Opzionale, richiede una rotta apposita
-            // Per ora usiamo l'email come fallback per il nome
-            document.getElementById('profile-name').textContent = session.user.email.split('@')[0];
-            document.getElementById('profile-ign').textContent = "Pilota ACR";
-            
-            // Nota: Per mostrare nome e ign veri, bisognerebbe fare una query su 'profiles'
-            // Se hai voglia, puoi aggiungere una rotta /api/profile/<id> nel backend.
-            // Ma per ora la pagina è funzionante.
-        
-            // 4. Carica lo storico iscrizioni
-            try {
-                const entriesRes = await apiJson(`/user/${session.user.id}/entries`);
-                const list = document.getElementById('user-entries-list');
-                const entries = entriesRes.data || [];
-
-                if (entries.length === 0) {
-                    list.innerHTML = `<div class="text-center py-4 bg-[#EBE6DC] rounded border border-[#D1CBBF]">Non sei ancora iscritto a nessun campionato.</div>`;
-                } else {
-                    list.innerHTML = entries.map(e => {
-                        const champName = e.championship ? e.championship.name : 'Campionato Sconosciuto';
-                        const carName = e.car ? `${e.car.brand} ${e.car.name}` : 'Auto non specificata';
-                        const isDsq = e.is_disqualified;
-                        
-                        return `
-                            <div class="flex justify-between items-center p-3 mb-2 bg-[#EBE6DC] rounded-lg border border-[#D1CBBF]">
-                                <div>
-                                    <div class="font-bold text-[#2C2A28] font-racing text-lg">${champName}</div>
-                                    <div class="text-xs text-[#6B665F] font-bold"><i class="fa-solid fa-car mr-1"></i> ${carName}</div>
-                                </div>
-                                ${isDsq 
-                                    ? '<span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded border border-red-300">Squalificato</span>' 
-                                    : '<span class="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded border border-green-300">Regolare</span>'}
-                            </div>
-                        `;
-                    }).join('');
-                }
-            } catch (e) {
-                console.error("Errore caricamento storico", e);
-                document.getElementById('user-entries-list').innerHTML = `<div class="text-red-500">Errore nel caricamento dello storico.</div>`;
-            }
-
-        async function openEditProfile() {
-            const sb = window.supabaseClient || window.supabase;
-            const { data: { session } } = await sb.auth.getSession();
-            
-            document.getElementById('edit-first-name').value = document.getElementById('profile-name').textContent.split(' ')[0] || '';
-            document.getElementById('edit-last-name').value = document.getElementById('profile-name').textContent.split(' ')[1] || '';
-            document.getElementById('edit-ign').value = document.getElementById('profile-ign').textContent || '';
-            document.getElementById('edit-email').value = session.user.email;
-            
-            document.getElementById('modal-edit-profile').classList.replace('hidden', 'flex');
-        }
-
-        async function saveProfile() {
-            const sb = window.supabaseClient || window.supabase;
-            const { data: { session } } = await sb.auth.getSession();
-            
-            const newEmail = document.getElementById('edit-email').value.trim();
-            const payload = {
-                first_name: document.getElementById('edit-first-name').value.trim(),
-                last_name: document.getElementById('edit-last-name').value.trim(),
-                ign: document.getElementById('edit-ign').value.trim()
-            };
-
-            try {
-                await apiJson('/user/profile', {
-                    method: 'PUT',
-                    body: JSON.stringify(payload)
-                });
-
-                if (newEmail !== session.user.email) {
-                    const { error } = await sb.auth.updateUser({ email: newEmail });
-                    if (error) throw error;
-                    alert("Ti è stata inviata una mail per confermare il nuovo indirizzo.");
-                }
-
-                alert("Dati salvati! Se hai cambiato l'IGN, attendi l'approvazione di un admin.");
-                document.getElementById('modal-edit-profile').classList.replace('flex','hidden');
-                window.location.reload();
-
-            } catch (e) {
-                alert("Errore: " + e.message);
-            }
-        }
-            
-        });
-    </script>
-        <!-- MODALE MODIFICA PROFILO -->
+    <!-- MODALE MODIFICA PROFILO -->
     <div id="modal-edit-profile" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
         <div class="bg-[#F4F1EA] rounded-xl p-6 w-full max-w-md border border-[#D1CBBF] shadow-2xl relative">
             <h2 class="text-2xl font-black italic font-racing text-[#2C2A28] mb-4">Modifica Profilo</h2>
@@ -229,5 +109,110 @@
             </div>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+        <script>
+                let userProfileData = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const sb = window.supabaseClient || window.supabase;
+            const { data: { session } } = await sb.auth.getSession();
+            
+            if (!session) return window.location.href = 'login.html';
+
+            // 1. Mostra email e ruolo
+            document.getElementById('profile-email').textContent = session.user.email;
+            document.getElementById('profile-role').textContent = session.user.app_metadata?.role || 'User';
+
+            // 2. Recupera profilo e statistiche
+            try {
+                const profileRes = await apiJson('/user/profile');
+                if (profileRes.success && profileRes.data) {
+                    userProfileData = profileRes.data;
+                    document.getElementById('profile-name').textContent = `${userProfileData.first_name} ${userProfileData.last_name}`;
+                    document.getElementById('profile-ign').textContent = userProfileData.ign || 'Nessun IGN';
+                }
+
+                const statsRes = await apiJson(`/user/${session.user.id}/stats`);
+                if (statsRes.success) {
+                    document.getElementById('stat-champs').textContent = statsRes.data.total_championships || 0;
+                    document.getElementById('stat-stages').textContent = statsRes.data.total_stages || 0;
+                    document.getElementById('stat-km').textContent = statsRes.data.total_km || 0;
+                }
+
+                // Carica storico iscrizioni
+                const entriesRes = await apiJson(`/user/${session.user.id}/entries`);
+                const list = document.getElementById('user-entries-list');
+                const entries = entriesRes.data || [];
+                if (entries.length === 0) {
+                    list.innerHTML = `<div class="text-center py-4 bg-[#EBE6DC] rounded border border-[#D1CBBF]">Non sei iscritto a nessun campionato.</div>`;
+                } else {
+                    list.innerHTML = entries.map(e => {
+                        const champName = e.championship ? e.championship.name : 'Sconosciuto';
+                        const carName = e.car ? `${e.car.brand} ${e.car.name}` : 'Auto non specificata';
+                        return `
+                            <div class="flex justify-between items-center p-3 mb-2 bg-[#EBE6DC] rounded-lg border border-[#D1CBBF]">
+                                <div>
+                                    <div class="font-bold text-[#2C2A28] font-racing text-lg">${champName}</div>
+                                    <div class="text-xs text-[#6B665F] font-bold"><i class="fa-solid fa-car mr-1"></i> ${carName}</div>
+                                </div>
+                                ${e.is_disqualified ? '<span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded">Squalificato</span>' : '<span class="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded">Regolare</span>'}
+                            </div>`;
+                    }).join('');
+                }
+            } catch (e) { console.error(e); }
+        });
+
+        function openEditProfile() {
+            if (!userProfileData) return alert("Dati non ancora caricati.");
+            
+            const sb = window.supabaseClient || window.supabase;
+            sb.auth.getSession().then(({data}) => {
+                document.getElementById('edit-email').value = data.session.user.email;
+            });
+
+            document.getElementById('edit-first-name').value = userProfileData.first_name || '';
+            document.getElementById('edit-last-name').value = userProfileData.last_name || '';
+            document.getElementById('edit-ign').value = userProfileData.ign || '';
+            
+            document.getElementById('modal-edit-profile').classList.replace('hidden', 'flex');
+        }
+
+        async function saveProfile() {
+            const sb = window.supabaseClient || window.supabase;
+            const { data: { session } } = await sb.auth.getSession();
+            
+            const newEmail = document.getElementById('edit-email').value.trim();
+            const payload = {
+                first_name: document.getElementById('edit-first-name').value.trim(),
+                last_name: document.getElementById('edit-last-name').value.trim(),
+                ign: document.getElementById('edit-ign').value.trim()
+            };
+
+            try {
+                const res = await apiJson('/user/profile', {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.success) throw new Error(res.error);
+
+                if (newEmail !== session.user.email) {
+                    const { error } = await sb.auth.updateUser({ email: newEmail });
+                    if (error) throw error;
+                    alert("Ti è stata inviata una mail per confermare il nuovo indirizzo.");
+                }
+
+                alert("Dati salvati! Se hai cambiato l'IGN, attendi l'approvazione di un admin.");
+                document.getElementById('modal-edit-profile').classList.replace('flex','hidden');
+                window.location.reload();
+
+            } catch (e) {
+                alert("Errore: " + e.message);
+            }
+        }
+    </script>
 </body>
 </html>
