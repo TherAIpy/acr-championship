@@ -45,16 +45,15 @@
                         
                         if (error) throw error;
 
-                        const isAdmin = data.user.app_metadata?.role === 'admin';
+                                                // Controlla il ruolo dell'utente
+                        const role = data.user.app_metadata?.role;
                         
-                        if (isAdmin) {
+                        // Se è admin O se è staff, va alla dashboard
+                        if (role === 'admin' || role === 'staff') {
                             window.location.href = 'dashboard.html';
                         } else {
-                            // Controllo Ban (solo per gli utenti normali)
+                            // ECCO IL CONTROLLO DEL BAN (solo per gli utenti normali)
                             try {
-                                const res = await apiJson(`/user/${data.user.id}/stats`); // Usiamo questa rotta che già conosciamo
-                                // Per farlo funzionare, dobbiamo restituire is_banned dalla rotta stats, 
-                                // oppure fare una chiamata apposita. Usiamo una chiamata finta per ora.
                                 const statusRes = await apiJson('/profile-status'); 
                                 if (statusRes && statusRes.is_banned) {
                                     await sb.auth.signOut();
@@ -62,9 +61,9 @@
                                 }
                             } catch (err) {
                                 if(err.message.includes("sospeso")) throw err; 
-                                // Se la rotta non esiste ancora, ignoriamo l'errore e facciamo entrare
                             }
                             
+                            // Se è un utente normale e non bannato, va al sito pubblico
                             window.location.href = 'index-v2.html';
                         }
                     } catch (err) {

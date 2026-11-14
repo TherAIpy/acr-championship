@@ -1935,6 +1935,8 @@ def get_all_users():
         result = []
         for uid, email in user_email_map.items():
             p = profile_map.get(uid, {})
+            if not p:
+                continue
             result.append({
                 "id": uid,
                 "email": email,

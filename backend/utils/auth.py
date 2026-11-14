@@ -16,12 +16,18 @@ def admin_required(f):
         auth_header = request.headers.get("Authorization", "")
         if not auth_header.startswith("Bearer "):
             return jsonify({"success": False, "error": "Token mancante"}), 401
+        
         token = auth_header.split(" ", 1)[1]
         user = get_user_from_token(token)
+        
         if not user:
             return jsonify({"success": False, "error": "Token non valido"}), 401
+            
         role = (user.app_metadata or {}).get("role")
-        if role != "admin":
+        
+        # MODIFICA QUI: Accettiamo sia 'admin' che 'staff'
+        if role not in ["admin", "staff"]:
             return jsonify({"success": False, "error": "Accesso negato"}), 403
+            
         return f(*args, **kwargs)
     return decorated

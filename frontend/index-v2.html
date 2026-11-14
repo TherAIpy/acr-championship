@@ -232,14 +232,26 @@
                 // Disegna l'header in base allo stato di login
         function renderHeader() {
             const nav = document.getElementById('header-nav');
-            if (!nav) return; // Se non hai l'id, ignora
+            if (!nav) return;
 
             if (v2State.session) {
-                const isAdmin = v2State.session.user.app_metadata?.role === 'admin';
-                const adminBtn = isAdmin ? `<a href="dashboard.html" class="text-[#E10600] font-bold hover:underline mr-4"><i class="fa-solid fa-gear mr-1"></i>Dashboard Admin</a>` : '';
+                const role = v2State.session.user.app_metadata?.role;
+                
+                // Il tasto Dashboard appare per Admin E Staff
+                const showDashboard = (role === 'admin' || role === 'staff');
+                const dashboardBtn = showDashboard 
+                    ? `<a href="dashboard.html" class="bg-[#E10600] text-white px-4 py-1.5 rounded font-bold hover:bg-[#b30500] transition shadow-sm mr-4"><i class="fa-solid fa-gear mr-1"></i>Gestione</a>` 
+                    : '';
+                
+                // Il tasto Profilo appare per gli utenti normali E per gli Admin (ma non per lo Staff)
+                const showProfile = (role !== 'staff');
+                const profileBtn = showProfile 
+                    ? `<a href="account.html" class="text-[#A8A29A] hover:text-white transition mr-4"><i class="fa-solid fa-user mr-1"></i>Il mio Profilo</a>`
+                    : '';
+
                 nav.innerHTML = `
-                    ${adminBtn}
-                    <a href="account.html" class="text-[#A8A29A] hover:text-white transition mr-4"><i class="fa-solid fa-user mr-1"></i>Il mio Profilo</a>
+                    ${dashboardBtn}
+                    ${profileBtn}
                     <button onclick="logout()" class="text-[#A8A29A] hover:text-white transition"><i class="fa-solid fa-power-off mr-1"></i>Esci</button>
                 `;
             } else {
@@ -255,6 +267,16 @@
             const container = document.getElementById('entry-banner-container');
             if (!container) return;
 
+            // --- INIZIO CONTROLLO RUOLO ---
+            const role = v2State.session?.user?.app_metadata?.role;
+            // Se non è loggato, o se è admin/staff, non mostrare il banner e interrompi la funzione
+            if (!v2State.session || role === 'staff') {
+                container.innerHTML = '';
+                return;
+            }
+            // --- FINE CONTROLLO RUOLO ---
+
+            // Da qui in poi c'è TUTTO il tuo codice originale per i piloti normali
             if (v2State.session && !v2State.myEntry) {
                 // Loggato ma non iscritto
                 container.innerHTML = `
