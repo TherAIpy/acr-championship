@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registrazione VRG ACR Champ</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/v2-style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -64,11 +63,8 @@
         </div>
     </div>
 
+    <!-- INCLUSIONE DEGLI SCRIPT UNA SOLA VOLTA (in fondo) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase.js"></script>
-    <script src="js/api.js"></script>
-
-        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase.js"></script>
     <script src="js/api.js"></script>
 
@@ -84,12 +80,10 @@
             form.addEventListener('submit', async (e) => {
                 e.preventDefault(); 
                 
-                // Cerca il bottone: prima per ID, se non lo trova prende il primo button[type="submit"] del form
                 const btn = document.getElementById('btn-register') || form.querySelector('button[type="submit"]');
                 const errDiv = document.getElementById('error-msg');
                 const succDiv = document.getElementById('success-msg');
                 
-                // Se mancano gli avvisi, li creiamo al volo per evitare crash
                 if (errDiv) errDiv.classList.add('hidden');
                 if (succDiv) succDiv.classList.add('hidden');
                 
@@ -126,8 +120,6 @@
                 };
 
                 try {
-                    console.log("Invio dati al server:", payload);
-                    
                     const res = await apiJson('/register', {
                         method: 'POST',
                         body: JSON.stringify(payload)
