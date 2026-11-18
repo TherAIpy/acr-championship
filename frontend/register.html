@@ -68,68 +68,101 @@
     <script src="js/supabase.js"></script>
     <script src="js/api.js"></script>
 
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            // 1. Carica la lista delle auto per la tendina
-            try {
-                const res = await apiJson('/cars');
-                const select = document.getElementById('car-id');
-                if (res.data && res.data.length > 0) {
-                    select.innerHTML = `<option value="">Scegli la tua vettura...</option>` + 
-                        res.data.map(c => `<option value="${c.id}">${c.brand} ${c.name} (${c.car_class?.name || 'N/D'})</option>`).join('');
-                } else {
-                    select.innerHTML = `<option value="">Nessuna auto disponibile</option>`;
-                }
-            } catch (e) {
-                document.getElementById('car-id').innerHTML = `<option value="">Errore caricamento auto</option>`;
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('register-form');
+            
+            if (!form) {
+                console.error("ERRORE: Il form con id 'register-form' non esiste!");
+                return;
             }
 
-            // 2. Gestione Invio Form
-            const form = document.getElementById('register-form');
             form.addEventListener('submit', async (e) => {
-                e.preventDefault();
+                e.preventDefault(); 
                 
-                const btn = document.getElementById('btn-register');
+                // Cerca il bottone: prima per ID, se non lo trova prende il primo button[type="submit"] del form
+                const btn = document.getElementById('btn-register') || form.querySelector('button[type="submit"]');
                 const errDiv = document.getElementById('error-msg');
                 const succDiv = document.getElementById('success-msg');
                 
-                errDiv.classList.add('hidden');
-                succDiv.classList.add('hidden');
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Registrazione...';
+                // Se mancano gli avvisi, li creiamo al volo per evitare crash
+                if (errDiv) errDiv.classList.add('hidden');
+                if (succDiv) succDiv.classList.add('hidden');
+                
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Registrazione...';
+                }
 
-                // Raccogliamo i dati dai nuovi campi HTML
+                const firstName = document.getElementById('first-name')?.value.trim();
+                const lastName = document.getElementById('last-name')?.value.trim();
+                const ign = document.getElementById('ign')?.value.trim();
+                const email = document.getElementById('email')?.value.trim();
+                const password = document.getElementById('password')?.value;
+                const inviteCode = document.getElementById('invite-code')?.value.trim();
+
+                if (!firstName || !lastName || !ign || !email || !password || !inviteCode) {
+                    if(errDiv) {
+                        errDiv.textContent = "Compila tutti i campi prima di procedere.";
+                        errDiv.classList.remove('hidden');
+                    } else {
+                        alert("Compila tutti i campi prima di procedere.");
+                    }
+                    if (btn) { btn.disabled = false; btn.innerHTML = 'Iscriviti'; }
+                    return;
+                }
+
                 const payload = {
-                    first_name: document.getElementById('first-name').value.trim(),
-                    last_name: document.getElementById('last-name').value.trim(),
-                    ign: document.getElementById('ign').value.trim(),
-                    email: document.getElementById('email').value.trim(),
-                    password: document.getElementById('password').value,
-                    invite_code: document.getElementById('invite-code').value.trim()
+                    first_name: firstName,
+                    last_name: lastName,
+                    ign: ign,
+                    email: email,
+                    password: password,
+                    invite_code: inviteCode
                 };
 
                 try {
-                    // Chiamiamo la rotta di registrazione sul backend
+                    console.log("Invio dati al server:", payload);
+                    
                     const res = await apiJson('/register', {
                         method: 'POST',
                         body: JSON.stringify(payload)
                     });
 
                     if (res.success) {
-                        succDiv.textContent = "Registrazione completata! Ora puoi effettuare il login.";
-                        succDiv.classList.remove('hidden');
+                        if(succDiv) {
+                            succDiv.textContent = "Registrazione completata! Ora puoi effettuare il login.";
+                            succDiv.classList.remove('hidden');
+                        } else {
+                            alert("Registrazione completata! Ora puoi effettuare il login.");
+                        }
                         form.reset();
                         setTimeout(() => window.location.href = 'login.html', 2000);
                     } else {
-                        errDiv.textContent = res.error || "Errore durante la registrazione.";
-                        errDiv.classList.remove('hidden');
+                        if(errDiv) {
+                            errDiv.textContent = res.error || "Errore durante la registrazione.";
+                            errDiv.classList.remove('hidden');
+                        } else {
+                            alert(res.error || "Errore durante la registrazione.");
+                        }
                     }
                 } catch (error) {
-                    errDiv.textContent = error.message || "Errore di connessione al server.";
-                    errDiv.classList.remove('hidden');
+                    console.error("Errore di rete o server:", error);
+                    if(errDiv) {
+                        errDiv.textContent = error.message || "Errore di connessione al server.";
+                        errDiv.classList.remove('hidden');
+                    } else {
+                        alert(error.message || "Errore di connessione al server.");
+                    }
                 } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = 'Iscriviti';
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = 'Iscriviti';
+                    }
                 }
             });
         });
