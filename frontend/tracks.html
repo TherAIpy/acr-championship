@@ -203,7 +203,7 @@
                             </div>
                             <i class="fa-solid fa-chevron-down text-[#6B665F] transition-transform chevron-icon"></i>
                         </div>
-                        <div class="location-stages hidden border-t border-[#D1CBBF] bg-white">
+                        <div class="location-stages border-t border-[#D1CBBF] bg-white">
                 `;
 
                 // Lista Stage
@@ -214,9 +214,9 @@
                     if (s.difficulty === 'Difficile') diffClass = 'bg-red-100 text-red-700';
 
                     html += `
-                        <div class="p-4 border-b border-[#F3F4F6] last:border-0 flex justify-between items-center hover:bg-[#F9FAFB] transition-colors group">
+                        <div onclick="window.location.href='track-detail.html?id=${s.id}'" class="p-4 border-b border-[#F3F4F6] last:border-0 flex justify-between items-center hover:bg-[#F9FAFB] transition-colors group cursor-pointer">
                             <div>
-                                <a href="track-detail.html?id=${s.id}" class="text-lg font-bold text-[#2C2A28] group-hover:text-[#E10600] transition-colors">${s.name}</a>
+                                <div class="text-lg font-bold text-[#2C2A28] group-hover:text-[#E10600] transition-colors">${s.name}</div>
                                 <div class="flex gap-3 text-xs font-bold text-[#6B665F] mt-1">
                                     <span><i class="fa-solid fa-ruler-horizontal mr-1"></i>${s.length_km} km</span>
                                     <span><i class="fa-solid fa-layer-group mr-1"></i>${s.sectors} settori</span>
@@ -225,7 +225,7 @@
                             </div>
                             <div class="flex items-center gap-3">
                                 <span class="${diffClass} px-2 py-1 rounded text-[10px] font-bold uppercase">${s.difficulty}</span>
-                                <a href="track-detail.html?id=${s.id}" class="bg-[#23211F] text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-[#E10600] transition-colors"><i class="fa-solid fa-arrow-right"></i></a>
+                                <div class="bg-[#23211F] text-white px-3 py-1.5 rounded text-xs font-bold group-hover:bg-[#E10600] transition-colors"><i class="fa-solid fa-arrow-right"></i></div>
                             </div>
                         </div>
                     `;
@@ -239,11 +239,11 @@
             }).join('');
             
             // Apri il primo accordion per default
-            const firstAccordion = container.querySelector('.location-stages');
-            if (firstAccordion) {
-                firstAccordion.classList.remove('hidden');
-                firstAccordion.previousElementSibling.querySelector('.chevron-icon').classList.add('rotate-180');
-            }
+            //const firstAccordion = container.querySelector('.location-stages');
+            //if (firstAccordion) {
+                //firstAccordion.classList.remove('hidden');
+                //firstAccordion.previousElementSibling.querySelector('.chevron-icon').classList.add('rotate-180');
+            //}
         }
 
         function toggleLocation(header) {
