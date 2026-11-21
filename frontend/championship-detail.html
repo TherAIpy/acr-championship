@@ -157,6 +157,15 @@
             <input type="hidden" id="input-leg-rally-id">
             <input type="text" id="input-nome-leg" placeholder="Nome Leg" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:border-vrg-accent">
             <input type="date" id="input-data-leg" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:border-vrg-accent">
+            <label class="block text-xs text-slate-400 mb-1 mt-4">Paese (Location)</label>
+            <select id="input-country-leg" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:border-vrg-accent">
+                <option value="">Scegli il Paese...</option>
+                <option value="Alsazia">Alsazia (Francia)</option>
+                <option value="Galles">Galles</option>
+                <option value="Grecia">Grecia</option>
+                <option value="Montecarlo">Montecarlo</option>
+                <option value="Svezia">Svezia</option>
+            </select>
             <div class="flex justify-end gap-3 mt-8">
                 <button onclick="closeModal('modal-leg')" class="px-5 py-2 rounded-lg text-sm text-slate-300 hover:text-white">Annulla</button>
                 <button id="btn-salva-leg" class="bg-vrg-accent text-black px-5 py-2 rounded-lg text-sm font-bold">Salva</button>
@@ -384,14 +393,14 @@
                 </button>
             `;
             // Carica i tracciati nel menu a tendina
-            try {
-                const tracksRes = await api.getTracks();
-                const selectTracciato = document.getElementById('select-tracciato');
-                if (selectTracciato) {
-                selectTracciato.innerHTML = `<option value="">Scegli un tracciato...</option>` + 
-                    tracksRes.data.map(t => `<option value="${t.id}">${t.name} (${t.location})</option>`).join('');
-                }
-            } catch (e) { console.error("Errore caricamento tracciati", e); }
+            //try {
+                //const tracksRes = await api.getTracks();
+                //const selectTracciato = document.getElementById('select-tracciato');
+                //if (selectTracciato) {
+                //selectTracciato.innerHTML = `<option value="">Scegli un tracciato...</option>` + 
+                    //tracksRes.data.map(t => `<option value="${t.id}">${t.name} (${t.location})</option>`).join('');
+                //}
+            //} catch (e) { console.error("Errore caricamento tracciati", e); }
 
             // 4. Ora è sicuro caricare i dati
             await loadTree();
@@ -412,11 +421,22 @@
                 const rallyId = document.getElementById('input-leg-rally-id').value;
                 const nome = document.getElementById('input-nome-leg').value.trim();
                 const data = document.getElementById('input-data-leg').value;
+                const country = document.getElementById('input-country-leg').value; // <-- RECUPERA IL PAESE
+                
                 if (!nome) return alert("Inserisci un nome");
+                if (!country) return alert("Seleziona il Paese");
+                
                 try {
-                    await api.createLeg({ rally_id: rallyId, name: nome, date: data || null });
+                    await api.createLeg({ 
+                        rally_id: rallyId, 
+                        name: nome, 
+                        date: data || null,
+                        country: country // <-- INVIA IL PAESE
+                    });
                     closeModal('modal-leg');
                     document.getElementById('input-nome-leg').value = '';
+                    document.getElementById('input-data-leg').value = '';
+                    document.getElementById('input-country-leg').value = '';
                     await loadTree();
                 } catch (e) { alert("Errore: " + e.message); }
             };
@@ -497,7 +517,7 @@
             }
         }
 
-                renderTree();
+        renderTree();
             } catch (e) {
                 container.innerHTML = `<div class="text-red-400 p-4 bg-red-900/20 rounded-lg">Errore: ${e.message}</div>`;
             }
@@ -571,6 +591,7 @@
                                         <i class="fa-solid fa-chevron-down text-slate-500 text-xs transition-transform" id="icon-leg-${leg.id}"></i>
                                         <i class="fa-solid fa-road text-slate-300"></i>
                                         <span class="font-semibold text-slate-200">${leg.name}</span>
+                                        <span class="text-[10px] font-bold bg-[#23211F] text-white px-2 py-0.5 rounded ml-2">${leg.country || 'N/D'}</span>
                                     </div>
                                     <div class="flex gap-2">${adminStageBtn} ${editLegBtn} ${deleteLegBtn} ${legStandingsBtn} ${legDiscordBtn}</div>
                                 </div>
@@ -638,14 +659,21 @@
             openModal('modal-leg');
         }
 
-                // Sostituisci openAddStage con queste due:
-        function openAddStage(legId) {
+        // Sostituisci openAddStage con queste due:
+        async function openAddStage(legId) {
+            // Trova i dati della Leg (per sapere il suo Paese)
+            let legCountry = null;
+            for (const rally of treeData.rallies) {
+                const leg = rally.legs.find(l => l.id === legId);
+                if (leg) { legCountry = leg.country; break; }
+            }
+
             document.getElementById('input-stage-leg-id').value = legId;
-            document.getElementById('input-risultati-stage-id').value = ''; // Svuota l'ID (indica che è nuova)
+            document.getElementById('input-stage-edit-id').value = ''; // Svuota l'ID (nuova stage)
             document.querySelector('#modal-stage h2').textContent = 'Nuova Stage';
             
-            // Svuota i campi
-            document.getElementById('select-tracciato').value = '';
+            // Reset campi
+            document.getElementById('select-tracciato').innerHTML = '<option value="">Caricamento...</option>';
             document.getElementById('input-nome-stage').value = '';
             document.getElementById('select-meteo').value = 'Sereno';
             document.getElementById('select-fondo').value = 'Asfalto Asciutto';
@@ -653,6 +681,27 @@
             document.getElementById('input-orario').value = '';
             
             openModal('modal-stage');
+
+            // Carica i tracciati filtrati per il paese della Leg
+            try {
+                if (!legCountry) {
+                    alert("Attenzione: questa Leg non ha un Paese assegnato. Non è possibile aggiungere Stage.");
+                    closeModal('modal-stage');
+                    return;
+                }
+
+                const tracksRes = await api.getTracks(legCountry);
+                const selectTracciato = document.getElementById('select-tracciato');
+                
+                if (!tracksRes.data || tracksRes.data.length === 0) {
+                    selectTracciato.innerHTML = `<option value="">Nessun tracciato trovato per ${legCountry}</option>`;
+                } else {
+                    selectTracciato.innerHTML = `<option value="">Scegli un tracciato...</option>` + 
+                        tracksRes.data.map(t => `<option value="${t.id}">${t.name} (${t.length_km} km)</option>`).join('');
+                }
+            } catch (e) { 
+                console.error("Errore caricamento tracciati", e); 
+            }
         }
 
         function openEditStage(stageId) {

@@ -532,7 +532,8 @@ def create_leg():
         res = supabase.table('leg').insert({
             "rally_id": rally_id,
             "name": name,
-            "date": leg_date
+            "date": leg_date,
+            "country": data.get('country') # <-- AGGIUNTO IL PAESE
         }).execute()
         
         # Aggiorna le date del rally genitore
@@ -1384,7 +1385,15 @@ def discord_publish(entity_type, entity_id):
 def get_tracks():
     try:
         supabase = get_supabase()
-        res = supabase.table('track').select('*').order('name').execute()
+        country = request.args.get('country')
+        
+        query = supabase.table('track').select('*')
+        
+        # Se il frontend passa ?country=Svezia, filtriamo
+        if country:
+            query = query.eq('country', country)
+            
+        res = query.order('name').execute()
         return jsonify({"success": True, "data": res.data}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

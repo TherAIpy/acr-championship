@@ -93,7 +93,7 @@ window.api = {
     publishStage: (id) => apiJson(`/publish-stage/${id}`, { method: 'POST' }),
     
     // Dropdown
-    getTracks: () => apiJson('/tracks'),
+    getTracks: (country) => apiJson(`/tracks${country ? `?country=${encodeURIComponent(country)}` : ''}`),
 
     // Toggle e Update
     toggleChampionship: (id) => apiJson(`/toggle-championship/${id}`, { method: 'PUT' }),
