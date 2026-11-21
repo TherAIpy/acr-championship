@@ -173,6 +173,35 @@
         </div>
     </div>
 
+    <!-- MODALE MODIFICA LEG -->
+    <div id="modal-edit-leg" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-vrg-card p-6 rounded-xl w-full max-w-md border border-slate-700 shadow-2xl">
+            <h2 class="text-xl font-bold text-white mb-4">Modifica Leg</h2>
+            <input type="hidden" id="edit-leg-id">
+            
+            <label class="block text-xs text-slate-400 mb-1">Nome Leg</label>
+            <input type="text" id="edit-nome-leg" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:border-vrg-accent">
+            
+            <label class="block text-xs text-slate-400 mb-1">Data di Svolgimento</label>
+            <input type="date" id="edit-data-leg" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:border-vrg-accent">
+            
+            <label class="block text-xs text-slate-400 mb-1">Paese (Location)</label>
+            <select id="edit-country-leg" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:border-vrg-accent">
+                <option value="">Scegli il Paese...</option>
+                <option value="Alsazia">Alsazia (Francia)</option>
+                <option value="Galles">Galles</option>
+                <option value="Grecia">Grecia</option>
+                <option value="Montecarlo">Montecarlo</option>
+                <option value="Svezia">Svezia</option>
+            </select>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeModal('modal-edit-leg')" class="px-5 py-2 rounded-lg text-sm text-slate-300 hover:text-white">Annulla</button>
+                <button id="btn-update-leg" class="bg-vrg-accent text-black px-5 py-2 rounded-lg text-sm font-bold">Salva Modifiche</button>
+            </div>
+        </div>
+    </div>
+
         <!-- MODALE AGGIUNGI STAGE (AGGIORNATO) -->
     <div id="modal-stage" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
         <div class="bg-vrg-card p-6 rounded-xl w-full max-w-xl border border-slate-700 shadow-2xl flex flex-col">
@@ -572,7 +601,7 @@
                         const adminStageBtn = isAdmin
                             ? `<button onclick="event.stopPropagation(); openAddStage(${leg.id})" class="text-xs bg-emerald-900/50 border border-emerald-700 hover:bg-emerald-800 text-emerald-200 px-3 py-1.5 rounded flex items-center gap-1 transition-colors"><i class="fa-solid fa-plus"></i> Stage</button>`
                             : '';
-                        const editLegBtn = isAdmin ? `<button onclick="event.stopPropagation(); editLeg(${leg.id}, '${leg.name}')" class="text-xs text-blue-400 hover:text-blue-300 px-2 py-1 ml-1" title="Modifica Leg"><i class="fa-solid fa-pen"></i></button>` : '';
+                        const editLegBtn = isAdmin ? `<button onclick="event.stopPropagation(); openEditLeg(${leg.id}, '${leg.name}', '${leg.date}', '${leg.country}')" class="text-xs text-blue-400 hover:text-blue-300 px-2 py-1 ml-1" title="Modifica Leg"><i class="fa-solid fa-pen"></i></button>` : '';
 
                         const deleteLegBtn = isAdmin 
                             ? `<button onclick="event.stopPropagation(); deleteLeg(${leg.id})" class="text-xs bg-red-900/50 hover:bg-red-700 text-red-200 px-2 py-1.5 rounded ml-1 transition-colors" title="Elimina Leg"><i class="fa-solid fa-trash"></i></button>`
@@ -659,17 +688,22 @@
             openModal('modal-leg');
         }
 
-        // Sostituisci openAddStage con queste due:
         async function openAddStage(legId) {
-            // Trova i dati della Leg (per sapere il suo Paese)
+            // Trova la Leg per sapere il suo Paese
             let legCountry = null;
             for (const rally of treeData.rallies) {
                 const leg = rally.legs.find(l => l.id === legId);
                 if (leg) { legCountry = leg.country; break; }
             }
 
+            // Se la leg non ha un paese, avvisa l'utente di modificarla prima
+            if (!legCountry) {
+                alert("Questa Leg non ha un Paese assegnato.\nClicca sulla matita per modificare la Leg e scegliere un Paese prima di aggiungere delle Stage.");
+                return;
+            }
+
             document.getElementById('input-stage-leg-id').value = legId;
-            document.getElementById('input-stage-edit-id').value = ''; // Svuota l'ID (nuova stage)
+            document.getElementById('input-stage-edit-id').value = ''; 
             document.querySelector('#modal-stage h2').textContent = 'Nuova Stage';
             
             // Reset campi
@@ -682,19 +716,13 @@
             
             openModal('modal-stage');
 
-            // Carica i tracciati filtrati per il paese della Leg
+            // Carica i tracciati del paese
             try {
-                if (!legCountry) {
-                    alert("Attenzione: questa Leg non ha un Paese assegnato. Non è possibile aggiungere Stage.");
-                    closeModal('modal-stage');
-                    return;
-                }
-
                 const tracksRes = await api.getTracks(legCountry);
                 const selectTracciato = document.getElementById('select-tracciato');
                 
                 if (!tracksRes.data || tracksRes.data.length === 0) {
-                    selectTracciato.innerHTML = `<option value="">Nessun tracciato trovato per ${legCountry}</option>`;
+                    selectTracciato.innerHTML = `<option value="">Nessun tracciato per ${legCountry}</option>`;
                 } else {
                     selectTracciato.innerHTML = `<option value="">Scegli un tracciato...</option>` + 
                         tracksRes.data.map(t => `<option value="${t.id}">${t.name} (${t.length_km} km)</option>`).join('');
@@ -1192,15 +1220,32 @@
             }
         }
 
-        async function editLeg(id, currentName) {
-            const newName = prompt("Modifica il nome della leg:", currentName);
-            if (newName && newName.trim() !== "" && newName !== currentName) {
-                try {
-                    await api.updateLeg(id, { name: newName.trim() });
-                    await loadTree();
-                } catch (e) { alert("Errore: " + e.message); }
-            }
+        function openEditLeg(legId, currentName, currentDate, currentCountry) {
+            document.getElementById('edit-leg-id').value = legId;
+            document.getElementById('edit-nome-leg').value = currentName;
+            document.getElementById('edit-data-leg').value = currentDate || '';
+            document.getElementById('edit-country-leg').value = currentCountry || '';
+            openModal('modal-edit-leg');
         }
+
+        document.getElementById('btn-update-leg').onclick = async () => {
+            const legId = document.getElementById('edit-leg-id').value;
+            const nome = document.getElementById('edit-nome-leg').value.trim();
+            const data = document.getElementById('edit-data-leg').value;
+            const country = document.getElementById('edit-country-leg').value;
+
+            if (!nome || !country) return alert("Nome e Paese sono obbligatori");
+
+            try {
+                await api.updateLeg(legId, { 
+                    name: nome, 
+                    date: data || null, 
+                    country: country 
+                });
+                closeModal('modal-edit-leg');
+                await loadTree();
+            } catch (e) { alert("Errore: " + e.message); }
+        };
         
             // Funzione per cambiare vista
         function switchView(viewName) {
