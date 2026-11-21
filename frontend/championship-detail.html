@@ -207,7 +207,7 @@
         <div class="bg-vrg-card p-6 rounded-xl w-full max-w-xl border border-slate-700 shadow-2xl flex flex-col">
             <h2 class="text-xl font-bold text-white mb-4">Nuova Stage</h2>
             <input type="hidden" id="input-stage-leg-id">
-            
+            <input type="hidden" id="input-stage-edit-id">
             <div class="grid grid-cols-2 gap-4">
                 <!-- Tracciato Ufficiale -->
                 <div class="col-span-2">
@@ -601,7 +601,7 @@
                         const adminStageBtn = isAdmin
                             ? `<button onclick="event.stopPropagation(); openAddStage(${leg.id})" class="text-xs bg-emerald-900/50 border border-emerald-700 hover:bg-emerald-800 text-emerald-200 px-3 py-1.5 rounded flex items-center gap-1 transition-colors"><i class="fa-solid fa-plus"></i> Stage</button>`
                             : '';
-                        const editLegBtn = isAdmin ? `<button onclick="event.stopPropagation(); openEditLeg(${leg.id}, '${leg.name}', '${leg.date}', '${leg.country}')" class="text-xs text-blue-400 hover:text-blue-300 px-2 py-1 ml-1" title="Modifica Leg"><i class="fa-solid fa-pen"></i></button>` : '';
+                        const editLegBtn = isAdmin ? `<button onclick="event.stopPropagation(); openEditLeg(${leg.id}, ${JSON.stringify(leg.name)}, ${JSON.stringify(leg.date)}, ${JSON.stringify(leg.country)})" class="text-xs text-blue-400 hover:text-blue-300 px-2 py-1 ml-1" title="Modifica Leg"><i class="fa-solid fa-pen"></i></button>` : '';
 
                         const deleteLegBtn = isAdmin 
                             ? `<button onclick="event.stopPropagation(); deleteLeg(${leg.id})" class="text-xs bg-red-900/50 hover:bg-red-700 text-red-200 px-2 py-1.5 rounded ml-1 transition-colors" title="Elimina Leg"><i class="fa-solid fa-trash"></i></button>`
