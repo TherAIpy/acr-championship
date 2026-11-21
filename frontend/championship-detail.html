@@ -209,11 +209,11 @@
             <input type="hidden" id="input-stage-leg-id">
             <input type="hidden" id="input-stage-edit-id">
             <div class="grid grid-cols-2 gap-4">
-                <!-- Tracciato Ufficiale -->
+                <!-- SELECT MACRO-AREA (Location) -->
                 <div class="col-span-2">
-                    <label class="block text-xs text-slate-400 mb-1">Tracciato (dal database ACR)</label>
-                    <select id="select-tracciato" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
-                        <option value="">Caricamento tracciati...</option>
+                    <label class="block text-xs text-slate-400 mb-1">1. Scegli la Location (Macro-Area)</label>
+                    <select id="select-macro-area" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
+                        <option value="">Caricamento locations...</option>
                     </select>
                 </div>
                 
@@ -223,19 +223,27 @@
                     <input type="text" id="input-nome-stage" placeholder="Se vuoto, userà il nome del tracciato" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
                 </div>
 
-                <!-- Meteo e Fondo -->
-                <div>
-                    <label class="block text-xs text-slate-400 mb-1">Meteo</label>
-                    <select id="select-meteo" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
-                        <option value="Sereno">Sereno</option>
-                        <option value="Nuvoloso">Nuvoloso</option>
-                        <option value="Pioggia Leggera">Pioggia Leggera</option>
-                        <option value="Pioggia Intensa">Pioggia Intensa</option>
-                        <option value="Neve">Neve</option>
+                <!-- SELECT TRACCIATO (Layout) -->
+                <div class="col-span-2">
+                    <label class="block text-xs text-slate-400 mb-1">2. Scegli il Tracciato (Layout)</label>
+                    <select id="select-tracciato" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent" disabled>
+                        <option value="">Scegli prima la Location</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block text-xs text-slate-400 mb-1">Manto Stradale</label>
+
+                <!-- BOX INFORMATIVO (Nuovo) -->
+                <div id="track-info-box" class="col-span-2 hidden bg-slate-800/80 border border-slate-700 rounded-lg p-3 flex justify-between text-xs font-bold text-slate-300">
+                    <div><i class="fa-solid fa-road text-vrg-accent mr-1"></i> Fondo Base: <span id="info-surface" class="text-white"></span></div>
+                    <div><i class="fa-solid fa-fire text-vrg-accent mr-1"></i> Difficoltà: <span id="info-difficulty" class="text-white"></span></div>
+                    <div><i class="fa-solid fa-ruler text-vrg-accent mr-1"></i> Lunghezza: <span id="info-length" class="text-white"></span></div>
+                </div>
+
+                <!-- Meteo e Fondo -->
+                <div class="mt-2">
+                    <label class="block text-xs text-slate-400 mb-1 flex justify-between">
+                        <span>Manto Stradale</span>
+                        <span id="surface-base-label" class="text-vrg-accent font-bold"></span>
+                    </label>
                     <select id="select-fondo" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
                         <option value="Asfalto Asciutto">Asfalto Asciutto</option>
                         <option value="Asfalto Bagnato">Asfalto Bagnato</option>
@@ -697,7 +705,7 @@
             openModal('modal-edit-leg');
         };
 
-        window.openAddStage = async function(legId) {
+                window.openAddStage = async function(legId) {
             // Trova la Leg per sapere il suo Paese
             let legCountry = null;
             for (const rally of treeData.rallies) {
@@ -714,21 +722,87 @@
             document.getElementById('input-stage-edit-id').value = ''; 
             document.querySelector('#modal-stage h2').textContent = 'Nuova Stage';
             
-            document.getElementById('select-tracciato').innerHTML = '<option value="">Caricamento...</option>';
-            document.getElementById('input-nome-stage').value = '';
+            const selectMacro = document.getElementById('select-macro-area');
+            const selectTracciato = document.getElementById('select-tracciato');
+            const infoBox = document.getElementById('track-info-box');
+            
+            selectMacro.innerHTML = '<option value="">Caricamento...</option>';
+            selectTracciato.innerHTML = '<option value="">Scegli prima la Location</option>';
+            selectTracciato.disabled = true;
+            infoBox.classList.add('hidden');
             
             openModal('modal-stage');
 
             try {
                 const tracksRes = await api.getTracks(legCountry);
-                const selectTracciato = document.getElementById('select-tracciato');
+                const allTracks = tracksRes.data || [];
                 
-                if (!tracksRes.data || tracksRes.data.length === 0) {
-                    selectTracciato.innerHTML = `<option value="">Nessun tracciato per ${legCountry}</option>`;
+                // Estrai le location uniche (Macro-Aree)
+                const macroAreas = [...new Set(allTracks.map(t => t.location))].filter(Boolean);
+                
+                if (macroAreas.length === 0) {
+                    selectMacro.innerHTML = `<option value="">Nessuna location per ${legCountry}</option>`;
                 } else {
-                    selectTracciato.innerHTML = `<option value="">Scegli un tracciato...</option>` + 
-                        tracksRes.data.map(t => `<option value="${t.id}">${t.name} (${t.length_km} km)</option>`).join('');
+                    selectMacro.innerHTML = `<option value="">Scegli la Location...</option>` + 
+                        macroAreas.map(m => `<option value="${m}">${m}</option>`).join('');
                 }
+
+                // Quando si sceglie la macro-area, popola i layout
+                selectMacro.onchange = (e) => {
+                    const selectedMacro = e.target.value;
+                    infoBox.classList.add('hidden');
+                    if (!selectedMacro) {
+                        selectTracciato.innerHTML = '<option value="">Scegli prima la Location</option>';
+                        selectTracciato.disabled = true;
+                        return;
+                    }
+                    
+                    const filteredTracks = allTracks.filter(t => t.location === selectedMacro);
+                    selectTracciato.innerHTML = `<option value="">Scegli il Tracciato...</option>` + 
+                        filteredTracks.map(t => `<option value="${t.id}" data-surface="${t.surface}" data-difficulty="${t.difficulty}" data-length="${t.length_km}">${t.name} (${t.length_km} km)</option>`).join('');
+                    selectTracciato.disabled = false;
+                };
+
+                // AUTO-COMPILAZIONE E BOX INFO QUANDO SI SCEGLIE IL LAYOUT
+                selectTracciato.onchange = (e) => {
+                    const selectedOption = e.target.options[e.target.selectedIndex];
+                    const surface = selectedOption.getAttribute('data-surface');
+                    const difficulty = selectedOption.getAttribute('data-difficulty');
+                    const length = selectedOption.getAttribute('data-length');
+                    
+                    const selectFondo = document.getElementById('select-fondo');
+                    const surfaceLabel = document.getElementById('surface-base-label');
+
+                    if (!surface || selectedOption.value === "") {
+                        infoBox.classList.add('hidden');
+                        surfaceLabel.textContent = "";
+                        return;
+                    }
+
+                    // Mostra il Box Informativo
+                    infoBox.classList.remove('hidden');
+                    document.getElementById('info-surface').textContent = surface;
+                    document.getElementById('info-difficulty').textContent = difficulty || 'N/D';
+                    document.getElementById('info-length').textContent = length + " km";
+                    surfaceLabel.textContent = `Base: ${surface.split(' ')[0]}`;
+
+                    // Auto-compila il manto stradale
+                    const s = surface.toLowerCase();
+                    if (s.includes('asfalto') && s.includes('sterrato')) {
+                        selectFondo.value = 'Sterrato'; // Prevalente
+                    } else if (s.includes('asfalto')) {
+                        selectFondo.value = 'Asfalto Asciutto'; 
+                    } else if (s.includes('sterrato')) {
+                        selectFondo.value = 'Sterrato';
+                    } else if (s.includes('neve')) {
+                        selectFondo.value = 'Neve Compatta';
+                    } else if (s.includes('ghiaccio')) {
+                        selectFondo.value = 'Ghiaccio';
+                    } else {
+                        selectFondo.value = 'Asfalto Asciutto'; 
+                    }
+                };
+
             } catch (e) { 
                 console.error("Errore caricamento tracciati", e); 
             }
