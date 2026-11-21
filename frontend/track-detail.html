@@ -135,22 +135,50 @@
                 if (res.track_info) {
                     const t = res.track_info;
                     
-                    // Popola la colonna sinistra
-                    document.getElementById('track-title').textContent = t.name;
-                    document.getElementById('track-location').textContent = t.location || '';
-                    document.getElementById('track-country-badge').textContent = t.country || 'N/D';
+                    // Uso l'operatore ?. per evitare crash se un elemento manca
+                    document.getElementById('track-title')?.textContent = t.name || 'Sconosciuto';
+                    document.getElementById('track-location')?.textContent = t.location || '';
+                    document.getElementById('track-country-badge')?.textContent = t.country || 'N/D';
                     
-                    document.getElementById('info-length').textContent = `${t.length_km || '-'} km`;
-                    document.getElementById('info-difficulty').textContent = t.difficulty || '-';
-                    document.getElementById('info-surface').textContent = t.surface || '-';
-                    document.getElementById('info-sectors').textContent = t.sectors || '-';
-                    document.getElementById('info-altitude').textContent = `${t.min_altitude || 0} - ${t.max_altitude || 0} m`;
-                    document.getElementById('info-width').textContent = `${t.road_width || '-'} m`;
+                    document.getElementById('info-length')?.textContent = t.length_km ? `${t.length_km} km` : '-';
+                    document.getElementById('info-sectors')?.textContent = t.sectors || '-';
+                    document.getElementById('info-alt-min')?.textContent = t.min_altitude ? `${t.min_altitude} m` : '-';
+                    document.getElementById('info-alt-max')?.textContent = t.max_altitude ? `${t.max_altitude} m` : '-';
+                    
+                    if (t.surface_gravel_percent > 0 && t.surface_asphalt_percent > 0) {
+                        document.getElementById('info-surface')?.textContent = `Misto (${t.surface_gravel_percent}% St / ${t.surface_asphalt_percent}% As)`;
+                    } else {
+                        document.getElementById('info-surface')?.textContent = t.surface || '-';
+                    }
+
+                    document.getElementById('info-width')?.textContent = t.road_width ? `${t.road_width} m` : '-';
+                    
+                    const diffEl = document.getElementById('info-difficulty');
+                    if (diffEl) {
+                        diffEl.textContent = t.difficulty || '-';
+                        if (t.difficulty === 'Facile') diffEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-green-100 text-green-700';
+                        else if (t.difficulty === 'Media') diffEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-yellow-100 text-yellow-700';
+                        else if (t.difficulty === 'Difficile') diffEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-red-100 text-red-700';
+                    }
+
+                    const barContainer = document.getElementById('difficulty-bar-container');
+                    const bar = document.getElementById('difficulty-bar');
+                    if (t.difficulty && barContainer && bar) {
+                        barContainer.classList.remove('hidden');
+                        let percent = 50;
+                        if (t.difficulty === 'Facile') percent = 25;
+                        if (t.difficulty === 'Difficile') percent = 85;
+                        bar.style.width = `${percent}%`;
+                    }
                 }
                 
                 renderLeaderboard(allResults);
             } catch (e) {
-                document.getElementById('track-results-tbody').innerHTML = `<tr><td colspan="5" class="text-center text-red-500 p-4">Errore: ${e.message}</td></tr>`;
+                console.error("Errore generale:", e);
+                const tbody = document.getElementById('track-results-tbody');
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-red-500 p-4">Errore: ${e.message}</td></tr>`;
+                }
             }
         });
 
