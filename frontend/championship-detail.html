@@ -683,12 +683,12 @@
             }
         }
 
-        function openAddLeg(rallyId) {
+        function window.openAddLeg(rallyId) {
             document.getElementById('input-leg-rally-id').value = rallyId;
             openModal('modal-leg');
         }
 
-        async function openAddStage(legId) {
+        async function window.openAddStage(legId) {
             // Trova la Leg per sapere il suo Paese
             let legCountry = null;
             for (const rally of treeData.rallies) {
@@ -732,7 +732,7 @@
             }
         }
 
-        function openEditStage(stageId) {
+        function window.openEditStage(stageId) {
             let stageData = null;
             // Cerca la stage nell'albero
             for (const rally of treeData.rallies) {
