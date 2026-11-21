@@ -479,10 +479,16 @@
             };
 
             document.getElementById('btn-salva-stage').onclick = async () => {
-                const stageId = document.getElementById('input-risultati-stage-id').value; // Se c'è, è una modifica
+                // LEGGE L'ID CORRETTO PER LA MODIFICA
+                const stageId = document.getElementById('input-stage-edit-id').value; 
                 const legId = document.getElementById('input-stage-leg-id').value;
                 const trackId = document.getElementById('select-tracciato').value;
-                const trackName = document.getElementById('select-tracciato').options[document.getElementById('select-tracciato').selectedIndex].text;
+                
+                // Trova il nome corretto del tracciato
+                const selectTracciato = document.getElementById('select-tracciato');
+                const selectedOption = selectTracciato.options[selectTracciato.selectedIndex];
+                const trackName = selectedOption.text.split(' (')[0]; // Prende solo il nome, scartando km e fondo
+                
                 const nome = document.getElementById('input-nome-stage').value.trim() || trackName;
                 const meteo = document.getElementById('select-meteo').value;
                 const fondo = document.getElementById('select-fondo').value;
@@ -502,6 +508,10 @@
                     start_time: orario || null
                 };
 
+                const btn = document.getElementById('btn-salva-stage');
+                btn.disabled = true;
+                btn.textContent = "Salvataggio...";
+
                 try {
                     if (stageId) {
                         // MODIFICA ESISTENTE
@@ -513,7 +523,12 @@
                     closeModal('modal-stage');
                     document.getElementById('input-nome-stage').value = '';
                     await loadTree();
-                } catch (e) { alert("Errore: " + e.message); }
+                } catch (e) { 
+                    alert("Errore: " + e.message); 
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = "Salva Stage";
+                }
             };
         });        
         function openModal(id) { document.getElementById(id).classList.replace('hidden', 'flex'); }
@@ -759,7 +774,7 @@
                     
                     const filteredTracks = allTracks.filter(t => t.location === selectedMacro);
                     selectTracciato.innerHTML = `<option value="">Scegli il Tracciato...</option>` + 
-                        filteredTracks.map(t => `<option value="${t.id}" data-surface="${t.surface}" data-difficulty="${t.difficulty}" data-length="${t.length_km}">${t.name} (${t.length_km} km)</option>`).join('');
+                        filteredTracks.map(t => `<option value="${t.id}" data-surface="${t.surface}" data-difficulty="${t.difficulty}" data-length="${t.length_km}">${t.name} (${t.length_km} km - ${t.surface} - ${t.difficulty})</option>`).join('');
                     selectTracciato.disabled = false;
                 };
 
