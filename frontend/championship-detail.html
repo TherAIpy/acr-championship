@@ -683,12 +683,21 @@
             }
         }
 
-        function window.openAddLeg(rallyId) {
+        // DEFINISCI LE FUNZIONI GLOBALMENTE (fuori da DOMContentLoaded)
+        window.openAddLeg = function(rallyId) {
             document.getElementById('input-leg-rally-id').value = rallyId;
             openModal('modal-leg');
-        }
+        };
 
-        async function window.openAddStage(legId) {
+        window.openEditLeg = function(legId, currentName, currentDate, currentCountry) {
+            document.getElementById('edit-leg-id').value = legId;
+            document.getElementById('edit-nome-leg').value = currentName;
+            document.getElementById('edit-data-leg').value = currentDate || '';
+            document.getElementById('edit-country-leg').value = currentCountry || '';
+            openModal('modal-edit-leg');
+        };
+
+        window.openAddStage = async function(legId) {
             // Trova la Leg per sapere il suo Paese
             let legCountry = null;
             for (const rally of treeData.rallies) {
@@ -696,7 +705,6 @@
                 if (leg) { legCountry = leg.country; break; }
             }
 
-            // Se la leg non ha un paese, avvisa l'utente di modificarla prima
             if (!legCountry) {
                 alert("Questa Leg non ha un Paese assegnato.\nClicca sulla matita per modificare la Leg e scegliere un Paese prima di aggiungere delle Stage.");
                 return;
@@ -706,17 +714,11 @@
             document.getElementById('input-stage-edit-id').value = ''; 
             document.querySelector('#modal-stage h2').textContent = 'Nuova Stage';
             
-            // Reset campi
             document.getElementById('select-tracciato').innerHTML = '<option value="">Caricamento...</option>';
             document.getElementById('input-nome-stage').value = '';
-            document.getElementById('select-meteo').value = 'Sereno';
-            document.getElementById('select-fondo').value = 'Asfalto Asciutto';
-            document.getElementById('input-temp').value = '20';
-            document.getElementById('input-orario').value = '';
             
             openModal('modal-stage');
 
-            // Carica i tracciati del paese
             try {
                 const tracksRes = await api.getTracks(legCountry);
                 const selectTracciato = document.getElementById('select-tracciato');
@@ -730,33 +732,7 @@
             } catch (e) { 
                 console.error("Errore caricamento tracciati", e); 
             }
-        }
-
-        function window.openEditStage(stageId) {
-            let stageData = null;
-            // Cerca la stage nell'albero
-            for (const rally of treeData.rallies) {
-                for (const leg of rally.legs) {
-                    const found = leg.stages.find(s => s.id === stageId);
-                    if (found) { stageData = found; break; }
-                }
-            }
-            if (!stageData) return;
-
-            document.getElementById('input-stage-leg-id').value = stageData.leg_id;
-            document.getElementById('input-risultati-stage-id').value = stageId; // Imposta l'ID per la modifica
-            document.querySelector('#modal-stage h2').textContent = 'Modifica Stage';
-            
-            // Popola i campi
-            document.getElementById('select-tracciato').value = stageData.track_id || '';
-            document.getElementById('input-nome-stage').value = stageData.name || '';
-            document.getElementById('select-meteo').value = stageData.weather || 'Sereno';
-            document.getElementById('select-fondo').value = stageData.surface || 'Asfalto Asciutto';
-            document.getElementById('input-temp').value = stageData.temperature || 20;
-            document.getElementById('input-orario').value = stageData.start_time || '';
-
-            openModal('modal-stage');
-        }
+        };
 
         async function openStageResults(stageId) {
             let stageName = 'Stage';
