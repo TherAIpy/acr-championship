@@ -666,21 +666,24 @@ def get_track_results(track_id):
     try:
         supabase = get_supabase()
         
-        # 1. Prendi le info del TRACCIATO (non dello stage)
-        track_res = supabase.table('track').select('name, location, length_km').eq('id', track_id).execute()
-        track_info = track_res.data[0] if track_res.data else {"name": "Tracciato Sconosciuto", "location": "", "length_km": 0}
+        # Usiamo select('*') per prendere TUTTI i campi
+        track_res = supabase.table('track').select('*').eq('id', track_id).execute()
+        if not track_res.data:
+            return jsonify({"success": False, "error": "Tracciato non trovato"}), 404
+            
+        track_info = track_res.data[0]
         
-        # 2. Trova tutte le stage (sessioni) che usano questo tracciato
+        # Trova le stage
         stages = supabase.table('stage').select('id').eq('track_id', track_id).execute().data
         if not stages:
             return jsonify({"success": True, "data": [], "track_info": track_info}), 200
 
         stage_ids = [s['id'] for s in stages]
 
-        # 3. Prendi i risultati ufficiali di tutte quelle stage
+        # Prendi i risultati ufficiali
         results = supabase.table('stage_result').select('*').in_('stage_id', stage_ids).eq('is_official', True).execute().data
 
-        # 4. Aggiungi i metadati meteo per contestualizzare i tempi
+        # Aggiungi metadati meteo
         stages_meta = supabase.table('stage').select('id, weather, surface, temperature').in_('id', stage_ids).execute().data
         meta_dict = {s['id']: s for s in stages_meta}
 
@@ -690,7 +693,6 @@ def get_track_results(track_id):
             r['surface'] = m.get('surface')
             r['temperature'] = m.get('temperature')
 
-        # 5. Ordina per tempo
         results.sort(key=lambda x: x['time_ms'])
 
         return jsonify({"success": True, "data": results, "track_info": track_info}), 200

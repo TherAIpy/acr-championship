@@ -28,40 +28,60 @@
             <!-- COLONNA SINISTRA: INFO TECNICHE -->
             <div class="lg:col-span-1">
                 <div class="card-wrc p-6 sticky top-6">
-                    <div class="text-center mb-6">
-                        <div id="track-country-badge" class="inline-block bg-[#E10600] text-white text-xs font-bold px-3 py-1 rounded mb-3 shadow-sm uppercase tracking-wider"></div>
+                    <div class="text-center mb-6 border-b border-[#D1CBBF] pb-4">
+                        <div id="track-country-badge" class="inline-block bg-[#E10600] text-white text-[10px] font-bold px-3 py-1 rounded shadow-sm uppercase tracking-widest mb-2">N/D</div>
                         <h1 id="track-title" class="text-4xl font-black font-racing italic text-[#2C2A28] leading-none mb-1">Caricamento...</h1>
-                        <h2 id="track-location" class="text-lg text-[#6B665F] font-bold"></h2>
+                        <h2 id="track-location" class="text-sm text-[#6B665F] font-bold uppercase tracking-widest"></h2>
                     </div>
 
-                    <h3 class="text-sm font-bold text-[#2C2A28] uppercase border-b border-[#D1CBBF] pb-2 mb-4">Dettagli Tracciato</h3>
+                    <h3 class="text-xs font-bold text-[#2C2A28] uppercase tracking-wider mb-4"><i class="fa-solid fa-list-check text-[#E10600] mr-2"></i> Scheda Tecnica</h3>
                     
-                    <ul class="space-y-3 text-sm font-bold text-[#2C2A28]">
-                        <li class="flex justify-between border-b border-[#F3F4F6] pb-2">
-                            <span class="text-[#6B665F]">Lunghezza</span> 
-                            <span id="info-length">-</span>
-                        </li>
-                        <li class="flex justify-between border-b border-[#F3F4F6] pb-2">
-                            <span class="text-[#6B665F]">Difficoltà</span> 
-                            <span id="info-difficulty" class="text-[#E10600]">-</span>
-                        </li>
-                        <li class="flex justify-between border-b border-[#F3F4F6] pb-2">
-                            <span class="text-[#6B665F]">Superficie</span> 
+                    <!-- Griglia a 2 colonne -->
+                    <div class="grid grid-cols-2 gap-3 mb-6">
+                        <div class="bg-[#EBE6DC] p-3 rounded-lg border border-[#D1CBBF]">
+                            <div class="text-[10px] font-bold text-[#6B665F] uppercase mb-1">Lunghezza</div>
+                            <div id="info-length" class="text-lg font-black text-[#2C2A28]">-</div>
+                        </div>
+                        <div class="bg-[#EBE6DC] p-3 rounded-lg border border-[#D1CBBF]">
+                            <div class="text-[10px] font-bold text-[#6B665F] uppercase mb-1">Settori</div>
+                            <div id="info-sectors" class="text-lg font-black text-[#2C2A28]">-</div>
+                        </div>
+                        <div class="bg-[#EBE6DC] p-3 rounded-lg border border-[#D1CBBF]">
+                            <div class="text-[10px] font-bold text-[#6B665F] uppercase mb-1">Alt. Min</div>
+                            <div id="info-alt-min" class="text-sm font-black text-[#2C2A28]">-</div>
+                        </div>
+                        <div class="bg-[#EBE6DC] p-3 rounded-lg border border-[#D1CBBF]">
+                            <div class="text-[10px] font-bold text-[#6B665F] uppercase mb-1">Alt. Max</div>
+                            <div id="info-alt-max" class="text-sm font-black text-[#2C2A28]">-</div>
+                        </div>
+                    </div>
+
+                    <ul class="space-y-3 text-sm font-bold text-[#2C2A28] mb-6">
+                        <li class="flex justify-between items-center border-b border-[#F3F4F6] pb-2">
+                            <span class="text-[#6B665F] flex items-center gap-2"><i class="fa-solid fa-road w-4 text-center"></i> Superficie</span> 
                             <span id="info-surface">-</span>
                         </li>
-                        <li class="flex justify-between border-b border-[#F3F4F6] pb-2">
-                            <span class="text-[#6B665F]">Settori</span> 
-                            <span id="info-sectors">-</span>
-                        </li>
-                        <li class="flex justify-between border-b border-[#F3F4F6] pb-2">
-                            <span class="text-[#6B665F]">Altitudine</span> 
-                            <span id="info-altitude">-</span>
-                        </li>
-                        <li class="flex justify-between pb-2">
-                            <span class="text-[#6B665F]">Larghezza</span> 
+                        <li class="flex justify-between items-center border-b border-[#F3F4F6] pb-2">
+                            <span class="text-[#6B665F] flex items-center gap-2"><i class="fa-solid fa-ruler-horizontal w-4 text-center"></i> Larghezza</span> 
                             <span id="info-width">-</span>
                         </li>
+                        <li class="flex justify-between items-center pb-2">
+                            <span class="text-[#6B665F] flex items-center gap-2"><i class="fa-solid fa-fire w-4 text-center"></i> Difficoltà</span> 
+                            <span id="info-difficulty" class="px-2 py-0.5 rounded text-xs bg-gray-200">-</span>
+                        </li>
                     </ul>
+
+                    <!-- Box Difficoltà visiva -->
+                    <div id="difficulty-bar-container" class="hidden">
+                        <div class="flex justify-between text-[10px] font-bold text-[#6B665F] uppercase mb-1">
+                            <span>Facile</span>
+                            <span>Media</span>
+                            <span>Difficile</span>
+                        </div>
+                        <div class="w-full bg-gray-300 h-2 rounded-full overflow-hidden">
+                            <div id="difficulty-bar" class="h-full bg-[#E10600] transition-all duration-500" style="width: 0%;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
