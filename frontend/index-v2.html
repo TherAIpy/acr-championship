@@ -162,33 +162,69 @@
             </div>
 
         </div>
-    <!-- MODALE ISCRIZIONE CAMPIONATO -->
-    <div id="modal-entry" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
-        <div class="bg-[#F4F1EA] rounded-xl p-6 w-full max-w-md border border-[#D1CBBF] shadow-2xl relative">
-            <h2 class="text-2xl font-black italic font-racing text-[#2C2A28] mb-2">Iscrizione al Campionato</h2>
-            <p class="text-sm text-[#6B665F] mb-6 font-bold">Scegli la classe e la vettura con cui correrai.</p>
+        <!-- MODALE ISCRIZIONE CAMPIONATO (STILE SHOWROOM) -->
+    <div id="modal-entry" class="fixed inset-0 bg-black/90 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-[#F4F1EA] rounded-xl w-full max-w-5xl border border-[#D1CBBF] shadow-2xl flex flex-col md:flex-row overflow-hidden max-h-[90vh]">
             
-            <div class="space-y-4 mb-6">
-                <!-- 1. SELEZIONE CLASSE -->
-                <div>
-                    <label class="block text-xs font-bold text-[#6B665F] uppercase mb-1">1. Classe</label>
+            <!-- PANNELLO SINISTRO: SELEZIONE CLASSE E AUTO -->
+            <div class="flex-1 p-6 flex flex-col border-r border-[#D1CBBF]">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h2 class="text-3xl font-black italic font-racing text-[#2C2A28]">Selezione Auto</h2>
+                        <p class="text-sm text-[#6B665F] font-bold">Scegli la classe e la vettura per il campionato.</p>
+                    </div>
+                    <button onclick="document.getElementById('modal-entry').classList.replace('flex','hidden')" class="text-[#6B665F] hover:text-[#E10600] font-bold"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-[#6B665F] uppercase mb-2">1. Scegli la Classe</label>
                     <select id="entry-class-select" class="w-full bg-white text-[#2C2A28] border border-[#D1CBBF] rounded-lg px-4 py-3 focus:outline-none focus:border-[#E10600] font-bold cursor-pointer">
                         <option value="">Caricamento classi...</option>
                     </select>
                 </div>
-                
-                <!-- 2. SELEZIONE VETTURA -->
-                <div>
-                    <label class="block text-xs font-bold text-[#6B665F] uppercase mb-1">2. Vettura</label>
-                    <select id="entry-car-select" class="w-full bg-white text-[#2C2A28] border border-[#D1CBBF] rounded-lg px-4 py-3 focus:outline-none focus:border-[#E10600] font-bold cursor-pointer" disabled>
-                        <option value="">Scegli prima la classe</option>
-                    </select>
+
+                <div class="flex-1 overflow-y-auto custom-scrollbar pr-2">
+                    <label class="block text-xs font-bold text-[#6B665F] uppercase mb-2">2. Scegli la Vettura</label>
+                    <div id="entry-cars-grid" class="grid grid-cols-2 gap-3">
+                        <!-- Le card delle auto verranno generate qui -->
+                    </div>
                 </div>
             </div>
 
-            <div class="flex justify-end gap-3">
-                <button onclick="document.getElementById('modal-entry').classList.replace('flex','hidden')" class="px-4 py-2 font-bold text-[#6B665F] hover:text-[#2C2A28] transition-colors">Annulla</button>
-                <button id="btn-confirm-entry" class="bg-[#E10600] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#b30500] transition-colors">Conferma Iscrizione</button>
+        <!-- PANNELLO DESTRO: SCHEDA TECNICA AUTO -->
+        <div class="w-full md:w-[400px] bg-[#1E2532] text-white p-6 flex flex-col justify-between relative overflow-hidden" id="entry-car-details-panel">
+                <!-- Sfondo patinato -->
+                <div class="absolute inset-0 opacity-10 bg-[url('https://images.unsplash.com/photo-1541343672885-9be56236302a?auto=format&fit=crop&q=80')] bg-cover bg-center"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-[#1E2532] to-transparent"></div>
+
+                <div class="relative z-10 text-center flex flex-col items-center justify-center h-full">
+                    <i class="fa-solid fa-car-side text-6xl text-[#3D3833] mb-4"></i>
+                    <h3 class="text-xl font-bold text-[#A8A29A]">Seleziona un'auto</h3>
+                    <p class="text-sm text-[#6B665F] mt-2">Le specifiche tecniche appariranno qui.</p>
+                </div>
+                
+                <!-- Contenuto Scheda Tecnica (nascosto di default) -->
+                <div id="entry-car-specs" class="hidden relative z-10 flex flex-col h-full">
+                    <div class="text-center mb-6">
+                        <div id="spec-brand" class="text-sm text-[#E10600] font-bold uppercase tracking-wider mb-1"></div>
+                        <h3 id="spec-name" class="text-3xl font-black italic font-racing leading-none"></h3>
+                        <div id="spec-class" class="mt-2 text-xs bg-[#E10600] text-white px-2 py-0.5 rounded inline-block font-bold"></div>
+                    </div>
+
+                    <div class="space-y-3 text-sm flex-1">
+                        <div class="flex justify-between border-b border-[#3D3833] pb-2"><span class="text-[#A8A29A]">Motore</span> <span id="spec-engine" class="font-bold text-right"></span></div>
+                        <div class="flex justify-between border-b border-[#3D3833] pb-2"><span class="text-[#A8A29A]">Potenza Max</span> <span id="spec-power" class="font-bold text-[#EAB308] text-right"></span></div>
+                        <div class="flex justify-between border-b border-[#3D3833] pb-2"><span class="text-[#A8A29A]">Coppia Max</span> <span id="spec-torque" class="font-bold text-right"></span></div>
+                        <div class="flex justify-between border-b border-[#3D3833] pb-2"><span class="text-[#A8A29A]">Peso</span> <span id="spec-weight" class="font-bold text-right"></span></div>
+                        <div class="flex justify-between border-b border-[#3D3833] pb-2"><span class="text-[#A8A29A]">Trazione</span> <span id="spec-drivetrain" class="font-bold text-right"></span></div>
+                        <div class="flex justify-between border-b border-[#3D3833] pb-2"><span class="text-[#A8A29A]">Cambio</span> <span id="spec-gearbox" class="font-bold text-right"></span></div>
+                        <div class="flex justify-between pb-2"><span class="text-[#A8A29A]">Sterzo</span> <span id="spec-steering" class="font-bold text-right"></span></div>
+                    </div>
+
+                    <button id="btn-confirm-entry" class="w-full bg-[#E10600] hover:bg-[#b30500] text-white font-black font-racing text-lg italic px-4 py-3 rounded-lg transition-colors shadow-lg mt-6">
+                        Conferma Iscrizione
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -210,6 +246,8 @@
             session: null,
             myEntry: null
         };
+
+        let allCarsData = [];
 
         document.addEventListener('DOMContentLoaded', async () => {
             try {
@@ -337,71 +375,106 @@
         }
 
         // Apre il modale per l'iscrizione
+        let selectedEntryCarId = null;
+
         async function openEntryModal() {
             document.getElementById('modal-entry').classList.replace('hidden', 'flex');
             const selectClass = document.getElementById('entry-class-select');
-            const selectCar = document.getElementById('entry-car-select');
+            const carsGrid = document.getElementById('entry-cars-grid');
+            const detailsPanel = document.getElementById('entry-car-details-panel');
             
+            // Resetta UI
+            selectedEntryCarId = null;
             selectClass.innerHTML = '<option value="">Caricamento classi...</option>';
-            selectCar.innerHTML = '<option value="">Scegli prima la classe</option>';
-            selectCar.disabled = true;
+            carsGrid.innerHTML = '';
+            detailsPanel.querySelector('.text-center.flex-col').classList.remove('hidden'); // Mostra placeholder
+            document.getElementById('entry-car-specs').classList.add('hidden'); // Nascondi specifiche
 
             try {
                 // 1. Prendi il campionato per sapere le classi ammesse
                 const champRes = await apiJson(`/championship/${v2State.champ.id}`);
                 const allowedClassIds = champRes.data.allowed_classes || [];
-                console.log("Classi ammesse (ID):", allowedClassIds);
 
                 if (allowedClassIds.length === 0) {
-                    selectClass.innerHTML = `<option value="">Nessuna classe impostata dall'Admin</option>`;
-                    return; // Blocca qui se non ci sono classi
+                    selectClass.innerHTML = `<option value="">Nessuna classe impostata</option>`;
+                    return;
                 }
                 
-                // 2. Prendi tutte le classi e filtrala
                 const classesRes = await apiJson('/car-classes');
                 const allowedClasses = classesRes.data.filter(c => allowedClassIds.includes(c.id));
-                console.log("Classi ammesse (Oggetti):", allowedClasses);
                 
                 selectClass.innerHTML = `<option value="">Scegli la classe...</option>` + 
                     allowedClasses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 
-                // 3. Quando si sceglie la classe, carica le auto
+                // 2. Quando si sceglie la classe, carica le auto
                 selectClass.onchange = async (e) => {
                     const classId = parseInt(e.target.value);
                     if (!classId) {
-                        selectCar.innerHTML = '<option value="">Scegli prima la classe</option>';
-                        selectCar.disabled = true;
+                        carsGrid.innerHTML = '';
                         return;
                     }
 
-                    selectCar.innerHTML = '<option value="">Caricamento auto...</option>';
+                    carsGrid.innerHTML = `<div class="col-span-2 text-center py-4"><i class="fa-solid fa-spinner fa-spin text-[#E10600]"></i></div>`;
                     const carsRes = await apiJson('/cars');
+                    allCarsData = carsRes.data;
                     const allowedCars = carsRes.data.filter(c => c.class_id === classId);
 
                     if (allowedCars.length === 0) {
-                        selectCar.innerHTML = '<option value="">Nessuna auto in questa classe</option>';
-                    } else {
-                        selectCar.innerHTML = `<option value="">Scegli l'auto...</option>` + 
-                            allowedCars.map(c => `<option value="${c.id}">${c.brand} ${c.name}</option>`).join('');
-                        selectCar.disabled = false;
+                        carsGrid.innerHTML = `<div class="col-span-2 text-center py-4 text-[#6B665F] font-bold">Nessuna auto in questa classe.</div>`;
+                        return;
                     }
+
+                    // Genera le Card
+                    carsGrid.innerHTML = allowedCars.map(car => `
+                        <div onclick="selectEntryCar(${car.id}, this)" class="car-card entry-car-option bg-white border border-[#D1CBBF] rounded-lg p-3 cursor-pointer transition-all hover:-translate-y-1 hover:shadow-md flex flex-col justify-between h-24">
+                            <div class="text-[10px] font-bold text-[#E10600]">${car.car_class?.name || ''}</div>
+                            <div class="font-bold text-[#2C2A28] text-sm leading-tight">${car.brand}<br>${car.name}</div>
+                        </div>
+                    `).join('');
                 };
             } catch(e) { 
                 console.error("Errore Iscrizione:", e); 
                 selectClass.innerHTML = '<option value="">Errore di caricamento</option>';
             }
+        }
 
-            document.getElementById('btn-confirm-entry').onclick = async () => {
-                const carId = selectCar.value;
-                if (!carId) return alert("Scegli un'auto");
-                
-                const btn = document.getElementById('btn-confirm-entry');
-                btn.disabled = true; btn.textContent = "Invio...";
+        // Funzione per selezionare l'auto e mostrare la scheda tecnica
+        window.selectEntryCar = (carId, element) => {
+            selectedEntryCarId = carId;
+            
+            document.querySelectorAll('.entry-car-option').forEach(el => el.classList.remove('border-[#E10600]', 'bg-[#EBE6DC]', 'ring-2', 'ring-[#E10600]'));
+            element.classList.add('border-[#E10600]', 'bg-[#EBE6DC]', 'ring-2', 'ring-[#E10600]');
+
+            const car = allCarsData.find(c => c.id === carId);
+            if (!car) return;
+
+            // Nascondi placeholder, mostra scheda
+            document.getElementById('entry-car-details-panel').querySelector('.text-center.flex-col').classList.add('hidden');
+            document.getElementById('entry-car-specs').classList.remove('hidden');
+
+            // Popola dati
+            document.getElementById('spec-brand').textContent = car.brand;
+            document.getElementById('spec-name').textContent = car.name;
+            document.getElementById('spec-class').textContent = `GRUPPO ${car.car_class?.name || 'N/D'}`;
+            
+            document.getElementById('spec-engine').textContent = car.engine || '-';
+            document.getElementById('spec-power').textContent = car.power_hp ? `${car.power_hp} hp` : '-';
+            document.getElementById('spec-torque').textContent = car.torque_nm ? `${car.torque_nm} Nm` : '-';
+            document.getElementById('spec-weight').textContent = car.weight_kg ? `${car.weight_kg} kg` : '-';
+            document.getElementById('spec-drivetrain').textContent = car.drivetrain || '-';
+            document.getElementById('spec-gearbox').textContent = car.gearbox || '-';
+            document.getElementById('spec-steering').textContent = car.steering_lock ? `${car.steering_lock}°` : '-';
+
+            // Configura il bottone di conferma
+            const confirmBtn = document.getElementById('btn-confirm-entry');
+            confirmBtn.onclick = async () => {
+                confirmBtn.disabled = true; 
+                confirmBtn.textContent = "Invio...";
                 
                 try {
                     const res = await apiJson('/join-championship', {
                         method: 'POST',
-                        body: JSON.stringify({ championship_id: v2State.champ.id, car_id: parseInt(carId) })
+                        body: JSON.stringify({ championship_id: v2State.champ.id, car_id: selectedEntryCarId })
                     });
                     if (res.success) {
                         document.getElementById('modal-entry').classList.replace('flex','hidden');
@@ -410,9 +483,9 @@
                         renderEntryButton(); 
                     }
                 } catch(e) { alert("Errore: " + e.message); } 
-                finally { btn.disabled = false; btn.textContent = "Conferma Iscrizione"; }
+                finally { confirmBtn.disabled = false; confirmBtn.textContent = "Conferma Iscrizione"; }
             };
-        }
+        };
 
         async function logout() {
             const sb = window.supabaseClient || window.supabase;
