@@ -484,7 +484,7 @@ def delete_rally(rally_id):
 @admin_required
 def create_rally():
     try:
-        # QUESTA È LA RIGA CHE MANCAVA
+
         data = request.json 
         
         supabase = get_supabase()
@@ -1690,6 +1690,31 @@ def get_standings(type, id):
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/car-results/<string:car_name>', methods=['GET'])
+def get_car_results(car_name):
+    try:
+        supabase = get_supabase()
+        
+        # Cerca i risultati ufficiali per quell'auto
+        results = supabase.table('stage_result').select('*, stage(name, leg(name, rally(name)))') \
+            .ilike('car_model', f'%{car_name}%') \
+            .eq('is_official', True) \
+            .execute().data
+
+        if not results:
+            return jsonify({"success": True, "data": [], "car_info": None}), 200
+
+        # Trova le info dell'auto
+        car_info = supabase.table('car').select('*, car_class(name)').ilike('name', f'%{car_name}%').execute().data
+        car_data = car_info[0] if car_info else None
+
+        # Ordina per tempo (dal più veloce)
+        results.sort(key=lambda x: x['time_ms'])
+
+        return jsonify({"success": True, "data": results, "car_info": car_data}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    
 # =============================================================================
 # MATRICI PUNTEGGI (Punti Rally by Rally / Punti Leg by Leg)
 # =============================================================================

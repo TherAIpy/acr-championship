@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archivio Vetture - ACR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/v2-style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="min-h-screen pb-10">
+
+    <!-- HEADER -->
+    <header class="relative bg-[#23211F] shadow-lg border-b-4 border-[#E10600] overflow-hidden h-32 md:h-40">
+        <div class="absolute inset-0 bg-[url('assets/backgrounds/vrg_banner.png')] bg-cover bg-[center_70%]"></div>
+        <div class="absolute inset-0 bg-gradient-to-r from-[#23211F] via-transparent to-[#23211F]"></div>
+        <div class="absolute inset-0 bg-black/20"></div>
+
+        <div class="relative max-w-[1600px] mx-auto px-4 h-full flex items-center justify-between z-10">
+            <div class="flex items-center gap-4">
+                <h1 class="text-3xl font-black text-white italic tracking-tighter drop-shadow-lg">
+                    ACR <span class="text-[#E10600]">CHAMPIONSHIP</span>
+                </h1>
+            </div>
+            
+            <nav class="hidden md:flex items-center gap-6 font-racing font-bold text-sm drop-shadow-md">
+                <a href="index-v2.html" class="text-[#E8E8E8] hover:text-white transition"><i class="fa-solid fa-trophy mr-2"></i>Campionato</a>
+                <a href="archive-v2.html" class="text-[#E8E8E8] hover:text-white transition"><i class="fa-solid fa-box-archive mr-2"></i>Archivio</a>
+                <a href="tracks.html" class="text-[#E8E8E8] hover:text-white transition"><i class="fa-solid fa-map-location-dot mr-2"></i>Tracciati</a>
+                <a href="cars.html" class="text-white border-b-2 border-[#E10600] pb-1"><i class="fa-solid fa-car mr-2 text-[#E10600]"></i>Vetture</a>
+                
+                <div class="h-6 w-px bg-white/30 mx-2"></div>
+                <div id="header-nav" class="flex items-center gap-4"></div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="max-w-[1600px] mx-auto px-4 mt-8">
+        
+        <!-- VISTA 1: SELEZIONE CLASSE -->
+        <div id="view-classes" class="animate-fade-in">
+            <div class="text-center mb-8">
+                <h2 class="text-4xl font-black italic font-racing text-[#2C2A28]">Archivio Vetture</h2>
+                <p class="text-[#6B665F] font-bold mt-2">Seleziona una classe per esplorare le vetture e le loro leaderboard.</p>
+            </div>
+            
+            <div id="classes-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <!-- Popolato via JS -->
+                <div class="col-span-full text-center py-12 text-gray-500">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl mb-4"></i>
+                    <p>Caricamento vetture...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA 2: DETTAGLIO CLASSE E AUTO -->
+        <div id="view-cars" class="hidden flex-col lg:flex-row gap-6 h-[calc(100vh-200px)]">
+            <!-- Sidebar Sinistra (Classi) -->
+            <div id="sidebar-classes" class="w-full lg:w-1/4 card-wrc p-4 overflow-y-auto custom-scrollbar flex-shrink-0">
+                <h3 class="text-xs font-bold text-[#6B665F] uppercase mb-4 tracking-wider">Classi</h3>
+                <div id="sidebar-classes-list" class="flex flex-col gap-2">
+                    <!-- Popolato via JS -->
+                </div>
+            </div>
+            
+            <!-- Area Destra (Auto) -->
+            <div id="main-cars" class="w-full lg:w-3/4 card-wrc p-6 overflow-y-auto custom-scrollbar flex-grow">
+                <div class="flex justify-between items-center mb-6 pb-4 border-b border-[#D1CBBF]">
+                    <h2 id="selected-class-title" class="text-3xl font-black italic font-racing text-[#2C2A28]">H1</h2>
+                    <button onclick="resetToClasses()" class="text-sm font-bold text-[#E10600] hover:text-[#2C2A28]"><i class="fa-solid fa-xmark mr-1"></i> Chiudi</button>
+                </div>
+                
+                <div id="cars-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Popolato via JS -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+
+    <script>
+        let allCars = [];
+        let groupedByClass = {};
+        let currentClass = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Auth header
+            const sb = window.supabaseClient || window.supabase;
+            const { data: { session } } = await sb.auth.getSession();
+            const nav = document.getElementById('header-nav');
+            
+            if (session) {
+                nav.innerHTML = `
+                    <span class="text-sm text-slate-400 hidden md:block">${session.user.email}</span>
+                    <button onclick="window.supabaseClient.auth.signOut().then(()=>window.location.reload())" class="text-slate-400 hover:text-red-400 ml-2" title="Logout">
+                        <i class="fa-solid fa-power-off"></i>
+                    </button>
+                `;
+            } else {
+                nav.innerHTML = `
+                    <a href="login.html" class="bg-[#E10600] text-white px-4 py-1.5 rounded font-bold hover:bg-[#b30500] transition shadow-sm">Accedi</a>
+                `;
+            }
+
+            // Carica auto
+            try {
+                const res = await apiJson('/cars');
+                allCars = res.data || [];
+                
+                // Raggruppa per Classe
+                allCars.forEach(c => {
+                    const className = c.car_class?.name || 'N/D';
+                    if (!groupedByClass[className]) groupedByClass[className] = [];
+                    groupedByClass[className].push(c);
+                });
+
+                renderClasses();
+            } catch (e) {
+                console.error("Errore caricamento auto", e);
+            }
+        });
+
+        function renderClasses() {
+            const grid = document.getElementById('classes-grid');
+            const classes = Object.keys(groupedByClass).sort();
+            
+            grid.innerHTML = classes.map(c => {
+                const carCount = groupedByClass[c].length;
+                return `
+                    <div onclick="selectClass('${c}')" class="card-wrc cursor-pointer overflow-hidden group relative h-32 flex flex-col justify-end p-6 border-l-4 border-[#E10600] hover:border-[#23211F] transition-colors">
+                        <div class="absolute inset-0 bg-[#EBE6DC] group-hover:bg-[#D1CBBF] transition-colors"></div>
+                        <div class="relative z-10 flex justify-between items-end">
+                            <h3 class="text-4xl font-black italic font-racing text-[#2C2A28]">${c}</h3>
+                            <p class="text-xs font-bold text-[#E10600] bg-white px-2 py-1 rounded shadow-sm">${carCount} Auto</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectClass(className) {
+            currentClass = className;
+            
+            // Switch viste
+            document.getElementById('view-classes').classList.add('hidden');
+            const carsView = document.getElementById('view-cars');
+            carsView.classList.remove('hidden');
+            carsView.classList.add('flex');
+
+            document.getElementById('selected-class-title').textContent = className;
+
+            // Render sidebar
+            const sidebarList = document.getElementById('sidebar-classes-list');
+            sidebarList.innerHTML = Object.keys(groupedByClass).sort().map(c => `
+                <div onclick="selectClass('${c}')" class="p-3 rounded-lg cursor-pointer font-bold text-sm transition-colors ${c === className ? 'bg-[#E10600] text-white shadow-md' : 'bg-[#EBE6DC] text-[#2C2A28] hover:bg-[#D1CBBF]'}">
+                    ${c}
+                </div>
+            `).join('');
+
+            // Render Auto
+            const cars = groupedByClass[className] || [];
+            const container = document.getElementById('cars-list');
+
+            container.innerHTML = cars.map(c => {
+                let diffClass = 'bg-gray-100 text-gray-700'; // Colore generico
+                
+                return `
+                    <div class="card-wrc flex flex-col bg-[#F4F1EA] border border-[#D1CBBF] overflow-hidden group hover:shadow-lg transition-shadow">
+                        <!-- Placeholder Immagine Auto -->
+                        <div class="h-40 bg-[#23211F] relative flex items-center justify-center overflow-hidden">
+                            <img src="${c.image_url || 'https://placehold.co/400x200/23211F/F4F1EA?text=Auto'}" alt="${c.name}" class="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity">
+                            <!-- Logo Placeholder in alto a sinistra -->
+                            <div class="absolute top-4 left-4 w-12 h-12 bg-white rounded-full p-1 shadow-md flex items-center justify-center border border-[#D1CBBF]">
+                                <img src="${c.logo_url || 'https://placehold.co/100x100/23211F/F4F1EA?text=Logo'}" alt="${c.brand}" class="max-w-full max-h-full object-contain">
+                            </div>
+                            <!-- Anno in alto a destra -->
+                            <div class="absolute top-4 right-4 bg-[#E10600] text-white text-xs font-bold px-2 py-1 rounded shadow-sm">
+                                ${c.year || 'N/D'}
+                            </div>
+                        </div>
+
+                        <!-- Dettagli Auto -->
+                        <div class="p-5 flex-1 flex flex-col">
+                            <div class="text-xs font-bold text-[#E10600] uppercase tracking-wider mb-1">${c.brand}</div>
+                            <h3 class="text-2xl font-black italic font-racing text-[#2C2A28] leading-tight mb-4">${c.name}</h3>
+                            
+                            <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-xs font-bold text-[#6B665F] mb-6">
+                                <div><i class="fa-solid fa-cogs mr-1 w-4 text-center"></i> ${c.engine || '-'}</div>
+                                <div><i class="fa-solid fa-bolt mr-1 w-4 text-center text-[#E10600]"></i> ${c.power_hp || '-'} hp</div>
+                                <div><i class="fa-solid fa-weight-hanging mr-1 w-4 text-center"></i> ${c.weight_kg || '-'} kg</div>
+                                <div><i class="fa-solid fa-road mr-1 w-4 text-center"></i> ${c.drivetrain || '-'}</div>
+                                <div><i class="fa-solid fa-gear mr-1 w-4 text-center"></i> ${c.gearbox || '-'}</div>
+                                <div><i class="fa-solid fa-steering-wheel mr-1 w-4 text-center"></i> ${c.steering_lock || '-'}°</div>
+                            </div>
+
+                            <a href="car-detail.html?name=${encodeURIComponent(c.brand + ' ' + c.name)}" class="mt-auto w-full bg-[#23211F] hover:bg-[#E10600] text-white font-bold text-sm py-2 rounded-lg transition-colors text-center shadow-md">
+                                <i class="fa-solid fa-ranking-star mr-1"></i> Leaderboard Vettura
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function resetToClasses() {
+            document.getElementById('view-cars').classList.add('hidden');
+            document.getElementById('view-cars').classList.remove('flex');
+            document.getElementById('view-classes').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
