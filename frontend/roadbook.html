@@ -17,15 +17,27 @@
             .page-container { margin: 0; padding: 0; box-shadow: none; max-width: 100%; }
             .no-print { display: none !important; }
             .page-break { page-break-before: always; }
+            
+            /* Stili Tabelle */
             .print-table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 12px; }
             .print-table th, .print-table td { border: 1px solid #ccc; padding: 6px; text-align: left; }
-            .print-table th { background-color: #eee; font-weight: bold; }
-            .print-header { text-align: center; margin-bottom: 2rem; border-bottom: 2px solid #000; padding-bottom: 1rem; }
-            .print-title { font-size: 24px; font-weight: 900; text-transform: uppercase; margin: 0; }
-            .print-subtitle { font-size: 14px; color: #555; margin: 5px 0 0 0; }
-            .rally-block { margin-bottom: 2rem; }
-            .rally-title { font-size: 18px; font-weight: 800; background: #333; color: white; padding: 5px 10px; margin-bottom: 10px; }
-            .leg-title { font-size: 14px; font-weight: 700; margin-top: 15px; margin-bottom: 5px; border-bottom: 1px solid #999; padding-bottom: 2px; }
+            .print-table th { background-color: #eee; font-weight: bold; text-transform: uppercase; font-size: 10px; }
+            
+            /* Intestazione Leg nella tabella */
+            .leg-header-row td { 
+                background-color: #e5e7eb !important; 
+                font-weight: 900 !important; 
+                font-size: 14px !important; 
+                color: #000 !important;
+                border-top: 2px solid #999 !important;
+                padding: 10px 6px !important;
+                text-transform: uppercase;
+            }
+
+            /* Info Table (Riepilogo Rally) */
+            .info-table { width: 100%; margin-bottom: 1rem; font-size: 12px; border-collapse: collapse; }
+            .info-table td { padding: 4px 8px; border-bottom: 1px solid #eee; }
+            .info-table .label { font-weight: bold; width: 150px; color: #555; }
         }
     </style>
 </head>
@@ -71,9 +83,9 @@
                 const rallies = data.rallies || [];
 
                 let html = `
-                    <div class="print-header">
-                        <h1 class="print-title">${champ.name}</h1>
-                        <p class="print-subtitle">Road Book Ufficiale - Impostazioni Campionato</p>
+                    <div class="text-center mb-8 border-b-2 border-gray-800 pb-4">
+                        <h1 class="text-3xl font-black uppercase text-gray-900">${champ.name}</h1>
+                        <p class="text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">Road Book Ufficiale - Impostazioni Campionato</p>
                     </div>
                 `;
 
@@ -85,41 +97,72 @@
                     // Aggiungi un salto pagina per ogni rally (tranne il primo)
                     const pageBreakClass = index > 0 ? 'page-break' : '';
 
+                    // Formattazione date per il riepilogo
+                    let dateRange = 'Date non definite';
+                    if (rally.start_date && rally.end_date) {
+                        dateRange = `${new Date(rally.start_date).toLocaleDateString('it-IT')} - ${new Date(rally.end_date).toLocaleDateString('it-IT')}`;
+                    } else if (rally.start_date) {
+                        dateRange = new Date(rally.start_date).toLocaleDateString('it-IT');
+                    }
+
                     html += `
-                        <div class="rally-block ${pageBreakClass}">
-                            <h2 class="rally-title">RALLY: ${rally.name} ${rally.start_date ? `(${new Date(rally.start_date).toLocaleDateString('it-IT')} - ${new Date(rally.end_date).toLocaleDateString('it-IT')})` : ''}</h2>
+                        <div class="mb-10 ${pageBreakClass}">
+                            
+                            <!-- TABELLA RIEPILOGO RALLY -->
+                            <table class="info-table mb-6 bg-gray-50 border border-gray-200">
+                                <tr>
+                                    <td class="label">Nome Rally</td>
+                                    <td class="font-bold text-lg">${rally.name}</td>
+                                </tr>
+                                <tr>
+                                    <td class="label">Periodo di Svolgimento</td>
+                                    <td>${dateRange}</td>
+                                </tr>
+                                <tr>
+                                    <td class="label">Totale Leg / Stage</td>
+                                    <td>${rally.total_legs || 0} Leg &bull; ${rally.total_stages || 0} Stage &bull; ${rally.total_km || 0} km</td>
+                                </tr>
+                            </table>
+
+                            <h3 class="text-lg font-black uppercase text-gray-800 border-b border-gray-400 mb-2">Programma Gara</h3>
                     `;
 
                     if (!rally.legs || rally.legs.length === 0) {
                         html += `<p class="text-sm italic text-gray-600 mb-4">Nessuna Leg configurata.</p>`;
                     } else {
+                        html += `
+                            <table class="print-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 20%">Stage</th>
+                                        <th style="width: 25%">Tracciato</th>
+                                        <th style="width: 8%">Km</th>
+                                        <th style="width: 12%">Meteo</th>
+                                        <th style="width: 15%">Fondo</th>
+                                        <th style="width: 8%">Temp.</th>
+                                        <th style="width: 7%">Orario</th>
+                                        <th style="width: 5%">Diff.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+
                         rally.legs.forEach(leg => {
+                            // Formattazione data leg
+                            const legDate = leg.date ? ` - Data: ${new Date(leg.date).toLocaleDateString('it-IT')}` : '';
+                            
+                            // Riga di intestazione della Leg
                             html += `
-                                <div class="leg-title">
-                                    ${leg.name} ${leg.date ? `- Data: ${new Date(leg.date).toLocaleDateString('it-IT')}` : ''} (${leg.country || 'N/D'})
-                                </div>
+                                <tr class="leg-header-row">
+                                    <td colspan="8">
+                                        <i class="fa-solid fa-road mr-2"></i> ${leg.name} ${legDate} (${leg.country || 'N/D'})
+                                    </td>
+                                </tr>
                             `;
 
                             if (!leg.stages || leg.stages.length === 0) {
-                                html += `<p class="text-xs italic text-gray-600 mb-2">Nessuna Stage configurata.</p>`;
+                                html += `<tr><td colspan="8" class="italic text-gray-500 text-center py-2">Nessuna stage configurata in questa Leg.</td></tr>`;
                             } else {
-                                html += `
-                                    <table class="print-table">
-                                        <thead>
-                                            <tr>
-                                                <th style="width: 20%">Stage</th>
-                                                <th style="width: 25%">Tracciato</th>
-                                                <th style="width: 8%">Km</th>
-                                                <th style="width: 12%">Meteo</th>
-                                                <th style="width: 12%">Fondo</th>
-                                                <th style="width: 8%">Temp.</th>
-                                                <th style="width: 10%">Orario</th>
-                                                <th style="width: 5%">Difficoltà</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                `;
-
                                 leg.stages.forEach(stage => {
                                     html += `
                                         <tr>
@@ -134,10 +177,10 @@
                                         </tr>
                                     `;
                                 });
-
-                                html += `</tbody></table>`;
                             }
                         });
+
+                        html += `</tbody></table>`;
                     }
 
                     html += `</div>`;
