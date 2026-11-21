@@ -202,7 +202,7 @@
         </div>
     </div>
 
-        <!-- MODALE AGGIUNGI STAGE (AGGIORNATO) -->
+    <!-- MODALE AGGIUNGI STAGE (AGGIORNATO) -->
     <div id="modal-stage" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
         <div class="bg-vrg-card p-6 rounded-xl w-full max-w-xl border border-slate-700 shadow-2xl flex flex-col">
             <h2 class="text-xl font-bold text-white mb-4">Nuova Stage</h2>
@@ -239,6 +239,16 @@
                 </div>
 
                 <!-- Meteo e Fondo -->
+                <div class="mt-2">
+                    <label class="block text-xs text-slate-400 mb-1">Meteo</label>
+                    <select id="select-meteo" class="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-vrg-accent">
+                        <option value="Sereno">Sereno</option>
+                        <option value="Nuvoloso">Nuvoloso</option>
+                        <option value="Pioggia Leggera">Pioggia Leggera</option>
+                        <option value="Pioggia Intensa">Pioggia Intensa</option>
+                        <option value="Neve">Neve</option>
+                    </select>
+                </div>
                 <div class="mt-2">
                     <label class="block text-xs text-slate-400 mb-1 flex justify-between">
                         <span>Manto Stradale</span>
@@ -479,21 +489,22 @@
             };
 
             document.getElementById('btn-salva-stage').onclick = async () => {
-                // LEGGE L'ID CORRETTO PER LA MODIFICA
-                const stageId = document.getElementById('input-stage-edit-id').value; 
-                const legId = document.getElementById('input-stage-leg-id').value;
-                const trackId = document.getElementById('select-tracciato').value;
+                // Lettura sicura con fallback (se un campo manca, non va in crash)
+                const stageId = document.getElementById('input-stage-edit-id')?.value || '';
+                const legId = document.getElementById('input-stage-leg-id')?.value || '';
+                const trackId = document.getElementById('select-tracciato')?.value || '';
                 
-                // Trova il nome corretto del tracciato
                 const selectTracciato = document.getElementById('select-tracciato');
-                const selectedOption = selectTracciato.options[selectTracciato.selectedIndex];
-                const trackName = selectedOption.text.split(' (')[0]; // Prende solo il nome, scartando km e fondo
+                let trackName = '';
+                if (selectTracciato && selectTracciato.selectedIndex >= 0) {
+                    trackName = selectTracciato.options[selectTracciato.selectedIndex].text.split(' (')[0];
+                }
                 
-                const nome = document.getElementById('input-nome-stage').value.trim() || trackName;
-                const meteo = document.getElementById('select-meteo').value;
-                const fondo = document.getElementById('select-fondo').value;
-                const temp = document.getElementById('input-temp').value;
-                const orario = document.getElementById('input-orario').value;
+                const nome = (document.getElementById('input-nome-stage')?.value || '').trim() || trackName;
+                const meteo = document.getElementById('select-meteo')?.value || 'Sereno';
+                const fondo = document.getElementById('select-fondo')?.value || 'Asfalto Asciutto';
+                const temp = document.getElementById('input-temp')?.value || 20;
+                const orario = document.getElementById('input-orario')?.value || null;
 
                 if (!trackId) return alert("Seleziona un tracciato dal database ACR!");
 
@@ -505,7 +516,7 @@
                     weather: meteo,
                     surface: fondo,
                     temperature: parseInt(temp),
-                    start_time: orario || null
+                    start_time: orario
                 };
 
                 const btn = document.getElementById('btn-salva-stage');
@@ -513,15 +524,12 @@
                 btn.textContent = "Salvataggio...";
 
                 try {
-                    if (stageId) {
-                        // MODIFICA ESISTENTE
+                    if (stageId && stageId !== '') {
                         await api.updateStage(stageId, payload);
                     } else {
-                        // CREAZIONE NUOVA
                         await api.createStage(payload);
                     }
                     closeModal('modal-stage');
-                    document.getElementById('input-nome-stage').value = '';
                     await loadTree();
                 } catch (e) { 
                     alert("Errore: " + e.message); 
@@ -530,7 +538,8 @@
                     btn.textContent = "Salva Stage";
                 }
             };
-        });        
+        });
+
         function openModal(id) { document.getElementById(id).classList.replace('hidden', 'flex'); }
         function closeModal(id) { document.getElementById(id).classList.replace('flex', 'hidden'); }
 
