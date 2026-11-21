@@ -22,31 +22,73 @@
         </div>
     </header>
 
-    <main class="max-w-[1200px] mx-auto px-4 mt-8">
-        <div id="track-header-container" class="mb-6">
-            <div class="text-center py-10 text-gray-500"><i class="fa-solid fa-spinner fa-spin text-3xl mb-4"></i><p>Caricamento dati tracciato...</p></div>
-        </div>
-
-        <div class="card-wrc overflow-hidden">
-            <div class="bg-[#1E2532] text-white p-3 flex justify-between items-center">
-                <h2 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-stopwatch text-[#E10600]"></i> Migliori Tempi Assoluti (Tutti i Campionati)</h2>
-            </div>
+    <main class="max-w-[1400px] mx-auto px-4 mt-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            <div class="max-h-[600px] overflow-y-auto custom-scrollbar">
-                <table class="w-full table-wrc text-sm">
-                    <thead class="sticky top-0 z-10">
-                        <tr>
-                            <th class="w-12 text-center">Pos</th>
-                            <th>Pilota</th>
-                            <th>Vettura</th>
-                            <th class="text-right">Tempo</th>
-                            <th class="text-center">Condizioni</th>
-                        </tr>
-                    </thead>
-                    <tbody id="track-results-tbody">
-                        <tr><td colspan="5" class="text-center py-8"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
-                    </tbody>
-                </table>
+            <!-- COLONNA SINISTRA: INFO TECNICHE -->
+            <div class="lg:col-span-1">
+                <div class="card-wrc p-6 sticky top-6">
+                    <div class="text-center mb-6">
+                        <div id="track-country-badge" class="inline-block bg-[#E10600] text-white text-xs font-bold px-3 py-1 rounded mb-3 shadow-sm uppercase tracking-wider"></div>
+                        <h1 id="track-title" class="text-4xl font-black font-racing italic text-[#2C2A28] leading-none mb-1">Caricamento...</h1>
+                        <h2 id="track-location" class="text-lg text-[#6B665F] font-bold"></h2>
+                    </div>
+
+                    <h3 class="text-sm font-bold text-[#2C2A28] uppercase border-b border-[#D1CBBF] pb-2 mb-4">Dettagli Tracciato</h3>
+                    
+                    <ul class="space-y-3 text-sm font-bold text-[#2C2A28]">
+                        <li class="flex justify-between border-b border-[#F3F4F6] pb-2">
+                            <span class="text-[#6B665F]">Lunghezza</span> 
+                            <span id="info-length">-</span>
+                        </li>
+                        <li class="flex justify-between border-b border-[#F3F4F6] pb-2">
+                            <span class="text-[#6B665F]">Difficoltà</span> 
+                            <span id="info-difficulty" class="text-[#E10600]">-</span>
+                        </li>
+                        <li class="flex justify-between border-b border-[#F3F4F6] pb-2">
+                            <span class="text-[#6B665F]">Superficie</span> 
+                            <span id="info-surface">-</span>
+                        </li>
+                        <li class="flex justify-between border-b border-[#F3F4F6] pb-2">
+                            <span class="text-[#6B665F]">Settori</span> 
+                            <span id="info-sectors">-</span>
+                        </li>
+                        <li class="flex justify-between border-b border-[#F3F4F6] pb-2">
+                            <span class="text-[#6B665F]">Altitudine</span> 
+                            <span id="info-altitude">-</span>
+                        </li>
+                        <li class="flex justify-between pb-2">
+                            <span class="text-[#6B665F]">Larghezza</span> 
+                            <span id="info-width">-</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- COLONNA DESTRA: LEADERBOARD -->
+            <div class="lg:col-span-2">
+                <div class="card-wrc overflow-hidden">
+                    <div class="bg-[#1E2532] text-white p-4 flex justify-between items-center">
+                        <h2 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-stopwatch text-[#E10600]"></i> Leaderboard Assoluta</h2>
+                    </div>
+                    
+                    <div class="max-h-[700px] overflow-y-auto custom-scrollbar">
+                        <table class="w-full table-wrc text-sm">
+                            <thead class="sticky top-0 z-10">
+                                <tr>
+                                    <th class="w-12 text-center">Pos</th>
+                                    <th>Pilota</th>
+                                    <th>Vettura</th>
+                                    <th class="text-right">Tempo</th>
+                                    <th class="text-center">Condizioni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="track-results-tbody">
+                                <tr><td colspan="5" class="text-center py-8"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -71,18 +113,21 @@
                 allResults = res.data || [];
                 
                 if (res.track_info) {
-                    document.getElementById('track-header-container').innerHTML = `
-                        <div class="bg-[#F4F1EA] border border-[#D1CBBF] rounded-lg p-6 shadow-sm flex items-center justify-between">
-                            <div>
-                                <h1 class="text-4xl font-black font-racing italic text-[#2C2A28]">
-                                    ${res.track_info.name} 
-                                    <span class="text-xl text-[#6B665F] font-bold not-italic">(${res.track_info.location})</span>
-                                </h1>
-                                <p class="text-[#6B665F] font-bold text-sm mt-1"><i class="fa-solid fa-route mr-1"></i> Lunghezza: ${res.track_info.length_km || '-'} km</p>
-                            </div>
-                        </div>
-                    `;
+                    const t = res.track_info;
+                    
+                    // Popola la colonna sinistra
+                    document.getElementById('track-title').textContent = t.name;
+                    document.getElementById('track-location').textContent = t.location || '';
+                    document.getElementById('track-country-badge').textContent = t.country || 'N/D';
+                    
+                    document.getElementById('info-length').textContent = `${t.length_km || '-'} km`;
+                    document.getElementById('info-difficulty').textContent = t.difficulty || '-';
+                    document.getElementById('info-surface').textContent = t.surface || '-';
+                    document.getElementById('info-sectors').textContent = t.sectors || '-';
+                    document.getElementById('info-altitude').textContent = `${t.min_altitude || 0} - ${t.max_altitude || 0} m`;
+                    document.getElementById('info-width').textContent = `${t.road_width || '-'} m`;
                 }
+                
                 renderLeaderboard(allResults);
             } catch (e) {
                 document.getElementById('track-results-tbody').innerHTML = `<tr><td colspan="5" class="text-center text-red-500 p-4">Errore: ${e.message}</td></tr>`;
