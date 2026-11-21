@@ -135,23 +135,28 @@
                 if (res.track_info) {
                     const t = res.track_info;
                     
-                    // Uso l'operatore ?. per evitare crash se un elemento manca
-                    document.getElementById('track-title')?.textContent = t.name || 'Sconosciuto';
-                    document.getElementById('track-location')?.textContent = t.location || '';
-                    document.getElementById('track-country-badge')?.textContent = t.country || 'N/D';
+                    // Funzione di supporto per aggiornare il testo in sicurezza
+                    const setText = (id, text) => {
+                        const el = document.getElementById(id);
+                        if (el) el.textContent = text;
+                    };
+
+                    setText('track-title', t.name || 'Sconosciuto');
+                    setText('track-location', t.location || '');
+                    setText('track-country-badge', t.country || 'N/D');
                     
-                    document.getElementById('info-length')?.textContent = t.length_km ? `${t.length_km} km` : '-';
-                    document.getElementById('info-sectors')?.textContent = t.sectors || '-';
-                    document.getElementById('info-alt-min')?.textContent = t.min_altitude ? `${t.min_altitude} m` : '-';
-                    document.getElementById('info-alt-max')?.textContent = t.max_altitude ? `${t.max_altitude} m` : '-';
+                    setText('info-length', t.length_km ? `${t.length_km} km` : '-');
+                    setText('info-sectors', t.sectors || '-');
+                    setText('info-alt-min', t.min_altitude ? `${t.min_altitude} m` : '-');
+                    setText('info-alt-max', t.max_altitude ? `${t.max_altitude} m` : '-');
                     
                     if (t.surface_gravel_percent > 0 && t.surface_asphalt_percent > 0) {
-                        document.getElementById('info-surface')?.textContent = `Misto (${t.surface_gravel_percent}% St / ${t.surface_asphalt_percent}% As)`;
+                        setText('info-surface', `Misto (${t.surface_gravel_percent}% St / ${t.surface_asphalt_percent}% As)`);
                     } else {
-                        document.getElementById('info-surface')?.textContent = t.surface || '-';
+                        setText('info-surface', t.surface || '-');
                     }
 
-                    document.getElementById('info-width')?.textContent = t.road_width ? `${t.road_width} m` : '-';
+                    setText('info-width', t.road_width ? `${t.road_width} m` : '-');
                     
                     const diffEl = document.getElementById('info-difficulty');
                     if (diffEl) {
@@ -172,7 +177,9 @@
                     }
                 }
                 
+                // Chiamata alla funzione che genera la tabella dei tempi
                 renderLeaderboard(allResults);
+
             } catch (e) {
                 console.error("Errore generale:", e);
                 const tbody = document.getElementById('track-results-tbody');
