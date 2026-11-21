@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archivio Tracciati - ACR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/v2-style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="min-h-screen pb-10">
+
+    <!-- HEADER -->
+    <header class="relative bg-[#23211F] shadow-lg border-b-4 border-[#E10600] overflow-hidden h-32 md:h-40">
+        <div class="absolute inset-0 bg-[url('assets/backgrounds/vrg_banner.png')] bg-cover bg-[center_70%]"></div>
+        <div class="absolute inset-0 bg-gradient-to-r from-[#23211F] via-transparent to-[#23211F]"></div>
+        <div class="absolute inset-0 bg-black/20"></div>
+
+        <div class="relative max-w-[1600px] mx-auto px-4 h-full flex items-center justify-between z-10">
+            <div class="flex items-center gap-4">
+                <h1 class="text-3xl font-black text-white italic tracking-tighter drop-shadow-lg">
+                    ACR <span class="text-[#E10600]">CHAMPIONSHIP</span>
+                </h1>
+            </div>
+            
+            <nav class="hidden md:flex items-center gap-6 font-racing font-bold text-sm drop-shadow-md">
+                <a href="index-v2.html" class="text-[#E8E8E8] hover:text-white transition"><i class="fa-solid fa-trophy mr-2"></i>Campionato</a>
+                <a href="archive-v2.html" class="text-[#E8E8E8] hover:text-white transition"><i class="fa-solid fa-box-archive mr-2"></i>Archivio</a>
+                <a href="tracks.html" class="text-white border-b-2 border-[#E10600] pb-1"><i class="fa-solid fa-map-location-dot mr-2 text-[#E10600]"></i>Tracciati</a>
+                
+                <div class="h-6 w-px bg-white/30 mx-2"></div>
+
+                <div id="header-nav" class="flex items-center gap-4"></div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="max-w-[1600px] mx-auto px-4 mt-8">
+        
+        <!-- VISTA 1: SELEZIONE PAESE -->
+        <div id="view-countries" class="animate-fade-in">
+            <div class="text-center mb-8">
+                <h2 class="text-4xl font-black italic font-racing text-[#2C2A28]">Archivio Tracciati</h2>
+                <p class="text-[#6B665F] font-bold mt-2">Seleziona un Paese per esplorare le prove speciali e le leaderboard.</p>
+            </div>
+            
+            <div id="countries-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                <!-- Popolato via JS -->
+                <div class="col-span-full text-center py-12 text-gray-500">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl mb-4"></i>
+                    <p>Caricamento tracciati...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA 2: DETTAGLIO PAESE E STAGE -->
+        <div id="view-stages" class="hidden flex-col lg:flex-row gap-6 h-[calc(100vh-200px)]">
+            <!-- Sidebar Sinistra (Paesi) -->
+            <div id="sidebar-countries" class="w-full lg:w-1/4 card-wrc p-4 overflow-y-auto custom-scrollbar flex-shrink-0">
+                <h3 class="text-xs font-bold text-[#6B665F] uppercase mb-4 tracking-wider">Paesi</h3>
+                <div id="sidebar-countries-list" class="flex flex-col gap-2">
+                    <!-- Popolato via JS -->
+                </div>
+            </div>
+            
+            <!-- Area Destra (Macro-Aree e Stage) -->
+            <div id="main-stages" class="w-full lg:w-3/4 card-wrc p-6 overflow-y-auto custom-scrollbar flex-grow">
+                <div class="flex justify-between items-center mb-6 pb-4 border-b border-[#D1CBBF]">
+                    <h2 id="selected-country-title" class="text-3xl font-black italic font-racing text-[#2C2A28]">Svezia</h2>
+                    <button onclick="resetToCountries()" class="text-sm font-bold text-[#E10600] hover:text-[#2C2A28]"><i class="fa-solid fa-xmark mr-1"></i> Chiudi</button>
+                </div>
+                
+                <div id="macro-areas-container" class="space-y-4">
+                    <!-- Popolato via JS -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+
+    <script>
+        let allTracks = [];
+        let groupedByCountry = {};
+        let currentCountry = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Auth header
+            const sb = window.supabaseClient || window.supabase;
+            const { data: { session } } = await sb.auth.getSession();
+            const nav = document.getElementById('header-nav');
+            
+            if (session) {
+                nav.innerHTML = `
+                    <span class="text-sm text-slate-400 hidden md:block">${session.user.email}</span>
+                    <button onclick="window.supabaseClient.auth.signOut().then(()=>window.location.reload())" class="text-slate-400 hover:text-red-400 ml-2" title="Logout">
+                        <i class="fa-solid fa-power-off"></i>
+                    </button>
+                `;
+            } else {
+                nav.innerHTML = `
+                    <a href="login.html" class="bg-[#E10600] text-white px-4 py-1.5 rounded font-bold hover:bg-[#b30500] transition shadow-sm">Accedi</a>
+                `;
+            }
+
+            // Carica tracciati
+            try {
+                const res = await apiJson('/tracks');
+                allTracks = res.data || [];
+                
+                // Raggruppa per Paese
+                allTracks.forEach(t => {
+                    const country = t.country || t.location || 'Altro';
+                    if (!groupedByCountry[country]) groupedByCountry[country] = [];
+                    groupedByCountry[country].push(t);
+                });
+
+                renderCountries();
+            } catch (e) {
+                console.error("Errore caricamento tracciati", e);
+            }
+        });
+
+        function renderCountries() {
+            const grid = document.getElementById('countries-grid');
+            const countries = Object.keys(groupedByCountry).sort();
+            
+            grid.innerHTML = countries.map(c => {
+                const trackCount = groupedByCountry[c].length;
+                const bgImg = getCountryBackground(c);
+                
+                return `
+                    <div onclick="selectCountry('${c}')" class="card-wrc cursor-pointer overflow-hidden group relative h-48 flex flex-col justify-end p-6 border-l-4 border-[#E10600]">
+                        <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style="background-image: url('${bgImg}');"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#1E2532] via-[#1E2532]/60 to-transparent opacity-90"></div>
+                        
+                        <div class="relative z-10">
+                            <h3 class="text-3xl font-black italic font-racing text-white drop-shadow-md mb-1">${c}</h3>
+                            <p class="text-xs font-bold text-[#E10600] bg-black/30 w-fit px-2 py-0.5 rounded">${trackCount} Stage</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getCountryBackground(country) {
+            const c = country.toLowerCase();
+            if (c.includes('alsazia')) return 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80';
+            if (c.includes('galles')) return 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&q=80';
+            if (c.includes('grecia')) return 'https://images.unsplash.com/photo-1505993597083-3bd19eb4596b?auto=format&fit=crop&q=80';
+            if (c.includes('montecarlo')) return 'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&q=80';
+            if (c.includes('svezia')) return 'https://images.unsplash.com/photo-1483664852095-d6cc6870702d?auto=format&fit=crop&q=80';
+            return 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80';
+        }
+
+        function selectCountry(country) {
+            currentCountry = country;
+            
+            // Switch viste
+            document.getElementById('view-countries').classList.add('hidden');
+            const stagesView = document.getElementById('view-stages');
+            stagesView.classList.remove('hidden');
+            stagesView.classList.add('flex');
+
+            document.getElementById('selected-country-title').textContent = country;
+
+            // Render sidebar
+            const sidebarList = document.getElementById('sidebar-countries-list');
+            sidebarList.innerHTML = Object.keys(groupedByCountry).sort().map(c => `
+                <div onclick="selectCountry('${c}')" class="p-3 rounded-lg cursor-pointer font-bold text-sm transition-colors ${c === country ? 'bg-[#E10600] text-white shadow-md' : 'bg-[#EBE6DC] text-[#2C2A28] hover:bg-[#D1CBBF]'}">
+                    ${c}
+                </div>
+            `).join('');
+
+            // Render Macro-Aree e Stage
+            const tracks = groupedByCountry[country] || [];
+            const groupedByLocation = {};
+            
+            tracks.forEach(t => {
+                const loc = t.location || 'Sconosciuta';
+                if (!groupedByLocation[loc]) groupedByLocation[loc] = [];
+                groupedByLocation[loc].push(t);
+            });
+
+            const container = document.getElementById('macro-areas-container');
+            const locations = Object.keys(groupedByLocation).sort();
+
+            container.innerHTML = locations.map(loc => {
+                const stages = groupedByLocation[loc].sort((a,b) => a.name.localeCompare(b.name));
+                
+                // Accordion Header
+                let html = `
+                    <div class="border border-[#D1CBBF] rounded-lg overflow-hidden bg-[#F4F1EA]">
+                        <div onclick="toggleLocation(this)" class="p-4 cursor-pointer flex justify-between items-center hover:bg-[#EBE6DC] transition-colors">
+                            <div class="flex items-center gap-3">
+                                <i class="fa-solid fa-folder-open text-[#E10600]"></i>
+                                <h3 class="text-xl font-black italic font-racing text-[#2C2A28]">${loc}</h3>
+                                <span class="text-[10px] font-bold bg-[#23211F] text-white px-2 py-0.5 rounded">${stages.length} Stage</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-down text-[#6B665F] transition-transform chevron-icon"></i>
+                        </div>
+                        <div class="location-stages hidden border-t border-[#D1CBBF] bg-white">
+                `;
+
+                // Lista Stage
+                stages.forEach(s => {
+                    let diffClass = 'bg-gray-100 text-gray-700';
+                    if (s.difficulty === 'Facile') diffClass = 'bg-green-100 text-green-700';
+                    if (s.difficulty === 'Media') diffClass = 'bg-yellow-100 text-yellow-700';
+                    if (s.difficulty === 'Difficile') diffClass = 'bg-red-100 text-red-700';
+
+                    html += `
+                        <div class="p-4 border-b border-[#F3F4F6] last:border-0 flex justify-between items-center hover:bg-[#F9FAFB] transition-colors group">
+                            <div>
+                                <a href="track-detail.html?id=${s.id}" class="text-lg font-bold text-[#2C2A28] group-hover:text-[#E10600] transition-colors">${s.name}</a>
+                                <div class="flex gap-3 text-xs font-bold text-[#6B665F] mt-1">
+                                    <span><i class="fa-solid fa-ruler-horizontal mr-1"></i>${s.length_km} km</span>
+                                    <span><i class="fa-solid fa-layer-group mr-1"></i>${s.sectors} settori</span>
+                                    <span><i class="fa-solid fa-road mr-1"></i>${s.surface}</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="${diffClass} px-2 py-1 rounded text-[10px] font-bold uppercase">${s.difficulty}</span>
+                                <a href="track-detail.html?id=${s.id}" class="bg-[#23211F] text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-[#E10600] transition-colors"><i class="fa-solid fa-arrow-right"></i></a>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+                return html;
+            }).join('');
+            
+            // Apri il primo accordion per default
+            const firstAccordion = container.querySelector('.location-stages');
+            if (firstAccordion) {
+                firstAccordion.classList.remove('hidden');
+                firstAccordion.previousElementSibling.querySelector('.chevron-icon').classList.add('rotate-180');
+            }
+        }
+
+        function toggleLocation(header) {
+            const body = header.nextElementSibling;
+            const icon = header.querySelector('.chevron-icon');
+            
+            if (body.classList.contains('hidden')) {
+                body.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+            } else {
+                body.classList.add('hidden');
+                icon.classList.remove('rotate-180');
+            }
+        }
+
+        function resetToCountries() {
+            document.getElementById('view-stages').classList.add('hidden');
+            document.getElementById('view-stages').classList.remove('flex');
+            document.getElementById('view-countries').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
