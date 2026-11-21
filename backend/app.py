@@ -1834,7 +1834,17 @@ def update_leg(leg_id):
     try:
         data = request.json
         supabase = get_supabase()
-        supabase.table('leg').update({"name": data['name']}).eq('id', leg_id).execute()
+        
+        leg_date = data.get('date')
+        if leg_date == "" or leg_date is None: leg_date = None
+
+        update_data = {
+            "name": data.get('name'),
+            "country": data.get('country'),
+            "date": leg_date # <-- AGGIUNTO IL SALVATAGGIO DELLA DATA
+        }
+        
+        supabase.table('leg').update(update_data).eq('id', leg_id).execute()
         return jsonify({"success": True}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
