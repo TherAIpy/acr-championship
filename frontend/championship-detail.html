@@ -847,6 +847,138 @@
                 }
             }
 
+        window.openEditStage = async function(stageId) {
+            // 1. Trova lo stage e la leg associata nell'albero
+            let stageData = null;
+            let legData = null;
+
+            for (const rally of treeData.rallies) {
+                for (const leg of rally.legs) {
+                    const s = leg.stages.find(st => st.id === stageId);
+                    if (s) {
+                        stageData = s;
+                        legData = leg;
+                        break;
+                    }
+                }
+                if (stageData) break;
+            }
+
+            if (!stageData || !legData) return alert("Impossibile trovare i dati dello stage.");
+            if (!legData.country) return alert("Questa Leg non ha un Paese assegnato. Modifica la Leg prima di procedere.");
+
+            // 2. Popola i campi hidden e il titolo
+            document.getElementById('input-stage-edit-id').value = stageId;
+            document.getElementById('input-stage-leg-id').value = legData.id;
+            document.querySelector('#modal-stage h2').textContent = 'Modifica Stage';
+
+            // 3. Popola i campi di testo e i menù a tendina statici
+            document.getElementById('input-nome-stage').value = stageData.name || '';
+            document.getElementById('select-meteo').value = stageData.weather || 'Sereno';
+            document.getElementById('input-temp').value = stageData.temperature || 20;
+            document.getElementById('input-orario').value = stageData.start_time || '';
+
+            // Reset tendine a cascata e box info
+            const selectMacro = document.getElementById('select-macro-area');
+            const selectTracciato = document.getElementById('select-tracciato');
+            const infoBox = document.getElementById('track-info-box');
+            
+            selectMacro.innerHTML = '<option value="">Caricamento...</option>';
+            selectTracciato.innerHTML = '<option value="">Scegli prima la Location</option>';
+            selectTracciato.disabled = true;
+            infoBox.classList.add('hidden');
+
+            openModal('modal-stage');
+
+            try {
+                // 4. Carica tutti i tracciati del paese
+                const tracksRes = await api.getTracks(legData.country);
+                const allTracks = tracksRes.data || [];
+                
+                const macroAreas = [...new Set(allTracks.map(t => t.location))].filter(Boolean);
+                
+                selectMacro.innerHTML = `<option value="">Scegli la Location...</option>` + 
+                    macroAreas.map(m => `<option value="${m}">${m}</option>`).join('');
+
+                // 5. Funzione di supporto per popolare i layout in base alla macro-area
+                const populateTracks = (macroName) => {
+                    const filteredTracks = allTracks.filter(t => t.location === macroName);
+                    selectTracciato.innerHTML = `<option value="">Scegli il Tracciato...</option>` + 
+                        filteredTracks.map(t => `<option value="${t.id}" data-surface="${t.surface}" data-difficulty="${t.difficulty}" data-length="${t.length_km}">${t.name} (${t.length_km} km - ${t.surface} - ${t.difficulty})</option>`).join('');
+                    selectTracciato.disabled = false;
+                };
+
+                // 6. Trova il tracciato attuale dello stage
+                const currentTrack = allTracks.find(t => t.id === stageData.track_id);
+                const currentMacro = currentTrack ? currentTrack.location : '';
+
+                // 7. Pre-seleziona i valori corretti
+                if (currentMacro) {
+                    selectMacro.value = currentMacro;
+                    populateTracks(currentMacro);
+                    selectTracciato.value = stageData.track_id;
+                    
+                    // Triggera l'evento onchange per mostrare il box info e settare il fondo base
+                    const event = new Event('change');
+                    selectTracciato.dispatchEvent(event);
+                }
+
+                // 8. Gestione onchange Macro-Area (per permettere cambi)
+                selectMacro.onchange = (e) => {
+                    const selectedMacro = e.target.value;
+                    infoBox.classList.add('hidden');
+                    if (!selectedMacro) {
+                        selectTracciato.innerHTML = '<option value="">Scegli prima la Location</option>';
+                        selectTracciato.disabled = true;
+                        return;
+                    }
+                    populateTracks(selectedMacro);
+                };
+
+                // 9. Gestione onchange Tracciato (Box Info + Fondo)
+                selectTracciato.onchange = (e) => {
+                    const selectedOption = e.target.options[e.target.selectedIndex];
+                    const surface = selectedOption.getAttribute('data-surface');
+                    const difficulty = selectedOption.getAttribute('data-difficulty');
+                    const length = selectedOption.getAttribute('data-length');
+                    
+                    const selectFondo = document.getElementById('select-fondo');
+                    const surfaceLabel = document.getElementById('surface-base-label');
+
+                    if (!surface || selectedOption.value === "") {
+                        infoBox.classList.add('hidden');
+                        surfaceLabel.textContent = "";
+                        return;
+                    }
+
+                    infoBox.classList.remove('hidden');
+                    document.getElementById('info-surface').textContent = surface;
+                    document.getElementById('info-difficulty').textContent = difficulty || 'N/D';
+                    document.getElementById('info-length').textContent = length + " km";
+                    surfaceLabel.textContent = `Base: ${surface.split(' ')[0]}`;
+
+                    const s = surface.toLowerCase();
+                    if (s.includes('asfalto') && s.includes('sterrato')) selectFondo.value = 'Sterrato'; 
+                    else if (s.includes('asfalto')) selectFondo.value = 'Asfalto Asciutto'; 
+                    else if (s.includes('sterrato')) selectFondo.value = 'Sterrato';
+                    else if (s.includes('neve')) selectFondo.value = 'Neve Compatta';
+                    else if (s.includes('ghiaccio')) selectFondo.value = 'Ghiaccio';
+                    else selectFondo.value = 'Asfalto Asciutto'; 
+                };
+
+                // 10. Ripristina il fondo esatto salvato nello stage (sovrascrive l'auto-compilazione)
+                if (stageData.surface) {
+                    // Piccolo timeout per essere sicuri che l'onchange del tracciato abbia finito
+                    setTimeout(() => {
+                        document.getElementById('select-fondo').value = stageData.surface;
+                    }, 50);
+                }
+
+            } catch (e) {
+                console.error("Errore caricamento tracciati", e);
+            }
+        };
+
             document.getElementById('input-risultati-stage-id').value = stageId;
             document.getElementById('modal-risultati-title').textContent = stageName;
             document.getElementById('risultati-tbody').innerHTML = '';
