@@ -1690,28 +1690,29 @@ def get_standings(type, id):
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route('/api/car-results/<string:car_name>', methods=['GET'])
-def get_car_results(car_name):
+@app.route('/api/car-results/<int:car_id>', methods=['GET'])
+def get_car_results(car_id):
     try:
         supabase = get_supabase()
         
-        # Cerca i risultati ufficiali per quell'auto
+        # 1. Recupera l'auto tramite ID
+        car_res = supabase.table('car').select('*, car_class(name)').eq('id', car_id).execute()
+        if not car_res.data:
+            return jsonify({"success": False, "error": "Auto non trovata"}), 404
+            
+        car_info = car_res.data[0]
+        car_name = car_info['name'] # Es. "A110 1.8"
+        
+        # 2. Cerca i risultati ufficiali per quell'auto (usiamo il nome, dato che l'OCR salva il modello)
         results = supabase.table('stage_result').select('*, stage(name, leg(name, rally(name)))') \
             .ilike('car_model', f'%{car_name}%') \
             .eq('is_official', True) \
             .execute().data
 
-        if not results:
-            return jsonify({"success": True, "data": [], "car_info": None}), 200
-
-        # Trova le info dell'auto
-        car_info = supabase.table('car').select('*, car_class(name)').ilike('name', f'%{car_name}%').execute().data
-        car_data = car_info[0] if car_info else None
-
-        # Ordina per tempo (dal più veloce)
+        # 3. Ordina per tempo (dal più veloce)
         results.sort(key=lambda x: x['time_ms'])
 
-        return jsonify({"success": True, "data": results, "car_info": car_data}), 200
+        return jsonify({"success": True, "data": results, "car_info": car_info}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
     

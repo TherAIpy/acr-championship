@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard Vettura</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/v2-style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="min-h-screen pb-10">
+
+    <header class="bg-[#23211F] text-white shadow-lg border-b-4 border-[#E10600]">
+        <div class="max-w-[1200px] mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <h1 class="text-2xl font-black text-white italic tracking-tighter">ACR <span class="text-[#E10600]">CAR LEADERBOARD</span></h1>
+            </div>
+            <button onclick="window.close()" class="text-[#A8A29A] hover:text-white transition font-racing font-bold text-sm">
+                <i class="fa-solid fa-xmark mr-2"></i>Chiudi Scheda
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-[1200px] mx-auto px-4 mt-8">
+        
+        <!-- HEADER AUTO -->
+        <div id="car-header-container" class="mb-6">
+            <div class="text-center py-10 text-gray-500"><i class="fa-solid fa-spinner fa-spin text-3xl mb-4"></i><p>Caricamento dati vettura...</p></div>
+        </div>
+
+        <!-- TABELLA RISULTATI -->
+        <div class="card-wrc overflow-hidden">
+            <div class="bg-[#1E2532] text-white p-4 flex justify-between items-center">
+                <h2 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-stopwatch text-[#E10600]"></i> Tempi Registrati con questa Vettura</h2>
+            </div>
+            
+            <div class="max-h-[600px] overflow-y-auto custom-scrollbar">
+                <table class="w-full table-wrc text-sm">
+                    <thead class="sticky top-0 z-10">
+                        <tr>
+                            <th class="w-12 text-center">Pos</th>
+                            <th>Pilota</th>
+                            <th>Rally / Stage</th>
+                            <th class="text-right">Tempo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="car-results-tbody">
+                        <tr><td colspan="4" class="text-center py-8"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const carId = urlParams.get('id');
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!carId) {
+                document.getElementById('car-header-container').innerHTML = `<div class="text-red-500 text-center">ID Vettura non fornito.</div>`;
+                return;
+            }
+
+            try {
+                const res = await apiJson(`/car-results/${carId}`);
+                const results = res.data || [];
+                const c = res.car_info;
+
+                if (c) {
+                    document.getElementById('car-header-container').innerHTML = `
+                        <div class="bg-[#F4F1EA] border border-[#D1CBBF] rounded-lg p-6 shadow-sm flex flex-col md:flex-row items-center gap-6">
+                            <div class="w-32 h-32 bg-white rounded-full p-2 shadow-md border border-[#D1CBBF] flex items-center justify-center flex-shrink-0">
+                                <img src="${c.logo_url || 'https://placehold.co/100x100/23211F/F4F1EA?text=Logo'}" alt="${c.brand}" class="max-w-full max-h-full object-contain">
+                            </div>
+                            <div class="flex-1 text-center md:text-left">
+                                <div class="text-sm font-bold text-[#E10600] uppercase tracking-wider mb-1">${c.brand} - ${c.car_class?.name || 'N/D'}</div>
+                                <h1 class="text-4xl font-black font-racing italic text-[#2C2A28] leading-none mb-2">${c.name} <span class="text-2xl text-[#6B665F] font-normal not-italic">(${c.year || ''})</span></h1>
+                                <div class="flex flex-wrap justify-center md:justify-start gap-4 text-xs font-bold text-[#6B665F] mt-3">
+                                    <span><i class="fa-solid fa-cogs mr-1"></i>${c.engine}</span>
+                                    <span><i class="fa-solid fa-bolt text-[#E10600] mr-1"></i>${c.power_hp} hp</span>
+                                    <span><i class="fa-solid fa-weight-hanging mr-1"></i>${c.weight_kg} kg</span>
+                                    <span><i class="fa-solid fa-road mr-1"></i>${c.drivetrain}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const tbody = document.getElementById('car-results-tbody');
+                if (results.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500">Nessun tempo registrato con questa vettura.</td></tr>`;
+                    return;
+                }
+
+                // Calcola distacco dal primo (globale)
+                const leaderTime = results[0].time_ms;
+
+                tbody.innerHTML = results.map((r, i) => {
+                    const gapMs = r.time_ms - leaderTime;
+                    const gapStr = gapMs === 0 ? '-' : `+${(gapMs/1000).toFixed(2)}`;
+                    
+                    // Estrai nome Rally e Stage (se presenti)
+                    const stageName = r.stage?.name || 'Stage';
+                    const rallyName = r.stage?.leg?.rally?.name || 'Rally';
+
+                    return `
+                        <tr class="${i === 0 ? 'row-first' : ''}">
+                            <td class="text-center font-bold">${i + 1}</td>
+                            <td class="font-bold text-[#2C2A28]">${r.driver_name}</td>
+                            <td class="text-xs font-bold text-[#6B665F]">
+                                <div class="text-[#E10600]">${rallyName}</div>
+                                <div>${stageName}</div>
+                            </td>
+                            <td class="text-right font-mono font-bold text-[#2C2A28]">${r.time_str} <span class="text-xs text-[#6B665F] ml-2 font-sans">${gapStr}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+                
+            } catch (e) {
+                console.error(e);
+                document.getElementById('car-results-tbody').innerHTML = `<tr><td colspan="4" class="text-center text-red-500 p-4">Errore: ${e.message}</td></tr>`;
+            }
+        });
+    </script>
+</body>
+</html>
